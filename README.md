@@ -2,6 +2,9 @@
 
 <!-- markdownlint-disable MD022 MD032 MD031 MD040 MD009 MD012 -->
 
+[![CI/CD Pipeline](https://github.com/SifatAli008/OriginX/actions/workflows/ci.yml/badge.svg)](https://github.com/SifatAli008/OriginX/actions/workflows/ci.yml)
+[![PR Checks](https://github.com/SifatAli008/OriginX/actions/workflows/pr-checks.yml/badge.svg)](https://github.com/SifatAli008/OriginX/actions/workflows/pr-checks.yml)
+
 A Next.js web platform for SMEs, warehouses, suppliers, auditors, and admins to register products, track movements, verify authenticity (QR), and review a simulated blockchain transaction history using Firebase and Cloud Functions.
 
 ## Overview
@@ -568,10 +571,29 @@ Deploy concrete rules in `firestore.rules` and deploy with Firebase CLI.
 - <2s page loads, no console errors
 - Secrets not exposed to client
 
+## CI/CD Pipeline
+
+This project uses GitHub Actions for automated testing, building, and deployment.
+
+### Workflows
+- **CI/CD Pipeline** (`ci.yml`): Runs on every push to `main`/`develop` and PRs
+  - Linting and type checking
+  - Building the application
+  - Automatic deployment to Vercel (on `main` branch)
+- **PR Checks** (`pr-checks.yml`): Ensures code quality before merging
+- **Vercel Deployment** (`vercel-deploy.yml`): Production deployment workflow
+
+### Setup
+See [`.github/workflows/SETUP.md`](.github/workflows/SETUP.md) for detailed setup instructions.
+
+**Quick Setup:**
+1. Add secrets to GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+2. Push to `main` branch to trigger automatic deployment
+
 ## Deployment
-- Web: Vercel (connect repo, set env vars)
-- Functions: `firebase deploy --only functions`
-- Firestore Rules: `firebase deploy --only firestore:rules`
+- **Web**: Automatically deployed to Vercel via GitHub Actions (or manually: `vercel --prod`)
+- **Functions**: `firebase deploy --only functions`
+- **Firestore Rules**: `firebase deploy --only firestore:rules`
 
 ## Roadmap
 - Real TensorFlow.js verification
