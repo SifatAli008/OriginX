@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import Particles from "@tsparticles/react";
-import type { Engine, ISourceOptions } from "tsparticles-engine";
+import type { ISourceOptions } from "tsparticles-engine";
 import { loadSlim } from "@tsparticles/slim";
 
 type HeroParticlesProps = {
@@ -10,7 +10,7 @@ type HeroParticlesProps = {
 };
 
 export default function HeroParticles({ density = 40 }: HeroParticlesProps) {
-  const init = useCallback(async (engine: Engine) => {
+  const init = useCallback(async (engine: any) => {
     await loadSlim(engine);
   }, []);
 
@@ -19,16 +19,16 @@ export default function HeroParticles({ density = 40 }: HeroParticlesProps) {
   const isMobile = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
   const particleDensity = prefersReduced ? Math.max(12, Math.floor(density * 0.4)) : density;
 
-  const options = useMemo<ISourceOptions>(() => ({
+  const options = useMemo(() => ({
     fullScreen: { enable: false },
     background: { color: { value: "transparent" } },
     fpsLimit: 60,
     detectRetina: true,
     interactivity: {
-      detectsOn: "window",
+      detectsOn: "window" as const,
       events: {
         onHover: { enable: true, mode: ["trail", "repulse"] },
-        resize: true,
+        resize: { enable: true },
       },
       modes: {
         repulse: { distance: 80, duration: 0.3 },
@@ -51,17 +51,18 @@ export default function HeroParticles({ density = 40 }: HeroParticlesProps) {
       move: {
         enable: true,
         speed: prefersReduced ? 0.6 : 1.2,
-        outModes: { default: "out" },
-        direction: "none",
+        outModes: { default: "out" as const },
+        direction: "none" as const,
       },
       opacity: { value: 0.35 },
       size: { value: { min: 0.5, max: 2.2 } },
-      shape: { type: "circle" },
+      shape: { type: "circle" as const },
       reduceDuplicates: true,
     },
-  }), [particleDensity, prefersReduced]);
+  }), [particleDensity, prefersReduced, isMobile]);
 
   return (
+    // @ts-ignore - Type mismatch between tsparticles-engine and @tsparticles/engine
     <Particles id="hero-particles" init={init} options={options} className="absolute inset-0 pointer-events-none" />
   );
 }
