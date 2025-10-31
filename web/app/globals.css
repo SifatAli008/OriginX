@@ -1,0 +1,251 @@
+@import "tailwindcss";
+@import "simplebar-react/dist/simplebar.min.css";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+:root {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow: hidden; /* hide native root scrollbar */
+}
+
+body {
+  overflow: hidden; /* route scroll through SimpleBar */
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body { height: 100%; }
+
+/* Hide native scrollbars across browsers; SimpleBar renders its own */
+html, body { -ms-overflow-style: none; scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+
+/* SimpleBar theming */
+.simplebar-scrollbar:before {
+  background: rgba(37, 99, 235, 0.7); /* blue-600 */
+}
+.simplebar-track.simplebar-vertical { width: 10px; }
+.simplebar-track.simplebar-horizontal { height: 10px; }
+.simplebar-track { background: rgba(0,0,0,0.06); border-radius: 9999px; }
+.simplebar-scrollbar {
+  border-radius: 9999px;
+}
+.simplebar-scrollbar.simplebar-visible:before { opacity: 1; }
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Better default link styling */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+main a:hover {
+  text-decoration: underline;
+}
+
+/* Brand link remains unadorned; underline is scoped to main */
+.nav-brand, .nav-brand:hover, .nav-brand:focus, .nav-brand:visited { text-decoration: none; }
+
+/* Improve keyboard focus globally */
+:where(a, button, [role="button"]) {
+  outline: none;
+}
+:where(a, button, [role="button"]):focus-visible {
+  outline: 2px solid rgb(37 99 235 / 0.5); /* blue focus */
+  outline-offset: 2px;
+}
+
+/* Text selection color */
+::selection {
+  background-color: rgb(37 99 235 / 0.25); /* blue-600 at 25% */
+}
+
+/* Glass + Liquid UI helpers */
+.glass-card {
+  position: relative;
+  border-radius: 14px;
+  /* tunable variables */
+  --glass-bg-alpha: 0;           /* 0..0.1 */
+  --glass-border: 0.14;          /* 0..0.2 */
+  --glass-blob-opacity: 0.85;    /* 0..1 */
+  --glass-blob-blur: 20px;       /* px */
+  background: rgba(255, 255, 255, var(--glass-bg-alpha));
+  border: 1.5px solid rgba(255, 255, 255, var(--glass-border));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background:
+    radial-gradient(120px 120px at 20% 30%, rgba(59, 130, 246, 0.30), transparent 60%),
+    radial-gradient(140px 140px at 80% 20%, rgba(147, 51, 234, 0.22), transparent 60%),
+    radial-gradient(160px 160px at 70% 80%, rgba(34, 197, 94, 0.22), transparent 60%);
+  filter: blur(var(--glass-blob-blur));
+  opacity: var(--glass-blob-opacity);
+  z-index: 0;
+  mix-blend-mode: overlay;
+  animation: liquidMove 16s ease-in-out infinite alternate;
+}
+
+.glass-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: none; z-index: 0; pointer-events: none; }
+
+/* Density presets */
+.glass--subtle { --glass-bg-alpha: 0; --glass-border: 0.10; --glass-blob-opacity: 0.5; --glass-blob-blur: 14px; }
+.glass--medium { --glass-bg-alpha: 0; --glass-border: 0.14; --glass-blob-opacity: 0.85; --glass-blob-blur: 20px; }
+.glass--vivid { --glass-bg-alpha: 0; --glass-border: 0.18; --glass-blob-opacity: 1; --glass-blob-blur: 26px; }
+
+.glass-content { position: relative; z-index: 1; }
+
+/* Readability helper for text over glass */
+.glass-text { text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35); }
+
+/* Shimmer gradient text for hero heading */
+.shimmer-text {
+  background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(96,165,250,0.9), rgba(255,255,255,0.95));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% 100%;
+  animation: gradientShift 6s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text { animation: none; }
+}
+
+@keyframes liquidMove {
+  0%   { transform: translate3d(0,0,0) scale(1); }
+  33%  { transform: translate3d(2%, -2%, 0) scale(1.03); }
+  66%  { transform: translate3d(-2%, 2%, 0) scale(0.98); }
+  100% { transform: translate3d(0,0,0) scale(1.02); }
+}
+
+/* Subtle dotted pattern overlay for large sections */
+.pattern-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 18px 18px;
+  opacity: .25;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, [role="button"] {
+  transition: all 0.3s ease;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
