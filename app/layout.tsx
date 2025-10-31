@@ -17,10 +17,10 @@ const geistMono = Geist_Mono({
 const themeInitializer = `
 (function() {
   try {
-    var stored = localStorage.getItem('theme');
-    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var isDark = stored ? stored === 'dark' : prefersDark;
-    document.documentElement.classList.toggle('dark', isDark);
+    // Always set dark theme
+    document.documentElement.classList.add('dark');
+    // Remove any stored theme preference to prevent conflicts
+    localStorage.removeItem('theme');
   } catch (err) {
     console.warn('Theme init failed', err);
   }
@@ -38,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitializer }} />
       </head>

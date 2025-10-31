@@ -4,18 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import ThemeToggle from "@/components/site/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 export default function Navbar() {
   const [active, setActive] = useState<string>("hero");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  const navLinks = [
-    { href: "#features", label: "Features" },
-    { href: "#roles", label: "Roles" },
-    { href: "#modules", label: "Modules" },
-  ];
+    const navLinks = [
+      { href: "#features", label: "Features" },
+      { href: "#roles", label: "Roles" },
+      { href: "#modules", label: "Modules" },
+    ];
 
   useEffect(() => {
     const sectionIds = ["hero", "features", "roles", "modules", "get-started"];
@@ -82,7 +81,6 @@ export default function Navbar() {
         {/* Right Side Actions */}
         <div className="flex items-center gap-4">
           <div className="hidden lg:flex items-center gap-4">
-            <ThemeToggle />
             <Link
               href="/login"
               className={cn(
@@ -110,13 +108,12 @@ export default function Navbar() {
             >
               <Link href="#get-started">
                 <span className="relative z-10">Get started</span>
-              </Link>
+          </Link>
             </Button>
           </div>
 
           {/* Mobile Actions */}
           <div className="lg:hidden flex items-center gap-2">
-            <ThemeToggle />
             <button
               className="p-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-accent transition-all duration-200 hover:scale-110"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -135,9 +132,9 @@ export default function Navbar() {
             {navLinks.map((link) => {
               const isActive = active === link.href.replace("#", "");
               return (
-                <Link
+            <Link
                   key={link.href}
-                  href={link.href}
+              href={link.href}
                   onClick={() => setIsMenuOpen(false)}
                   className={cn(
                     "block px-4 py-3 rounded-md text-base font-medium transition-all duration-200",
@@ -145,9 +142,9 @@ export default function Navbar() {
                     "hover:translate-x-2 hover:shadow-sm",
                     isActive ? "text-primary bg-accent/50" : "text-foreground/80"
                   )}
-                >
-                  {link.label}
-                </Link>
+            >
+              {link.label}
+            </Link>
               );
             })}
             <div className="pt-4 border-t border-border/40 space-y-2">
@@ -156,15 +153,15 @@ export default function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
                 className="block px-4 py-3 rounded-md text-base font-medium text-foreground/80 hover:bg-accent hover:text-primary transition-all duration-200 hover:translate-x-2"
               >
-                Sign in
-              </Link>
-              <Button
+            Sign in
+          </Link>
+          <Button
                 asChild
                 className="w-full mt-2"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <Link href="#get-started">Get started</Link>
-              </Button>
+          </Button>
             </div>
           </div>
         </div>

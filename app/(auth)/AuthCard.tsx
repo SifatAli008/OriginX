@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ShieldCheck, ArrowLeft, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
+import HeroVectors from "@/components/visuals/HeroVectors";
 
 type AuthCardProps = {
   title: string;
@@ -39,9 +40,27 @@ const cardVariants = {
 
 export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [pointer, setPointer] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    // Check for reduced motion preference
+    if (typeof window !== "undefined" && window.matchMedia) {
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      setReduced(mediaQuery.matches);
+      
+      const handleChange = (e: MediaQueryListEvent) => setReduced(e.matches);
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      const rect = document.body.getBoundingClientRect();
+      const x = (e.clientX / rect.width) - 0.5;
+      const y = (e.clientY / rect.height) - 0.5;
+      setPointer({ x, y });
       setMousePosition({
         x: (e.clientX / window.innerWidth - 0.5) * 200,
         y: (e.clientY / window.innerHeight - 0.5) * 200,
@@ -69,6 +88,9 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
     >
       {/* Multi-layer animated background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Hero Section Vector Effects */}
+        <HeroVectors pointer={pointer} reduced={reduced} />
+        
         {/* Grid Pattern */}
         <div 
           className="absolute inset-0 opacity-[0.04] dark:opacity-[0.02]"

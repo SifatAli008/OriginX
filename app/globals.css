@@ -25,25 +25,25 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 3%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 98%;
     --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -55,6 +55,10 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem; /* Offset for fixed navbar */
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.3) transparent;
 }
 
 body {
@@ -64,6 +68,65 @@ body {
     Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--primary) / 0.4),
+    hsl(var(--primary) / 0.6)
+  );
+  border-radius: 10px;
+  border: 2px solid hsl(var(--background));
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--primary) / 0.6),
+    hsl(var(--primary) / 0.8)
+  );
+  border: 2px solid hsl(var(--background));
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.3);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: hsl(var(--primary));
+  box-shadow: 0 0 15px hsl(var(--primary) / 0.5);
+}
+
+/* Horizontal scrollbar */
+::-webkit-scrollbar:horizontal {
+  height: 10px;
+}
+
+/* Scrollbar corner */
+::-webkit-scrollbar-corner {
+  background: hsl(var(--background));
+}
+
+/* Smooth scrollbar animation */
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.4) hsl(var(--background));
+  }
+  
+  *:hover {
+    scrollbar-color: hsl(var(--primary) / 0.6) hsl(var(--background));
+  }
 }
 
 /* Animations */
@@ -208,6 +271,101 @@ main a:hover {
 /* Readability helper for text over glass */
 .glass-text { text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35); }
 
+/* Liquid hover effect for shadcn cards */
+.liquid-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Animated gradient background layer */
+.liquid-card::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background:
+    radial-gradient(300px 300px at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+      rgba(59, 130, 246, 0.25) 0%, 
+      rgba(96, 165, 250, 0.15) 30%,
+      rgba(147, 51, 234, 0.12) 50%,
+      transparent 70%),
+    radial-gradient(250px 250px at calc(100% - var(--mouse-x, 50%) * 1.2) calc(100% - var(--mouse-y, 50%) * 1.2), 
+      rgba(147, 51, 234, 0.20) 0%,
+      rgba(168, 85, 247, 0.12) 40%,
+      transparent 65%),
+    radial-gradient(200px 200px at calc(var(--mouse-x, 50%) * 0.8) calc(var(--mouse-y, 50%) * 0.8), 
+      rgba(34, 197, 94, 0.15) 0%,
+      transparent 55%);
+  filter: blur(40px);
+  opacity: 0;
+  z-index: 0;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+              transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.5s ease;
+  pointer-events: none;
+  transform: scale(0.92) translate(calc((var(--mouse-x, 50%) - 50%) * 0.1), calc((var(--mouse-y, 50%) - 50%) * 0.1));
+  will-change: transform, opacity;
+}
+
+.liquid-card:hover::before {
+  opacity: 1;
+  transform: scale(1.08) translate(calc((var(--mouse-x, 50%) - 50%) * 0.05), calc((var(--mouse-y, 50%) - 50%) * 0.05));
+  filter: blur(35px);
+}
+
+/* Interactive spotlight overlay */
+.liquid-card::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: 
+    radial-gradient(400px 400px at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+      rgba(59, 130, 246, 0.12) 0%,
+      rgba(96, 165, 250, 0.08) 25%,
+      transparent 50%);
+  opacity: 0;
+  z-index: 1;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  will-change: opacity;
+}
+
+.liquid-card:hover::after {
+  opacity: 1;
+}
+
+/* Glowing border and background effect */
+.liquid-card {
+  background: linear-gradient(135deg, 
+    hsl(var(--card) / 0.35) 0%,
+    hsl(var(--card) / 0.25) 50%,
+    hsl(var(--card) / 0.30) 100%);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.liquid-card:hover {
+  box-shadow: 
+    0 0 0 1px rgba(59, 130, 246, 0.3),
+    0 12px 40px rgba(59, 130, 246, 0.2),
+    0 4px 16px rgba(147, 51, 234, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Enhanced transition */
+.liquid-card {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  transform-style: preserve-3d;
+}
+
 /* Shimmer gradient text for hero heading */
 .shimmer-text {
   background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(96,165,250,0.9), rgba(255,255,255,0.95));
@@ -249,6 +407,105 @@ main a:hover {
 /* Smooth transitions for all interactive elements */
 button, a, [role="button"] {
   transition: all 0.3s ease;
+}
+
+/* Enhanced typography hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+h2 {
+  font-size: clamp(1.75rem, 4vw, 3rem);
+}
+
+h3 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+/* Better spacing for sections */
+section {
+  scroll-margin-top: 6rem;
+  position: relative;
+}
+
+/* Section transitions */
+section {
+  transition: background-color 0.3s ease;
+}
+
+/* Additional animations */
+@keyframes floatEnhanced {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+  }
+}
+
+/* Enhanced badge styles */
+[class*="badge"] {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Shimmer animation for backgrounds */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Section background patterns */
+@keyframes floatGradient {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  33% {
+    transform: translate(30px, -30px) scale(1.1);
+    opacity: 0.7;
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+    opacity: 0.6;
+  }
+}
+
+/* Enhanced section backgrounds */
+section[class*="relative"] {
+  position: relative;
+}
+
+section[class*="relative"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.03), transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(147, 51, 234, 0.02), transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Smooth section transitions */
+section {
+  transition: background 0.3s ease;
+}
+
+/* Improved focus states */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: calc(var(--radius) - 2px);
 }
 
 /* Reduce motion for users who prefer it */

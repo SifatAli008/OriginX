@@ -1,8 +1,9 @@
 "use client";
 
-import { Card, CardBody } from "@heroui/react";
+import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { ArrowRight, Package, QrCode, Truck, CheckCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function HowItWorksFlow() {
   const steps = [
@@ -51,16 +52,32 @@ export default function HowItWorksFlow() {
                 transition={{ delay: index * 0.2 }}
                 className="flex-1 w-full"
               >
-                <Card radius="lg" className="glass-card glass--medium transition-all duration-300 group cursor-default relative h-full min-h-[280px]">
-                  <CardBody className="p-6 pt-10 pb-8 flex flex-col items-center text-center gap-4 h-full glass-content">
+                <Card className={cn(
+                  "liquid-card group cursor-default relative h-full min-h-[280px]",
+                  "border-2 border-border/40 backdrop-blur-xl",
+                  "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/25"
+                )}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                  e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+                  e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.setProperty('--mouse-x', '50%');
+                  e.currentTarget.style.setProperty('--mouse-y', '50%');
+                }}
+                >
+                  <CardContent className="p-6 pt-10 pb-8 flex flex-col items-center text-center gap-4 h-full relative z-10">
                     <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center text-background shadow-lg flex-shrink-0`}>
                       <Icon className="h-8 w-8" />
                     </div>
                     <div className="flex flex-col gap-3 flex-1 justify-center items-center">
-                    <h3 className="font-bold text-lg leading-tight px-2 w-full glass-text">{step.title}</h3>
-                    <p className="text-sm text-foreground/70 leading-relaxed px-2 w-full glass-text">{step.description}</p>
+                    <h3 className="font-bold text-lg leading-tight px-2 w-full text-foreground">{step.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed px-2 w-full">{step.description}</p>
                     </div>
-                  </CardBody>
+                  </CardContent>
                 </Card>
               </motion.div>
               
@@ -92,8 +109,23 @@ export default function HowItWorksFlow() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.15 }}
               >
-                <Card radius="lg" className="glass-card glass--medium">
-                  <CardBody className="p-5 flex items-start gap-4 glass-content">
+                <Card className={cn(
+                  "liquid-card border-2 border-border/40 backdrop-blur-xl relative",
+                  "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/25"
+                )}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                  e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+                  e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.setProperty('--mouse-x', '50%');
+                  e.currentTarget.style.setProperty('--mouse-y', '50%');
+                }}
+                >
+                  <CardContent className="p-5 flex items-start gap-4 relative z-10">
                     <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${step.color} flex items-center justify-center text-background shadow-md flex-shrink-0`}>
                       <Icon className="h-7 w-7" />
                     </div>
@@ -101,9 +133,9 @@ export default function HowItWorksFlow() {
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="font-bold text-base leading-tight">{step.title}</h3>
                       </div>
-                      <p className="text-sm text-foreground/70 leading-relaxed">{step.description}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
                     </div>
-                  </CardBody>
+                  </CardContent>
                 </Card>
               </motion.div>
               

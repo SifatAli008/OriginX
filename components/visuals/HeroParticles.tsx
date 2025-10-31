@@ -22,17 +22,44 @@ export default function HeroParticles({ density = 40 }: HeroParticlesProps) {
   const options = useMemo(() => ({
     fullScreen: { enable: false },
     background: { color: { value: "transparent" } },
-    fpsLimit: 60,
+    fpsLimit: 120,
     detectRetina: true,
     interactivity: {
       detectsOn: "window" as const,
       events: {
-        onHover: { enable: true, mode: ["trail", "repulse"] },
+        onHover: { 
+          enable: true, 
+          mode: ["grab", "trail", "bubble", "repulse"],
+          parallax: { enable: true, force: 2, smooth: 10 }
+        },
+        onClick: { enable: true, mode: ["push", "bubble"] },
         resize: { enable: true },
       },
       modes: {
-        repulse: { distance: 80, duration: 0.3 },
-        trail: { delay: 0.005, quantity: 2, pauseOnStop: true },
+        grab: { 
+          distance: 180, 
+          links: { opacity: 0.4, blink: true },
+          lineLinked: { opacity: 0.6 }
+        },
+        repulse: { 
+          distance: 120, 
+          duration: 0.4,
+          speed: 1,
+          factor: 2
+        },
+        trail: { 
+          delay: 0.005, 
+          quantity: 3, 
+          pauseOnStop: true,
+          length: 10
+        },
+        bubble: {
+          distance: 200,
+          size: 6,
+          duration: 2,
+          opacity: 0.3
+        },
+        push: { quantity: 4 },
       },
     },
     particles: {
@@ -40,24 +67,102 @@ export default function HeroParticles({ density = 40 }: HeroParticlesProps) {
         density: { enable: true, area: 800 },
         value: particleDensity,
       },
-      color: { value: ["#60a5fa", "#a78bfa", "#34d399"] },
+      color: { 
+        value: ["#60a5fa", "#a78bfa", "#34d399", "#fbbf24", "#f472b6"],
+        animation: {
+          enable: true,
+          speed: 20,
+          sync: false
+        }
+      },
       links: {
         enable: !isMobile,
         color: "#60a5fa",
-        opacity: 0.18,
-        distance: 140,
-        width: 1,
+        opacity: 0.25,
+        distance: 150,
+        width: 1.2,
+        triangles: {
+          enable: true,
+          opacity: 0.05,
+          color: "#a78bfa"
+        },
+        blink: true,
+        consent: false,
+        shadow: {
+          enable: true,
+          blur: 5,
+          color: "#3b82f6",
+          opacity: 0.2
+        }
       },
       move: {
         enable: true,
-        speed: prefersReduced ? 0.6 : 1.2,
+        speed: prefersReduced ? 0.6 : 1.5,
         outModes: { default: "out" as const },
         direction: "none" as const,
+        random: true,
+        straight: false,
+        attract: {
+          enable: true,
+          rotate: { x: 300, y: 300 }
+        },
+        trail: {
+          enable: true,
+          length: 3,
+          fill: { color: { value: "#60a5fa" } }
+        },
+        vibrate: true,
+        warp: true
       },
-      opacity: { value: 0.35 },
-      size: { value: { min: 0.5, max: 2.2 } },
-      shape: { type: "circle" as const },
+      opacity: { 
+        value: { min: 0.2, max: 0.6 },
+        animation: {
+          enable: true,
+          speed: 1.5,
+          minimumValue: 0.2,
+          sync: false,
+          destroy: "none"
+        }
+      },
+      size: { 
+        value: { min: 1, max: 3 },
+        animation: {
+          enable: true,
+          speed: 3,
+          minimumValue: 0.5,
+          sync: false,
+          destroy: "none",
+          startValue: "random"
+        }
+      },
+      shape: { 
+        type: ["circle", "triangle", "polygon"] as const,
+        options: {
+          polygon: {
+            sides: 6,
+            radius: { min: 1, max: 2 }
+          }
+        }
+      },
       reduceDuplicates: true,
+      twinkle: {
+        particles: {
+          enable: true,
+          frequency: 0.05,
+          opacity: 1
+        }
+      },
+      life: {
+        count: 0,
+        delay: {
+          value: 0,
+          sync: false
+        },
+        duration: {
+          value: 0,
+          sync: false
+        }
+      }
     },
   }), [particleDensity, prefersReduced, isMobile]);
 

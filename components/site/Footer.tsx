@@ -1,75 +1,211 @@
-import { Divider, Link as HLink } from "@heroui/react";
+"use client";
+
+import Link from "next/link";
+import { Separator } from "@/components/ui/separator";
 import { Github, Twitter, Linkedin, Mail } from "lucide-react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 export default function Footer() {
+  const footerLinks = {
+    product: [
+      { label: "Features", href: "#features" },
+      { label: "Roles", href: "#roles" },
+      { label: "Modules", href: "#modules" },
+      { label: "Pricing", href: "#pricing" },
+    ],
+    company: [
+      { label: "About", href: "#" },
+      { label: "Blog", href: "#" },
+      { label: "Careers", href: "#" },
+      { label: "Contact", href: "#" },
+    ],
+    legal: [
+      { label: "Privacy", href: "#" },
+      { label: "Terms", href: "#" },
+      { label: "Security", href: "#" },
+      { label: "Compliance", href: "#" },
+    ],
+  };
+
+  const socialLinks = [
+    { icon: Github, href: "#", label: "GitHub" },
+    { icon: Twitter, href: "#", label: "Twitter" },
+    { icon: Linkedin, href: "#", label: "LinkedIn" },
+    { icon: Mail, href: "#", label: "Email" },
+  ];
+
   return (
-    <footer className="border-t border-foreground/10 bg-foreground/[0.02]">
-      <div className="mx-auto max-w-6xl px-4 py-12">
+    <footer className="relative border-t border-border/40 bg-gradient-to-t from-background via-background to-foreground/[0.01]">
+      {/* Decorative gradient */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+      
+      <div className="mx-auto max-w-6xl px-4 py-16">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-12">
           {/* Brand Column */}
-          <div className="col-span-2 md:col-span-1">
-            <h3 className="font-bold text-primary text-lg mb-3">OriginX</h3>
-            <p className="text-sm text-foreground/70 leading-relaxed">
+          <motion.div 
+            className="col-span-2 md:col-span-1"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <Link href="/" className="inline-block mb-4 group">
+              <h3 className="font-bold text-primary text-xl mb-2 group-hover:scale-105 transition-transform duration-300">
+                OriginX
+              </h3>
+            </Link>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-6">
               AI-powered anti-counterfeit platform for Bangladesh SMEs.
             </p>
-            <div className="flex items-center gap-3 mt-4">
-              <HLink href="#" className="text-foreground/60 hover:text-primary transition-colors">
-                <Github className="h-5 w-5" />
-              </HLink>
-              <HLink href="#" className="text-foreground/60 hover:text-primary transition-colors">
-                <Twitter className="h-5 w-5" />
-              </HLink>
-              <HLink href="#" className="text-foreground/60 hover:text-primary transition-colors">
-                <Linkedin className="h-5 w-5" />
-              </HLink>
-              <HLink href="#" className="text-foreground/60 hover:text-primary transition-colors">
-                <Mail className="h-5 w-5" />
-              </HLink>
+            <div className="flex items-center gap-3">
+              {socialLinks.map((social, idx) => {
+                const Icon = social.icon;
+                return (
+                  <motion.a
+                    key={social.label}
+                    href={social.href}
+                    aria-label={social.label}
+                    initial={{ opacity: 0, scale: 0 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: idx * 0.1 }}
+                    whileHover={{ scale: 1.1, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={cn(
+                      "p-2 rounded-lg text-muted-foreground",
+                      "hover:text-primary hover:bg-accent/50",
+                      "transition-all duration-200"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </motion.a>
+                );
+              })}
             </div>
-          </div>
+          </motion.div>
 
           {/* Product Column */}
-          <div>
-            <h4 className="font-semibold text-foreground mb-3 text-sm">Product</h4>
-            <nav className="flex flex-col gap-2">
-              <HLink href="#features" className="text-sm text-foreground/70 hover:text-primary transition-colors">Features</HLink>
-              <HLink href="#roles" className="text-sm text-foreground/70 hover:text-primary transition-colors">Roles</HLink>
-              <HLink href="#modules" className="text-sm text-foreground/70 hover:text-primary transition-colors">Modules</HLink>
-              <HLink href="#pricing" className="text-sm text-foreground/70 hover:text-primary transition-colors">Pricing</HLink>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Product</h4>
+            <nav className="flex flex-col gap-3">
+              {footerLinks.product.map((link, idx) => (
+                <motion.div
+                  key={link.label}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 + idx * 0.05 }}
+                >
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "text-sm text-muted-foreground",
+                      "hover:text-primary transition-all duration-200",
+                      "relative group"
+                    )}
+                  >
+                    <span className="relative">
+                      {link.label}
+                      <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+                    </span>
+                  </Link>
+                </motion.div>
+              ))}
             </nav>
-          </div>
+          </motion.div>
 
           {/* Company Column */}
-          <div>
-            <h4 className="font-semibold text-foreground mb-3 text-sm">Company</h4>
-            <nav className="flex flex-col gap-2">
-              <HLink href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors">About</HLink>
-              <HLink href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors">Blog</HLink>
-              <HLink href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors">Careers</HLink>
-              <HLink href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors">Contact</HLink>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Company</h4>
+            <nav className="flex flex-col gap-3">
+              {footerLinks.company.map((link, idx) => (
+                <motion.div
+                  key={link.label}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.2 + idx * 0.05 }}
+                >
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "text-sm text-muted-foreground",
+                      "hover:text-primary transition-all duration-200",
+                      "relative group"
+                    )}
+                  >
+                    <span className="relative">
+                      {link.label}
+                      <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+                    </span>
+                  </Link>
+                </motion.div>
+              ))}
             </nav>
-          </div>
+          </motion.div>
 
           {/* Legal Column */}
-          <div>
-            <h4 className="font-semibold text-foreground mb-3 text-sm">Legal</h4>
-            <nav className="flex flex-col gap-2">
-              <HLink href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors">Privacy</HLink>
-              <HLink href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors">Terms</HLink>
-              <HLink href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors">Security</HLink>
-              <HLink href="#" className="text-sm text-foreground/70 hover:text-primary transition-colors">Compliance</HLink>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Legal</h4>
+            <nav className="flex flex-col gap-3">
+              {footerLinks.legal.map((link, idx) => (
+                <motion.div
+                  key={link.label}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.3 + idx * 0.05 }}
+                >
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "text-sm text-muted-foreground",
+                      "hover:text-primary transition-all duration-200",
+                      "relative group"
+                    )}
+                  >
+                    <span className="relative">
+                      {link.label}
+                      <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+                    </span>
+                  </Link>
+                </motion.div>
+              ))}
             </nav>
-          </div>
+          </motion.div>
         </div>
 
-        <Divider className="mb-6" />
+        <Separator className="mb-8 opacity-20" />
 
         {/* Bottom Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-foreground/60">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground"
+        >
           <p>© {new Date().getFullYear()} OriginX. All rights reserved.</p>
-          <p>Made with 💙 for Bangladesh manufacturers</p>
-        </div>
+          <p className="flex items-center gap-2">
+            Made with <span className="text-primary">💙</span> for Bangladesh manufacturers
+          </p>
+        </motion.div>
       </div>
     </footer>
   );

@@ -1,9 +1,12 @@
 "use client";
 
-import { Button, Card, CardBody, Chip, Tooltip } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import HeroParticles from "@/components/visuals/HeroParticles";
+import HeroVectors from "@/components/visuals/HeroVectors";
 import { motion } from "framer-motion";
 import Navbar from "@/components/site/Navbar";
 import Footer from "@/components/site/Footer";
@@ -23,6 +26,7 @@ import {
   Sparkles,
   Zap
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Animation variants
 const fadeInUp = {
@@ -64,7 +68,19 @@ const scaleIn = {
 
 export default function LandingPage() {
   const [pointer, setPointer] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const reduced = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [reduced, setReduced] = useState(false);
+
+  // Check for reduced motion preference
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      setReduced(mediaQuery.matches);
+      
+      const handleChange = (e: MediaQueryListEvent) => setReduced(e.matches);
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+  }, []);
   const features = [
     {
       title: "Product registration",
@@ -120,57 +136,112 @@ export default function LandingPage() {
       >
         {/* Decorative background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Library vector animation */}
-          <HeroParticles />
+          {/* Enhanced vector animations */}
+          <HeroVectors pointer={pointer} reduced={reduced} />
+          
+          {/* Enhanced particle system */}
+          <HeroParticles density={60} />
+          
+          {/* Animated gradient orbs */}
           <motion.div 
             aria-hidden="true"
             animate={{ 
-              y: [0, -20, 0],
-              scale: [1, 1.1, 1]
+              y: [0, -30, 0],
+              rotate: [0, 180, 360],
+              scale: [1, 1.15, 1]
             }}
             transition={{ 
-              duration: 8, 
+              duration: 12, 
               repeat: Infinity, 
               ease: "easeInOut" 
             }}
-            className="absolute top-20 right-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl opacity-20"
+            className="absolute top-20 right-20 w-80 h-80 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent rounded-full blur-3xl opacity-25"
           />
           <motion.div 
             aria-hidden="true"
             animate={{ 
-              y: [0, 20, 0],
-              scale: [1, 0.9, 1]
+              y: [0, 30, 0],
+              rotate: [360, 180, 0],
+              scale: [1, 0.85, 1]
             }}
             transition={{ 
-              duration: 10, 
+              duration: 15, 
               repeat: Infinity, 
-              ease: "easeInOut" 
+              ease: "easeInOut",
+              delay: 2
             }}
-            className="absolute bottom-20 left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl opacity-30"
+            className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-tl from-primary/15 via-primary/5 to-transparent rounded-full blur-3xl opacity-30"
           />
-          {/* Cursor-reactive liquid blobs */}
+          <motion.div 
+            aria-hidden="true"
+            animate={{ 
+              x: [0, 50, 0],
+              y: [0, -40, 0],
+              rotate: [0, 90, 180],
+              scale: [1, 1.2, 1]
+            }}
+            transition={{ 
+              duration: 18, 
+              repeat: Infinity, 
+              ease: "easeInOut",
+              delay: 1
+            }}
+            className="absolute top-1/2 left-1/4 w-64 h-64 bg-gradient-to-br from-purple-500/10 to-primary/5 rounded-full blur-3xl opacity-20"
+          />
+          
+          {/* Enhanced cursor-reactive liquid blobs */}
           <motion.div
             aria-hidden="true"
-            className="absolute -top-16 -left-24 w-[520px] h-[520px] rounded-full bg-gradient-to-br from-primary/25 to-transparent blur-3xl"
-            animate={{ x: (pointer.x || 0) * 50, y: (pointer.y || 0) * 40 }}
-            transition={{ type: "spring", stiffness: 60, damping: 20, mass: 0.3 }}
+            className="absolute -top-16 -left-24 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-primary/30 via-primary/15 to-transparent blur-3xl"
+            animate={{ 
+              x: (pointer.x || 0) * 60, 
+              y: (pointer.y || 0) * 50,
+            }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 50, 
+              damping: 25, 
+              mass: 0.4 
+            }}
+            style={{
+              scale: 1 + Math.abs(pointer.x || 0) * 0.1 + Math.abs(pointer.y || 0) * 0.05
+            }}
           />
           <motion.div
             aria-hidden="true"
-            className="absolute -bottom-24 right-0 w-[520px] h-[520px] rounded-full bg-gradient-to-tr from-sky-400/20 to-transparent blur-3xl"
-            animate={{ x: (pointer.x || 0) * -40, y: (pointer.y || 0) * -30 }}
-            transition={{ type: "spring", stiffness: 60, damping: 20, mass: 0.3 }}
+            className="absolute -bottom-24 right-0 w-[550px] h-[550px] rounded-full bg-gradient-to-tr from-purple-500/25 via-sky-400/15 to-transparent blur-3xl"
+            animate={{ 
+              x: (pointer.x || 0) * -50, 
+              y: (pointer.y || 0) * -40,
+            }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 50, 
+              damping: 25, 
+              mass: 0.4 
+            }}
+            style={{
+              scale: 1 + Math.abs(pointer.x || 0) * 0.08 + Math.abs(pointer.y || 0) * 0.07
+            }}
           />
-          {/* Subtle vector grid that drifts with cursor */}
-          <motion.svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 opacity-[0.08]"
-            animate={{ x: (pointer.x || 0) * 15, y: (pointer.y || 0) * 10 }} transition={{ type: "spring", stiffness: 40, damping: 18 }}>
-            <defs>
-              <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
-                <path d="M 8 0 L 0 0 0 8" fill="none" stroke="currentColor" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </motion.svg>
+          <motion.div
+            aria-hidden="true"
+            className="absolute top-1/2 right-1/4 w-[480px] h-[480px] rounded-full bg-gradient-to-bl from-green-400/15 via-primary/10 to-transparent blur-3xl"
+            animate={{ 
+              x: (pointer.x || 0) * 30, 
+              y: (pointer.y || 0) * -35,
+            }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 40, 
+              damping: 20, 
+              mass: 0.5
+            }}
+            style={{
+              rotate: (pointer.x || 0) * 90 + (pointer.y || 0) * 90
+            }}
+          />
+          
         </div>
         
         <div className="relative mx-auto max-w-6xl px-4 pt-24 sm:pt-32 pb-20 sm:pb-28">
@@ -193,13 +264,20 @@ export default function LandingPage() {
             transition={{ type: "spring", stiffness: 60, damping: 20 }}
           >
             <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm text-foreground/90 backdrop-blur-sm"
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15 border border-primary/30 px-5 py-2.5 text-sm font-medium backdrop-blur-md shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:scale-105 hover:border-primary/40 group"
             >
-              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-              <span className="font-medium">AI-Powered Anti-Counterfeit Platform</span>
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+                <Sparkles className="h-4 w-4 text-primary" />
+              </motion.div>
+              <span className="text-foreground font-medium group-hover:text-primary transition-colors duration-300 whitespace-nowrap">
+                AI-Powered Anti-Counterfeit Platform
+              </span>
             </motion.div>
             
             <motion.div className="relative">
@@ -221,7 +299,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="mt-6 sm:mt-8 text-foreground/70 text-lg sm:text-xl leading-relaxed max-w-3xl"
+              className="mt-6 sm:mt-8 text-muted-foreground text-lg sm:text-xl leading-relaxed max-w-3xl font-light"
             >
               Enterprise-grade supply chain security for Bangladesh SMEs. Register products, generate encrypted QR codes, track movements, and verify authenticity with AI—all in one platform.
             </motion.p>
@@ -245,26 +323,47 @@ export default function LandingPage() {
                   transition={{ duration: 2.2, repeat: Infinity }}
                 />
               <Button 
-                as={Link} 
-                href="#get-started" 
-                color="primary" 
+                asChild
                 size="lg" 
-                radius="lg"
-                endContent={<ArrowRight className="h-5 w-5" />}
-                className="font-semibold px-8 text-base shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className={cn(
+                  "font-semibold px-8 text-base shadow-lg",
+                  "hover:shadow-xl hover:shadow-primary/25",
+                  "transition-all duration-300 hover:scale-105",
+                  "relative overflow-hidden",
+                  "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/10 before:to-primary/0",
+                  "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
+                )}
               >
+                <Link href="/login">
+                  <span className="relative z-10 flex items-center gap-2">
                 Get started free
+                    <ArrowRight className="h-5 w-5" />
+                  </span>
+                </Link>
               </Button>
               </div>
               <Button 
-                as={Link} 
-                href="#features" 
-                variant="bordered" 
+                asChild
+                variant="outline"
                 size="lg" 
-                radius="lg"
-                className="font-medium px-8 text-base border-2 hover:bg-foreground/5 transition-all duration-300"
+                className={cn(
+                  "font-medium px-8 text-base border-2",
+                  "hover:bg-accent hover:border-primary/50",
+                  "transition-all duration-300 hover:scale-105",
+                  "relative overflow-hidden group",
+                  "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/5 before:to-primary/0",
+                  "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-500"
+                )}
               >
+                <Link href="#features" className="relative z-10 flex items-center gap-2">
                 See how it works
+                  <motion.span
+                    animate={{ x: [0, 4, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <ArrowRight className="h-5 w-5" />
+                  </motion.span>
+                </Link>
               </Button>
             </motion.div>
             
@@ -272,27 +371,43 @@ export default function LandingPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.8 }}
-              className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-foreground/60"
+              className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm"
             >
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                <span>No credit card required</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                <span>Free for 100 products</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-primary" />
-                <span>Setup in minutes</span>
-              </div>
+              {[
+                { text: "No credit card required", delay: 0 },
+                { text: "Free for 100 products", delay: 0.1 },
+                { text: "Setup in minutes", delay: 0.2 }
+              ].map((item, idx) => (
+                <motion.div
+                  key={item.text}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.8 + item.delay }}
+                  className="flex items-center gap-2.5 group"
+                >
+                  <motion.div
+                    whileHover={{ scale: 1.2, rotate: 360 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <CheckCircle2 className="h-5 w-5 text-primary group-hover:text-primary/80 transition-colors" />
+                  </motion.div>
+                  <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                    {item.text}
+                  </span>
+                </motion.div>
+              ))}
             </motion.div>
           </motion.div>
         </div>
       </section>
 
       {/* How It Works Flow */}
-      <section className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
+      <section className="relative mx-auto max-w-6xl px-4 py-20 sm:py-28 overflow-hidden">
+        {/* Gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/3 to-transparent pointer-events-none" />
+        {/* Section divider */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+        <div className="relative z-10">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -300,21 +415,42 @@ export default function LandingPage() {
           variants={fadeInUp}
           className="text-center mb-12"
         >
-          <Chip color="primary" variant="flat" className="mb-4" startContent={<Route className="h-3.5 w-3.5" />}>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <Badge variant="secondary" className="mb-6 gap-1.5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:scale-105 transition-transform duration-300">
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Route className="h-3.5 w-3.5" />
+              </motion.div>
             Process Flow
-          </Chip>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            </Badge>
+          </motion.div>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
             How OriginX Works
           </h2>
-          <p className="mt-4 text-foreground/70 text-lg max-w-2xl mx-auto">
+          <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
             Four simple steps from product registration to authenticity verification
           </p>
         </motion.div>
+        <div className="mt-12">
         <HowItWorksFlow />
+        </div>
+        </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" aria-labelledby="features-heading" className="mx-auto max-w-6xl px-4 py-20 sm:py-28 scroll-mt-24 sm:scroll-mt-28">
+      <section id="features" aria-labelledby="features-heading" className="relative mx-auto max-w-6xl px-4 py-20 sm:py-28 scroll-mt-24 sm:scroll-mt-28 overflow-hidden">
+        {/* Gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
+        {/* Section divider */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        <div className="relative z-10">
         <motion.div 
           initial="hidden"
           whileInView="visible"
@@ -322,13 +458,26 @@ export default function LandingPage() {
           variants={fadeInUp}
           className="text-center mb-12"
         >
-          <Chip color="primary" variant="flat" className="mb-4" startContent={<Zap className="h-3.5 w-3.5" />}>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <Badge variant="secondary" className="mb-6 gap-1.5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:scale-105 transition-transform duration-300">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Zap className="h-3.5 w-3.5 text-primary" />
+              </motion.div>
             Core Features
-          </Chip>
-          <h2 id="features-heading" className="text-3xl sm:text-4xl font-bold tracking-tight">
+            </Badge>
+          </motion.div>
+          <h2 id="features-heading" className="text-3xl sm:text-4xl font-bold tracking-tight mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
             Everything you need to fight counterfeits
           </h2>
-          <p className="mt-4 text-foreground/70 text-lg max-w-2xl mx-auto">
+          <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
             From product registration to AI-powered verification, OriginX provides end-to-end protection for your supply chain.
           </p>
         </motion.div>
@@ -342,77 +491,187 @@ export default function LandingPage() {
           {features.map((f) => {
             const Icon = f.icon;
             return (
-            <motion.div key={f.title} variants={fadeInUp}>
+            <motion.div 
+              key={f.title} 
+              variants={fadeInUp}
+              whileHover={{ y: -8 }}
+              transition={{ duration: 0.3 }}
+            >
               <Card
-                radius="lg"
                 tabIndex={0}
-                className="glass-card glass--medium transition-all duration-300 hover:-translate-y-2 hover:border-primary/60 group h-full cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className={cn(
+                  "liquid-card h-full cursor-pointer",
+                  "border-2 border-border/40 backdrop-blur-xl",
+                  "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/25",
+                  "group relative overflow-hidden",
+                  "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+                )}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                  e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+                  e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+                }}
+                onMouseLeave={(e) => {
+                  // Reset to center for smooth exit
+                  e.currentTarget.style.setProperty('--mouse-x', '50%');
+                  e.currentTarget.style.setProperty('--mouse-y', '50%');
+                }}
               >
-              <CardBody className="gap-4 p-6 glass-content">
+              <CardContent className="gap-4 p-6 relative z-10">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:scale-110">
+                  <motion.span 
+                    className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
                     <Icon className="h-6 w-6" aria-hidden="true" />
-                  </span>
-                  <Chip size="sm" variant="flat" color="primary" className="w-fit group-hover:scale-105 transition-transform duration-300">{f.tag}</Chip>
+                  </motion.span>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider">
+                      {f.tag}
+                    </Badge>
+                  </motion.div>
                 </div>
                 <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors duration-300">{f.title}</h3>
-                <p className="text-foreground/70 text-sm leading-6">{f.body}</p>
-              </CardBody>
+                <p className="text-muted-foreground text-sm leading-6">{f.body}</p>
+              </CardContent>
               </Card>
             </motion.div>
           );
           })}
         </motion.div>
+        </div>
       </section>
 
       {/* Roles Section */}
-      <section id="roles" aria-labelledby="roles-heading" className="bg-gradient-to-b from-foreground/[0.02] to-foreground/[0.05] relative overflow-hidden scroll-mt-24 sm:scroll-mt-28">
-        {/* Decorative element */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+      <section id="roles" aria-labelledby="roles-heading" className="relative bg-gradient-to-b from-foreground/[0.02] via-foreground/[0.03] to-foreground/[0.05] overflow-hidden scroll-mt-24 sm:scroll-mt-28">
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.05),transparent_50%)] pointer-events-none" />
         
-        <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
-          <div className="text-center mb-12">
-            <Chip color="primary" variant="flat" className="mb-4" startContent={<Users className="h-3.5 w-3.5" />}>
+        <div className="relative mx-auto max-w-6xl px-4 py-20 sm:py-28 z-10">
+          <motion.div 
+            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeInUp}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <Badge variant="secondary" className="mb-6 gap-1.5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:scale-105 transition-transform duration-300">
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                </motion.div>
               User Roles
-            </Chip>
-            <h2 id="roles-heading" className="text-3xl sm:text-4xl font-bold tracking-tight">
+              </Badge>
+            </motion.div>
+            <h2 id="roles-heading" className="text-3xl sm:text-4xl font-bold tracking-tight mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
               Built for every stakeholder
             </h2>
-            <p className="mt-4 text-foreground/70 text-lg max-w-2xl mx-auto">
+            <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
               Tailored experiences for each role in your supply chain ecosystem.
             </p>
-          </div>
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          </motion.div>
+          <motion.div 
+            className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
             {[
               { role: "SME/Supplier", desc: "Register products, print QR, manage batches." },
               { role: "Warehouse", desc: "Inbound/outbound, transfers, QC, handovers." },
               { role: "Auditor", desc: "Journey visualization and verification history." },
               { role: "Admin", desc: "Users, roles, suppliers, policies, analytics." },
             ].map((r) => (
-              <Card key={r.role} radius="lg" tabIndex={0} className="glass-card glass--medium transition-all duration-300 hover:scale-105 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 group cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                <CardBody className="p-5 glass-content">
+              <motion.div key={r.role} variants={fadeInUp}>
+                <Card 
+                  tabIndex={0} 
+                  className={cn(
+                    "liquid-card cursor-pointer group relative",
+                    "border-2 border-border/40 backdrop-blur-xl",
+                    "hover:scale-105 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/25",
+                    "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+                  )}
+                  onMouseMove={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+                    e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.setProperty('--mouse-x', '50%');
+                    e.currentTarget.style.setProperty('--mouse-y', '50%');
+                  }}
+                >
+                  <CardContent className="p-5 relative z-10">
                   <h3 className="font-semibold text-foreground text-base group-hover:text-primary transition-colors duration-300">{r.role}</h3>
-                  <p className="text-foreground/70 text-sm mt-2 leading-6 group-hover:text-foreground/90 transition-colors duration-300">{r.desc}</p>
-                </CardBody>
+                    <p className="text-muted-foreground text-sm mt-2 leading-6 group-hover:text-foreground/90 transition-colors duration-300">{r.desc}</p>
+                  </CardContent>
               </Card>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Why OriginX */}
-      <section className="py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12">
-            <Chip color="primary" variant="flat" className="mb-4" startContent={<ShieldCheck className="h-3.5 w-3.5" />}>
+      <section className="relative py-20 sm:py-28 overflow-hidden">
+        {/* Enhanced background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/2 to-background pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.06),transparent_60%)] pointer-events-none" />
+        {/* Section divider */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+        <div className="relative mx-auto max-w-6xl px-4 z-10">
+          <motion.div 
+            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeInUp}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <Badge variant="secondary" className="mb-6 gap-1.5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:scale-105 transition-transform duration-300">
+                <motion.div
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                </motion.div>
               Why OriginX
-            </Chip>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Built specifically for Bangladesh SMEs</h2>
-            <p className="mt-4 text-foreground/70 text-lg max-w-2xl mx-auto">
+              </Badge>
+            </motion.div>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">Built specifically for Bangladesh SMEs</h2>
+            <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
               Addressing local challenges with proven technology and affordable solutions.
             </p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
+          </motion.div>
+          <motion.div 
+            className="grid md:grid-cols-2 gap-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
             {[
               { 
                 title: "Low-Cost Implementation", 
@@ -437,34 +696,88 @@ export default function LandingPage() {
             ].map((item) => {
               const Icon = item.icon;
               return (
-                <Card key={item.title} radius="lg" tabIndex={0} className="glass-card glass--medium transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 group cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                  <CardBody className="gap-4 p-6 glass-content">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary group-hover:from-primary group-hover:to-primary/80 group-hover:text-white group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                <motion.div key={item.title} variants={fadeInUp} whileHover={{ y: -4 }}>
+                  <Card 
+                    tabIndex={0} 
+                    className={cn(
+                      "liquid-card cursor-pointer group relative",
+                      "border-2 border-border/40 backdrop-blur-xl",
+                      "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/25",
+                      "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+                    )}
+                    onMouseMove={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = ((e.clientX - rect.left) / rect.width) * 100;
+                      const y = ((e.clientY - rect.top) / rect.height) * 100;
+                      e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+                      e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.setProperty('--mouse-x', '50%');
+                      e.currentTarget.style.setProperty('--mouse-y', '50%');
+                    }}
+                  >
+                    <CardContent className="gap-4 p-6 relative z-10">
+                      <motion.div 
+                        className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary group-hover:from-primary group-hover:to-primary/80 group-hover:text-primary-foreground transition-all duration-300"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                      >
                       <Icon className="h-7 w-7" />
-                    </div>
-                <h3 className="text-xl font-semibold group-hover:text-primary transition-colors duration-300 glass-text">{item.title}</h3>
-                <p className="text-foreground/70 text-sm leading-6 group-hover:text-foreground/90 transition-colors duration-300 glass-text">{item.desc}</p>
-                  </CardBody>
+                      </motion.div>
+                      <h3 className="text-xl font-semibold group-hover:text-primary transition-colors duration-300">{item.title}</h3>
+                      <p className="text-muted-foreground text-sm leading-6 group-hover:text-foreground/90 transition-colors duration-300">{item.desc}</p>
+                    </CardContent>
                 </Card>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Use Cases */}
-      <section className="bg-gradient-to-b from-foreground/[0.02] to-background py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12">
-            <Chip color="primary" variant="flat" className="mb-4" startContent={<Package className="h-3.5 w-3.5" />}>
+      <section className="relative bg-gradient-to-b from-foreground/[0.02] via-foreground/[0.03] to-background py-20 sm:py-28 overflow-hidden">
+        {/* Enhanced background elements */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_70%,rgba(147,51,234,0.06),transparent_60%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.04),transparent_50%)] pointer-events-none" />
+        {/* Section divider */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+        <div className="relative mx-auto max-w-6xl px-4 z-10">
+          <motion.div 
+            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeInUp}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <Badge variant="secondary" className="mb-6 gap-1.5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:scale-105 transition-transform duration-300">
+                <motion.div
+                  animate={{ rotate: [0, 15, -15, 0] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Package className="h-3.5 w-3.5 text-primary" />
+                </motion.div>
               Use Cases
-            </Chip>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Protecting diverse industries across Bangladesh</h2>
-            <p className="mt-4 text-foreground/70 text-lg max-w-2xl mx-auto">
+              </Badge>
+            </motion.div>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">Protecting diverse industries across Bangladesh</h2>
+            <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
               From pharmaceuticals to textiles, OriginX adapts to your industry needs.
             </p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          </motion.div>
+          <motion.div 
+            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
             {[
               { industry: "Pharmaceuticals", challenge: "Combat fake medicines", solution: "Tamper-evident packaging with instant authenticity verification" },
               { industry: "Auto Parts", challenge: "Prevent counterfeit components", solution: "Supply chain tracking from factory to garage" },
@@ -473,38 +786,94 @@ export default function LandingPage() {
               { industry: "Food & Beverage", challenge: "Ensure product safety", solution: "Batch tracking with expiry and recall management" },
               { industry: "Cosmetics", challenge: "Stop grey market imports", solution: "Geo-fenced distribution monitoring" },
             ].map((useCase) => (
-              <Card key={useCase.industry} radius="lg" tabIndex={0} className="glass-card glass--medium transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 group cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                <CardBody className="gap-4 p-5 glass-content">
-                  <Chip size="sm" color="primary" variant="flat" className="w-fit group-hover:scale-105 transition-transform duration-300">{useCase.industry}</Chip>
+              <motion.div key={useCase.industry} variants={fadeInUp} whileHover={{ y: -4 }}>
+                <Card 
+                  tabIndex={0} 
+                  className={cn(
+                    "liquid-card cursor-pointer group relative",
+                    "border-2 border-border/40 backdrop-blur-xl",
+                    "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/25",
+                    "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+                  )}
+                  onMouseMove={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+                    e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.setProperty('--mouse-x', '50%');
+                    e.currentTarget.style.setProperty('--mouse-y', '50%');
+                  }}
+                >
+                  <CardContent className="gap-4 p-5 relative z-10">
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Badge variant="secondary" className="w-fit text-xs font-semibold uppercase tracking-wider">{useCase.industry}</Badge>
+                    </motion.div>
                   <div>
-                    <div className="text-xs font-medium text-foreground/60 mb-1.5 uppercase tracking-wide group-hover:text-primary/80 transition-colors duration-300">Challenge</div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide group-hover:text-primary/80 transition-colors duration-300">Challenge</div>
                     <div className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors duration-300">{useCase.challenge}</div>
                   </div>
                   <div>
-                    <div className="text-xs font-medium text-foreground/60 mb-1.5 uppercase tracking-wide group-hover:text-primary/80 transition-colors duration-300">OriginX Solution</div>
-                    <div className="text-sm text-foreground/70 leading-relaxed group-hover:text-foreground/90 transition-colors duration-300">{useCase.solution}</div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide group-hover:text-primary/80 transition-colors duration-300">OriginX Solution</div>
+                      <div className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/90 transition-colors duration-300">{useCase.solution}</div>
                   </div>
-                </CardBody>
+                  </CardContent>
               </Card>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Modules Summary */}
-      <section id="modules" aria-labelledby="modules-heading" className="mx-auto max-w-6xl px-4 py-20 sm:py-28 scroll-mt-24 sm:scroll-mt-28">
-        <div className="text-center mb-12">
-          <Chip color="primary" variant="flat" className="mb-4" startContent={<Blocks className="h-3.5 w-3.5" />}>
+      <section id="modules" aria-labelledby="modules-heading" className="relative mx-auto max-w-6xl px-4 py-20 sm:py-28 scroll-mt-24 sm:scroll-mt-28 overflow-hidden">
+        {/* Gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/4 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05),transparent_70%)] pointer-events-none" />
+        {/* Section divider */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
+        <motion.div 
+          className="text-center mb-12"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeInUp}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <Badge variant="secondary" className="mb-6 gap-1.5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:scale-105 transition-transform duration-300">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Blocks className="h-3.5 w-3.5 text-primary" />
+              </motion.div>
             Platform Modules
-          </Chip>
-          <h2 id="modules-heading" className="text-3xl sm:text-4xl font-bold tracking-tight">
+            </Badge>
+          </motion.div>
+          <h2 id="modules-heading" className="text-3xl sm:text-4xl font-bold tracking-tight mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
             Complete ecosystem for supply chain security
           </h2>
-          <p className="mt-4 text-foreground/70 text-lg max-w-2xl mx-auto">
+          <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
             Integrated modules working together to provide comprehensive protection.
           </p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        </motion.div>
+        <motion.div 
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+        >
           {[
             { module: "Authentication", desc: "Multi-factor auth with role-based access control", points: ["OTP/email/passwordless", "RBAC & granular permissions", "SSO-ready (Google/Okta)"] },
             { module: "Products", desc: "Register, manage, and track your inventory", points: ["Bulk import (CSV/Excel)", "Batches & variants", "Cloudinary media attachments"] },
@@ -516,29 +885,53 @@ export default function LandingPage() {
             { module: "Reports", desc: "Generate compliance and audit reports", points: ["PDF export", "Custom templates", "Scheduled emails"] },
             { module: "API", desc: "Integrate with your existing systems", points: ["REST endpoints", "Webhooks", "API keys & rate limits"] },
           ].map((item) => (
-            <Card key={item.module} radius="lg" tabIndex={0} className="glass-card glass--medium transition-all duration-300 hover:scale-105 hover:border-primary/60 hover:shadow-md hover:shadow-primary/10 group cursor-pointer min-h-[160px] focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-              <CardBody className="gap-3 p-5 h-full flex flex-col justify-between glass-content">
-                <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300 glass-text">{item.module}</h3>
-                <p className="text-sm text-foreground/70 leading-relaxed group-hover:text-foreground/90 transition-colors duration-300 glass-text">{item.desc}</p>
-                <ul className="mt-1 space-y-1 text-xs text-foreground/60">
+            <motion.div key={item.module} variants={fadeInUp} whileHover={{ scale: 1.02 }}>
+              <Card 
+                tabIndex={0} 
+                className={cn(
+                  "liquid-card cursor-pointer group min-h-[160px] relative",
+                  "border-2 border-border/40 backdrop-blur-xl",
+                  "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/25",
+                  "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+                )}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                  e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+                  e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.setProperty('--mouse-x', '50%');
+                  e.currentTarget.style.setProperty('--mouse-y', '50%');
+                }}
+              >
+                <CardContent className="gap-3 p-5 h-full flex flex-col justify-between relative z-10">
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300">{item.module}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/90 transition-colors duration-300">{item.desc}</p>
+                  <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
                   {item.points.map((p) => (
                     <li key={p} className="flex items-start gap-2">
-                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/60"></span>
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary/60 flex-shrink-0"></span>
                       <span>{p}</span>
                     </li>
                   ))}
                 </ul>
-              </CardBody>
+                </CardContent>
             </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       {/* CTA */}
       <section id="get-started" aria-labelledby="cta-heading" className="relative overflow-hidden scroll-mt-24 sm:scroll-mt-28">
-        {/* Gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-background"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent"></div>
+        {/* Enhanced gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/8 to-background"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.12),transparent_70%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(147,51,234,0.08),transparent_60%)]"></div>
+        {/* Animated grid overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,transparent_0%,rgba(59,130,246,0.03)_50%,transparent_100%)] bg-[size:200%_100%] animate-[shimmer_8s_linear_infinite]"></div>
         
         <div className="relative mx-auto max-w-4xl px-4 py-20 sm:py-28">
           <motion.div 
@@ -550,53 +943,63 @@ export default function LandingPage() {
           >
             <motion.div 
               animate={{ 
-                rotate: [0, 5, -5, 0],
-                scale: [1, 1.1, 1]
+                rotate: [0, 10, -10, 0],
+                scale: [1, 1.15, 1]
               }}
               transition={{ 
-                duration: 3, 
+                duration: 4, 
                 repeat: Infinity, 
                 ease: "easeInOut" 
               }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/15 mb-6"
+              className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 mb-8 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow duration-300"
             >
-              <Sparkles className="h-8 w-8 text-primary" />
+              <Sparkles className="h-10 w-10 text-primary" />
             </motion.div>
             
-            <h3 id="cta-heading" className="text-3xl sm:text-4xl font-bold tracking-tight">
+            <h3 id="cta-heading" className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
               Ready to protect your products?
             </h3>
-            <p className="text-foreground/70 text-lg mt-4 max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-lg sm:text-xl mt-6 max-w-2xl mx-auto leading-relaxed font-light">
               Join Bangladesh's leading manufacturers in the fight against counterfeits. Start with 100 free products—no credit card required.
             </p>
             
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button 
-                as={Link} 
-                href="/app/auth/login" 
-                color="primary" 
+                asChild
                 size="lg"
-                radius="lg"
-                endContent={<ArrowRight className="h-5 w-5" />}
-                className="font-semibold px-8 text-base shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                className={cn(
+                  "font-semibold px-8 text-base shadow-lg",
+                  "hover:shadow-xl hover:shadow-primary/25",
+                  "transition-all duration-300 hover:scale-105",
+                  "relative overflow-hidden",
+                  "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/10 before:to-primary/0",
+                  "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
+                )}
               >
+                <Link href="/login">
+                  <span className="relative z-10 flex items-center gap-2">
                 Get started free
+                    <ArrowRight className="h-5 w-5" />
+                  </span>
+                </Link>
               </Button>
               <Button 
-                as={Link} 
-                href="#features" 
-                variant="bordered" 
+                asChild
+                variant="outline"
                 size="lg"
-                radius="lg"
-                className="font-medium px-8 text-base border-2 hover:bg-foreground/5 transition-all duration-300"
+                className={cn(
+                  "font-medium px-8 text-base border-2",
+                  "hover:bg-accent hover:border-primary/50",
+                  "transition-all duration-300 hover:scale-105"
+                )}
               >
-                Learn more
+                <Link href="#features">Learn more</Link>
               </Button>
             </div>
             
-            <p className="mt-8 text-sm text-foreground/60">
+            <p className="mt-8 text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link href="/app/auth/login" className="text-primary font-medium hover:underline">
+              <Link href="/login" className="text-primary font-medium hover:underline">
                 Sign in
               </Link>
             </p>
