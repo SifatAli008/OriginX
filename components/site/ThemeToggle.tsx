@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Tooltip } from "@heroui/react";
+import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState<boolean>(false);
@@ -15,25 +16,27 @@ export default function ThemeToggle() {
     document.documentElement.classList.toggle("dark", nextDark);
   }, []);
 
-  function onChange(value: boolean) {
-    setIsDark(value);
-    document.documentElement.classList.toggle("dark", value);
-    localStorage.setItem("theme", value ? "dark" : "light");
+  function toggleTheme() {
+    const newValue = !isDark;
+    setIsDark(newValue);
+    document.documentElement.classList.toggle("dark", newValue);
+    localStorage.setItem("theme", newValue ? "dark" : "light");
   }
 
   return (
-    <Tooltip content={isDark ? "Switch to light" : "Switch to dark"} placement="bottom">
-      <Button
-        isIconOnly
-        variant="light"
-        radius="full"
-        aria-label="Toggle theme"
-        onPress={() => onChange(!isDark)}
-        className="h-9 w-9 text-foreground/80 hover:text-foreground"
-      >
-        {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </Button>
-    </Tooltip>
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={toggleTheme}
+      className={cn(
+        "h-9 w-9 text-foreground/80 hover:text-foreground",
+        "hover:bg-accent transition-all duration-200",
+        "hover:scale-110 hover:rotate-12"
+      )}
+    >
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </Button>
   );
 }
 

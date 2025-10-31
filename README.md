@@ -1,4 +1,6 @@
-OriginX Web Platform (Full Web System)
+# OriginX Web Platform (Full Web System)
+
+<!-- markdownlint-disable MD022 MD032 MD031 MD040 MD009 MD012 -->
 
 A Next.js web platform for SMEs, warehouses, suppliers, auditors, and admins to register products, track movements, verify authenticity (QR), and review a simulated blockchain transaction history using Firebase and Cloud Functions.
 

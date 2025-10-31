@@ -2,25 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Navbar as HNavbar,
-  NavbarBrand,
-  NavbarContent,
-  NavbarItem,
-  NavbarMenu,
-  NavbarMenuItem,
-  NavbarMenuToggle,
-  Button,
-} from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
 import ThemeToggle from "@/components/site/ThemeToggle";
+import { cn } from "@/lib/utils";
 
 export default function Navbar() {
   const [active, setActive] = useState<string>("hero");
-    const navLinks = [
-      { href: "#features", label: "Features" },
-      { href: "#roles", label: "Roles" },
-      { href: "#modules", label: "Modules" },
-    ];
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  const navLinks = [
+    { href: "#features", label: "Features" },
+    { href: "#roles", label: "Roles" },
+    { href: "#modules", label: "Modules" },
+  ];
 
   useEffect(() => {
     const sectionIds = ["hero", "features", "roles", "modules", "get-started"];
@@ -41,82 +36,140 @@ export default function Navbar() {
   }, []);
 
   return (
-    <HNavbar
-      maxWidth="xl"
-      isBordered
-      position="sticky"
-      height="4.5rem"
-      className="top-0 border-b border-foreground/10 bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-sm"
-      classNames={{
-        wrapper: "px-4 md:px-6 py-2",
-      }}
-    >
-      <NavbarContent justify="start" className="flex-shrink-0">
-        <NavbarBrand>
-          <Link href="/" className="nav-brand flex items-center gap-2 whitespace-nowrap !no-underline hover:!no-underline focus:!no-underline visited:!no-underline text-inherit hover:text-inherit">
-            <span className="text-xl font-bold text-primary tracking-tight">OriginX</span>
-            <span className="text-sm text-foreground/60 hidden sm:inline font-normal">Anti‑Counterfeit</span>
-          </Link>
-        </NavbarBrand>
-      </NavbarContent>
-      <NavbarContent className="hidden lg:flex gap-8" justify="center">
-        {navLinks.map((link) => (
-          <NavbarItem key={link.href}>
-            <Link
-              href={link.href}
-              aria-current={active === link.href.replace("#", "") ? "page" : undefined}
-              className={`relative text-base font-medium transition-all duration-300 after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:scale-x-0 after:bg-primary after:transition-transform after:duration-300 after:ease-out hover:text-primary hover:after:scale-x-100 ${
-                active === link.href.replace("#", "") ? "text-primary after:scale-x-100" : "text-foreground/90"
-              }`}
-            >
-              {link.label}
-            </Link>
-          </NavbarItem>
-        ))}
-      </NavbarContent>
-      <NavbarContent
-        justify="end"
-        className="flex flex-shrink-0 flex-nowrap items-center gap-4"
-      >
-        <NavbarItem className="lg:hidden flex items-center">
-          <NavbarMenuToggle aria-label="Toggle menu" />
-        </NavbarItem>
-        <NavbarItem className="hidden lg:flex items-center">
-          <Link href="/app/auth/login" className="text-base text-foreground/90 font-medium hover:text-primary transition-all duration-300 relative after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full">
-            Sign in
-          </Link>
-        </NavbarItem>
-        <NavbarItem className="flex shrink-0">
-          <Button
-            as={Link}
-            href="#get-started"
-            color="primary"
-            size="lg"
-            radius="sm"
-            className="font-semibold text-base px-7 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:shadow-xl hover:scale-105 transition-all duration-300"
+    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 h-18 flex items-center justify-between">
+        {/* Brand */}
+        <div className="flex items-center">
+          <Link 
+            href="/" 
+            className="nav-brand flex items-center gap-2 whitespace-nowrap group"
           >
-            Get started
-          </Button>
-        </NavbarItem>
-      </NavbarContent>
-      <NavbarMenu>
-        {navLinks.map((item) => (
-          <NavbarMenuItem key={item.href}>
-            <Link href={item.href} className="w-full" aria-label={item.label}>
-              {item.label}
+            <span className="text-xl font-bold text-primary tracking-tight transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-lg">
+              OriginX
+            </span>
+            <span className="text-sm text-muted-foreground hidden sm:inline font-normal transition-colors duration-300 group-hover:text-foreground">
+              Anti‑Counterfeit
+            </span>
+          </Link>
+        </div>
+
+        {/* Desktop Navigation */}
+        <div className="hidden lg:flex items-center gap-8">
+          {navLinks.map((link) => {
+            const isActive = active === link.href.replace("#", "");
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "relative text-base font-medium transition-all duration-300",
+                  "hover:text-primary group",
+                  "before:absolute before:-inset-x-2 before:-inset-y-1 before:rounded-md before:bg-primary/0",
+                  "before:transition-all before:duration-300 hover:before:bg-primary/5",
+                  "after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-0",
+                  "after:bg-primary after:transition-all after:duration-300 after:ease-out",
+                  "hover:after:w-full hover:scale-105",
+                  isActive ? "text-primary after:w-full" : "text-foreground/80"
+                )}
+              >
+                <span className="relative z-10">{link.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Right Side Actions */}
+        <div className="flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-4">
+            <ThemeToggle />
+            <Link
+              href="/login"
+              className={cn(
+                "relative text-base font-medium transition-all duration-300",
+                "text-foreground/80 hover:text-primary",
+                "after:absolute after:-bottom-0.5 after:left-0 after:h-[2px] after:w-0",
+                "after:bg-primary after:transition-all after:duration-300",
+                "hover:after:w-full hover:scale-105"
+              )}
+            >
+              Sign in
             </Link>
-          </NavbarMenuItem>
-        ))}
-        <NavbarMenuItem>
-          <Link href="/app/auth/login">Sign in</Link>
-        </NavbarMenuItem>
-        <NavbarMenuItem>
-          <Button as={Link} href="#get-started" color="primary" radius="sm" className="w-full">
-            Get started
-          </Button>
-        </NavbarMenuItem>
-      </NavbarMenu>
-    </HNavbar>
+            <Button
+              asChild
+              size="lg"
+              className={cn(
+                "font-semibold text-base px-7",
+                "relative overflow-hidden",
+                "hover:shadow-lg hover:shadow-primary/25",
+                "hover:scale-105 hover:-translate-y-0.5",
+                "transition-all duration-300",
+                "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/10 before:to-primary/0",
+                "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
+              )}
+            >
+              <Link href="#get-started">
+                <span className="relative z-10">Get started</span>
+              </Link>
+            </Button>
+          </div>
+
+          {/* Mobile Actions */}
+          <div className="lg:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              className="p-2 rounded-md text-foreground/80 hover:text-foreground hover:bg-accent transition-all duration-200 hover:scale-110"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="lg:hidden border-t border-border/40 bg-background/95 backdrop-blur">
+          <div className="container mx-auto max-w-7xl px-4 py-4 space-y-2">
+            {navLinks.map((link) => {
+              const isActive = active === link.href.replace("#", "");
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={cn(
+                    "block px-4 py-3 rounded-md text-base font-medium transition-all duration-200",
+                    "hover:bg-accent hover:text-primary",
+                    "hover:translate-x-2 hover:shadow-sm",
+                    isActive ? "text-primary bg-accent/50" : "text-foreground/80"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <div className="pt-4 border-t border-border/40 space-y-2">
+              <Link
+                href="/login"
+                onClick={() => setIsMenuOpen(false)}
+                className="block px-4 py-3 rounded-md text-base font-medium text-foreground/80 hover:bg-accent hover:text-primary transition-all duration-200 hover:translate-x-2"
+              >
+                Sign in
+              </Link>
+              <Button
+                asChild
+                className="w-full mt-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Link href="#get-started">Get started</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </nav>
   );
 }
 
