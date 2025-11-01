@@ -29,7 +29,7 @@ export default function ThemeToggle() {
   }
 
   return (
-    <Button
+      <Button
       variant="ghost"
       size="icon"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
@@ -39,9 +39,9 @@ export default function ThemeToggle() {
         "hover:bg-accent transition-all duration-200",
         "hover:scale-110 hover:rotate-12"
       )}
-    >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-    </Button>
+      >
+        {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      </Button>
   );
 }
 

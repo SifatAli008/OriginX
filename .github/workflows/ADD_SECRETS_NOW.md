@@ -1,49 +1,50 @@
-# ⚠️ IMPORTANT: Add Secrets to GitHub
+# ⚠️ IMPORTANT Add Secrets to GitHub
 
 You have a Vercel token. **DO NOT commit it to code.** Add it as a GitHub Secret instead.
 
-## Quick Steps:
+## Quick Steps
 
 ### 1. Go to GitHub Repository Settings
+
 - Visit: `https://github.com/SifatAli008/OriginX/settings/secrets/actions`
 - Or: Repository → **Settings** → **Secrets and variables** → **Actions**
 
 ### 2. Add VERCEL_TOKEN Secret
+
 1. Click **"New repository secret"**
 2. **Name:** `VERCEL_TOKEN`
 3. **Secret:** `9nVJvN1RZ6nksx22QAa880hZ`
 4. Click **"Add secret"**
 
-### 3. Get and Add Other Required Secrets
+### 3. Add VERCEL_ORG_ID Secret
 
-You still need these two:
+1. Click **"New repository secret"**
+2. **Name:** `VERCEL_ORG_ID`
+3. **Secret:** `team_9eEABLbyiHLdJRpp2L5GTlZF`
+4. Click **"Add secret"**
 
-#### VERCEL_ORG_ID:
-- Go to [Vercel Dashboard](https://vercel.com/dashboard)
-- Click your team/org name (top left)
-- Go to **Settings** → **General**
-- Find **"Team ID"** or **"Organization ID"**
-- Copy it and add as secret named `VERCEL_ORG_ID`
+### 4. Add VERCEL_PROJECT_ID Secret
 
-#### VERCEL_PROJECT_ID:
-- Go to [Vercel Dashboard](https://vercel.com/dashboard)
-- Open your project
-- Go to **Settings** → **General**
-- Find **"Project ID"**
-- Copy it and add as secret named `VERCEL_PROJECT_ID`
+1. Click **"New repository secret"**
+2. **Name:** `VERCEL_PROJECT_ID`
+3. **Secret:** `prj_UH8WS9uA4rBVwdCDnf541D5lg9sB` (you mentioned this earlier)
+4. Click **"Add secret"**
 
-### 4. Verify
+### 5. Verify
+
 After adding all 3 secrets, you should see:
-- ✅ VERCEL_TOKEN
-- ✅ VERCEL_ORG_ID
-- ✅ VERCEL_PROJECT_ID
 
-### 5. Test
+- ✅ VERCEL_TOKEN = `9nVJvN1RZ6nksx22QAa880hZ`
+- ✅ VERCEL_ORG_ID = `team_9eEABLbyiHLdJRpp2L5GTlZF`
+- ✅ VERCEL_PROJECT_ID = `prj_UH8WS9uA4rBVwdCDnf541D5lg9sB`
+
+### 6. Test
+
 - Push a commit or re-run the workflow
 - Deployment should now work!
 
-## ⚠️ Security Note:
+## ⚠️ Security Note
+
 - **Never** share tokens publicly
 - **Never** commit tokens to git
 - **Always** use GitHub Secrets for sensitive data
-
