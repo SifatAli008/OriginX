@@ -205,15 +205,21 @@ jobs:
           echo "✓ Ready for artifact upload"
 
       - name: Verify .next before upload
+        working-directory: ${{ github.workspace }}
         run: |
           echo "=== VERIFYING .next IMMEDIATELY BEFORE UPLOAD ==="
-          echo "Workspace: ${{ steps.preupload.outputs.workspace }}"
-          echo "Next path: ${{ steps.preupload.outputs.next-path }}"
-          echo "File count: ${{ steps.preupload.outputs.file-count }}"
+          echo "Workspace: ${{ github.workspace }}"
+          echo "Working directory: $(pwd)"
+          echo "Pre-upload file count: ${{ steps.preupload.outputs.file-count }}"
           echo ""
-          echo "Current directory: $(pwd)"
+          echo "Current directory contents:"
+          ls -la
           echo ""
-          echo "Checking .next exists:"
+          echo "Checking .next exists and is readable:"
+          if [ ! -d ".next" ]; then
+            echo "::error::.next directory does not exist!"
+            exit 1
+          fi
           ls -la .next 2>&1 || (echo "ERROR: Cannot list .next!" && exit 1)
           echo ""
           echo "File count check:"
@@ -221,8 +227,20 @@ jobs:
           echo "Found $FILE_COUNT files"
           if [ "$FILE_COUNT" -eq "0" ]; then
             echo "::error::.next directory has no files right before upload!"
+            echo "Directory structure:"
+            ls -laR .next/ | head -20
             exit 1
           fi
+          echo ""
+          echo "Testing file access:"
+          find .next -type f | head -5 | while read f; do
+            if [ -f "$f" ]; then
+              echo "✓ $f exists and is readable"
+            else
+              echo "::error::$f does not exist or is not readable"
+            fi
+          done
+          echo ""
           echo "✓ Verification passed - ready for upload"
 
       - name: Upload build artifacts
@@ -230,9 +248,12 @@ jobs:
         if: success() && steps.build.outputs.next-directory-exists == 'true' && steps.preupload.outputs.file-count != '0'
         with:
           name: build-artifacts
-          path: ${{ github.workspace }}/.next
+          path: |
+            .next/**
+            !.next/cache/**
           retention-days: 7
           if-no-files-found: error
+          continue-on-error: false
 
   deploy:
     name: Deploy to Vercel
