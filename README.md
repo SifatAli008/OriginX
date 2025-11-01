@@ -205,11 +205,26 @@ Error envelope and rate limits follow the earlier API section.
 - Phase 2: NFC binding, AI anomaly models, custom reports, support tickets, ERP integrations, advanced alerts, payment escrow smart-contracts
 
 ## Tech Stack
-- Next.js (App Router) + TypeScript + Tailwind CSS
-- Firebase: Auth, Firestore, Cloud Functions, Storage
-- Cloudinary for image upload/optimization
-- QR via `qrcode`; AES-256 via `crypto-js`
-- Charts via `recharts`
+
+### Frontend
+- **Framework:** Next.js 16.0.1 (App Router) with TypeScript
+- **Styling:** Tailwind CSS 4.0
+- **UI Components:** shadcn/ui, HeroUI
+- **Animations:** Framer Motion 12.23.24
+- **State Management:** Redux Toolkit
+
+### Backend & Services
+- **Authentication:** Firebase Auth (Email/Password, Google OAuth)
+- **Database:** Firestore
+- **Storage:** Firebase Storage, Cloudinary
+- **Functions:** Firebase Cloud Functions
+- **Deployment:** Vercel
+
+### Libraries
+- **QR Generation:** `qrcode`
+- **Encryption:** `crypto-js` (AES-256)
+- **Charts:** `recharts`
+- **Particles:** `@tsparticles/react`
 
 ## Prerequisites
 - Node.js 18+
@@ -218,36 +233,91 @@ Error envelope and rate limits follow the earlier API section.
 - Vercel (recommended) for web deploys
 
 ## Environment Variables
-Create `web/.env.local` and set the same in Vercel for production:
 
+### Local Development
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env.local
 ```
-# Firebase (client)
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
 
-# Cloudinary (client)
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+2. Fill in your Firebase configuration values in `.env.local`:
+```env
+# Firebase (Required)
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789012:web:abcdef1234567890
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.region.firebasedatabase.app
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+
+# Cloudinary (Optional)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
 
 # Server-only (never expose to client)
-QR_AES_SECRET=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
+QR_AES_SECRET=your-aes-secret-key
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
 ```
+
+**Note:** `.env.local` is gitignored and won't be committed to the repository.
+
+### Vercel Production Deployment
+
+For production deployments on Vercel, add all `NEXT_PUBLIC_*` environment variables in the Vercel Dashboard:
+
+1. Go to **Vercel Dashboard** → Your Project → **Settings** → **Environment Variables**
+2. Add each variable one by one:
+   - `NEXT_PUBLIC_FIREBASE_API_KEY`
+   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+   - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+   - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+   - `NEXT_PUBLIC_FIREBASE_APP_ID`
+   - `NEXT_PUBLIC_FIREBASE_DATABASE_URL` (optional)
+   - `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (optional)
+3. Enable for **Production** environment (and Preview/Development if needed)
+4. **Redeploy** after adding variables
+
+⚠️ **Important:** The app will load even if Firebase variables are missing (with warnings), but authentication features won't work until variables are configured.
 
 ## Setup
-```
-# Scaffold (if needed)
-npx create-next-app@latest web --ts --eslint --tailwind --app
 
-cd web
-npm i firebase qrcode crypto-js axios recharts
+### Prerequisites
+- Node.js 18+ installed
+- Firebase project with Auth, Firestore, and Storage enabled
+- (Optional) Cloudinary account for image uploads
 
-# Run
+### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/SifatAli008/OriginX.git
+cd OriginX
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your Firebase config values
+
+# Run development server
 npm run dev
+```
+
+Visit `http://localhost:3000` to see the application.
+
+### Build for Production
+
+```bash
+# Build the application
+npm run build
+
+# Start production server
+npm start
 ```
 
 ## Project Structure (web)
@@ -577,23 +647,69 @@ This project uses GitHub Actions for automated testing, building, and deployment
 
 ### Workflows
 - **CI/CD Pipeline** (`ci.yml`): Runs on every push to `main`/`develop` and PRs
-  - Linting and type checking
-  - Building the application
-  - Automatic deployment to Vercel (on `main` branch)
+  - ✅ Linting and TypeScript type checking
+  - ✅ Building the Next.js application
+  - ✅ Automatic deployment to Vercel (on `main` branch)
 - **PR Checks** (`pr-checks.yml`): Ensures code quality before merging
 - **Vercel Deployment** (`vercel-deploy.yml`): Production deployment workflow
 
-### Setup
-See [`.github/workflows/SETUP.md`](.github/workflows/SETUP.md) for detailed setup instructions.
+### Setup GitHub Actions Secrets
 
-**Quick Setup:**
-1. Add secrets to GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
-2. Push to `main` branch to trigger automatic deployment
+For automatic Vercel deployment via GitHub Actions:
+
+1. Go to your GitHub repository: **Settings** → **Secrets and variables** → **Actions**
+2. Add the following secrets:
+   - `VERCEL_TOKEN` - Get from [Vercel Account Settings](https://vercel.com/account/tokens)
+   - `VERCEL_ORG_ID` - Found in Vercel Dashboard → Team Settings → General
+   - `VERCEL_PROJECT_ID` - Found in Vercel Dashboard → Project Settings → General
+
+3. Push to `main` branch to trigger automatic deployment
+
+### Recent Improvements
+
+- ✅ Fixed TypeScript compilation errors (Framer Motion variants)
+- ✅ Improved Firebase error handling (graceful degradation)
+- ✅ App no longer crashes when Firebase config is missing
+- ✅ Enhanced CI/CD pipeline reliability
 
 ## Deployment
-- **Web**: Automatically deployed to Vercel via GitHub Actions (or manually: `vercel --prod`)
-- **Functions**: `firebase deploy --only functions`
-- **Firestore Rules**: `firebase deploy --only firestore:rules`
+
+### Vercel Deployment (Recommended)
+
+The application is automatically deployed to Vercel via GitHub Actions when you push to the `main` branch.
+
+**Manual Deployment:**
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy
+vercel --prod
+```
+
+**Before deploying, ensure:**
+1. ✅ All Firebase environment variables are set in Vercel Dashboard
+2. ✅ Environment variables are enabled for Production environment
+3. ✅ Build passes locally (`npm run build`)
+
+**Deployment Status:**
+- ✅ TypeScript compilation
+- ✅ Next.js build optimization
+- ✅ Graceful error handling (app won't crash if Firebase isn't configured)
+- ✅ Automatic CI/CD via GitHub Actions
+
+### Firebase Deployment
+
+```bash
+# Deploy Cloud Functions
+firebase deploy --only functions
+
+# Deploy Firestore Rules
+firebase deploy --only firestore:rules
+
+# Deploy everything
+firebase deploy
+```
 
 ## Roadmap
 - Real TensorFlow.js verification
