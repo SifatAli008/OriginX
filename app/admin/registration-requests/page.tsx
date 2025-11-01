@@ -9,7 +9,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import {
   FileText,
   Search,
-  Filter,
   CheckCircle,
   XCircle,
   Clock,
@@ -17,8 +16,6 @@ import {
   Mail,
   Phone,
   Building2,
-  User,
-  Calendar,
   ChevronRight,
   Home,
   RefreshCw,

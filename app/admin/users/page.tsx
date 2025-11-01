@@ -9,7 +9,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import {
   Users,
   Search,
-  Filter,
   UserPlus,
   Edit,
   Trash2,

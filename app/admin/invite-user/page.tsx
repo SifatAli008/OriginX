@@ -4,8 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { inviteUser } from "@/lib/firebase/firestore";
-import { getAllUsers } from "@/lib/firebase/firestore";
-import { getUsersByOrg } from "@/lib/firebase/firestore";
 import { getAllOrganizations } from "@/lib/firebase/company";
 import type { UserRole } from "@/lib/types/user";
 import { Button } from "@/components/ui/button";

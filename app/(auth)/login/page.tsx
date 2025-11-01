@@ -39,66 +39,15 @@ export default function LoginPage() {
     let isMounted = true;
     let authStateUnsubscribe: (() => void) | null = null;
     let redirectHandled = false;
-
-    // FIRST: Check if user is already authenticated and redirect them away from login page
-    const checkExistingAuth = async () => {
-      const auth = getFirebaseAuth();
-      if (!auth) {
-        console.log("⚠️ Firebase auth not initialized");
-        return;
-      }
-
-      // Check if user is already authenticated
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        console.log("✅ User is already logged in:", currentUser.email);
-        console.log("🔄 Checking user document to determine redirect...");
-        
-        try {
-          const userDoc = await getUserDocument(currentUser.uid);
-          
-          if (userDoc && isMounted) {
-            console.log("✅ User doc found:", {
-              status: userDoc.status,
-              orgId: userDoc.orgId,
-              role: userDoc.role,
-              email: userDoc.email
-            });
-            
-            // Redirect based on user status
-            if (userDoc.role === "admin") {
-              console.log("→ Redirecting admin to dashboard");
-              router.push("/dashboard");
-              return;
-            } else if (userDoc.status === "pending" && !userDoc.orgId) {
-              console.log("→ Redirecting to register-company (pending, no org)");
-              router.push("/register-company");
-              return;
-            } else if (userDoc.orgId && userDoc.status === "active" && userDoc.role === "sme") {
-              console.log("→ Redirecting to select-role (approved, needs role selection)");
-              router.push("/select-role");
-              return;
-            } else {
-              console.log("→ Redirecting to dashboard (fully set up)");
-              router.push("/dashboard");
-              return;
-            }
-          } else {
-            console.log("⚠️ User doc not found, will be created by AuthListener");
-            // AuthListener will create it, wait for it
-          }
-        } catch (err) {
-          console.error("❌ Error checking user document:", err);
-        }
-      } else {
-        console.log("ℹ️ User is not authenticated, login page is appropriate");
-      }
-    };
-
-    // DON'T check existing auth first - it prevents redirect processing
-    // We'll check it AFTER handling redirect result
     
-    const handleGoogleAuthSuccess = async (firebaseUser: any) => {
+    interface FirebaseUser {
+      uid: string;
+      email: string | null;
+      displayName: string | null;
+      photoURL: string | null;
+    }
+    
+    const handleGoogleAuthSuccess = async (firebaseUser: FirebaseUser) => {
       // Prevent duplicate handling
       if (redirectHandled) {
         console.log("⚠️ Redirect already handled, skipping");
@@ -151,9 +100,10 @@ export default function LoginPage() {
                 }
               }
             }
-          } catch (invitationError: any) {
+          } catch (invitationError: unknown) {
             // If invitation check fails (permission error or no invitation), continue with normal flow
-            console.log("No invitation found or permission error (this is OK for new users):", invitationError.message);
+            const errorMessage = invitationError instanceof Error ? invitationError.message : String(invitationError);
+            console.log("No invitation found or permission error (this is OK for new users):", errorMessage);
             // Continue to create user document normally
           }
         }
@@ -424,10 +374,11 @@ export default function LoginPage() {
         }
       } catch (err: unknown) {
         console.error("❌ Error handling redirect result:", err);
+        const errorObj = err as { code?: string; message?: string; stack?: string };
         console.error("Error details:", {
-          code: (err as any)?.code,
-          message: (err as any)?.message,
-          stack: (err as any)?.stack
+          code: errorObj?.code,
+          message: errorObj?.message,
+          stack: errorObj?.stack
         });
         if (isMounted) {
           const errorMessage = getFirebaseAuthErrorMessage(err);
@@ -494,7 +445,7 @@ export default function LoginPage() {
         authStateUnsubscribe();
       }
     };
-  }, []);
+  }, [router]);
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -548,14 +499,16 @@ export default function LoginPage() {
           await updateProfile(cred.user, { displayName: "Admin" });
           
           // User is already signed in after createUserWithEmailAndPassword
-        } catch (createErr: any) {
+        } catch (createErr: unknown) {
           // If account already exists, try to sign in with static password
-          if (createErr.code === "auth/email-already-in-use") {
+          const createError = createErr as { code?: string; message?: string };
+          if (createError.code === "auth/email-already-in-use") {
             try {
               await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD);
-            } catch (signInErr: any) {
+            } catch (signInErr: unknown) {
+              const signInError = signInErr as { code?: string; message?: string };
               // Account exists but password doesn't match - try to reset or show error
-              if (signInErr.code === "auth/invalid-credential" || signInErr.code === "auth/wrong-password") {
+              if (signInError.code === "auth/invalid-credential" || signInError.code === "auth/wrong-password") {
                 setError("Admin account password mismatch. The admin account requires password reset. Please contact system administrator.");
               } else {
                 setError(getFirebaseAuthErrorMessage(signInErr));
@@ -565,7 +518,7 @@ export default function LoginPage() {
             }
           } else {
             // Other creation errors
-            setError(createErr.message || "Failed to create admin account. Please contact support.");
+            setError(createError.message || "Failed to create admin account. Please contact support.");
             setLoading(false);
             return;
           }
@@ -581,23 +534,24 @@ export default function LoginPage() {
           }
           
           await signInWithEmailAndPassword(auth, normalizedEmail, password);
-        } catch (err: any) {
+        } catch (err: unknown) {
           // Enhanced error handling
-          if (err.code === "auth/invalid-email") {
+          const error = err as { code?: string; message?: string };
+          if (error.code === "auth/invalid-email") {
             setError("Invalid email address format");
-          } else if (err.code === "auth/user-disabled") {
+          } else if (error.code === "auth/user-disabled") {
             setError("This account has been disabled");
-          } else if (err.code === "auth/user-not-found") {
+          } else if (error.code === "auth/user-not-found") {
             setError("No account found with this email. Please check your email or sign up.");
-          } else if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+          } else if (error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
             setError("Incorrect password. Please try again.");
-          } else if (err.code === "auth/too-many-requests") {
+          } else if (error.code === "auth/too-many-requests") {
             setError("Too many failed attempts. Please try again later.");
-          } else if (err.code === "auth/operation-not-allowed") {
+          } else if (error.code === "auth/operation-not-allowed") {
             setError("Email/Password authentication is not enabled. Please contact support.");
           } else {
             // For 400 errors, provide more specific message
-            const errorMessage = err.message || "Authentication failed";
+            const errorMessage = error.message || "Authentication failed";
             if (errorMessage.includes("INVALID_PASSWORD") || errorMessage.includes("INVALID_EMAIL")) {
               setError("Invalid email or password. Please check your credentials.");
             } else {
@@ -739,18 +693,19 @@ export default function LoginPage() {
         
         // The redirect will navigate away immediately - this code won't run
         // The result will be handled in the useEffect when the page loads after redirect
-      } catch (redirectErr: any) {
+      } catch (redirectErr: unknown) {
         // Enhanced error handling for redirect errors
         console.error("Google sign-in redirect error:", redirectErr);
+        const redirectError = redirectErr as { code?: string; message?: string };
         
-        if (redirectErr.code === "auth/operation-not-allowed") {
+        if (redirectError.code === "auth/operation-not-allowed") {
           setError("Google sign-in is not enabled. Please enable it in Firebase Console → Authentication → Sign-in method → Google.");
-        } else if (redirectErr.code === "auth/popup-blocked") {
+        } else if (redirectError.code === "auth/popup-blocked") {
           setError("Popup was blocked. Please allow popups and try again.");
-        } else if (redirectErr.code === "auth/unauthorized-domain") {
+        } else if (redirectError.code === "auth/unauthorized-domain") {
           const currentDomain = window.location.hostname;
           setError(`Unauthorized domain: ${currentDomain}. Add it in Firebase Console → Authentication → Settings → Authorized domains.`);
-        } else if (redirectErr.code === "auth/redirect-operation-pending") {
+        } else if (redirectError.code === "auth/redirect-operation-pending") {
           setError("A sign-in operation is already in progress. Please wait for it to complete.");
         } else {
           setError(getFirebaseAuthErrorMessage(redirectErr) || "Failed to initiate Google sign-in. Please try again.");
@@ -765,7 +720,7 @@ export default function LoginPage() {
     }
   }
 
-  async function handleMFAVerify(code: string) {
+  async function handleMFAVerify(_code: string) {
     // MFA verified, proceed to dashboard
     router.push("/dashboard");
   }
