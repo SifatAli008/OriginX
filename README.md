@@ -283,6 +283,35 @@ For production deployments on Vercel, add all `NEXT_PUBLIC_*` environment variab
 
 ⚠️ **Important:** The app will load even if Firebase variables are missing (with warnings), but authentication features won't work until variables are configured.
 
+## Troubleshooting
+
+### Firebase Authentication: "auth/unauthorized-domain" Error
+
+If you encounter the `auth/unauthorized-domain` error when trying to sign in with Google, it means your domain is not authorized in Firebase Console.
+
+**Solution:**
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select your project
+3. Navigate to **Authentication** → **Settings** → **Authorized domains**
+4. Click **Add domain**
+5. Add your domain(s):
+   - **For local development:** Add `localhost` (if not already present)
+   - **For production:** Add your production domain (e.g., `yourdomain.com`, `www.yourdomain.com`)
+   - **For Vercel deployments:** Add your Vercel domain (e.g., `yourproject.vercel.app`)
+
+**Common domains to add:**
+- `localhost` (for local development - usually added by default)
+- `127.0.0.1` (if testing locally with IP)
+- **Local IP addresses** (e.g., `192.168.0.100`, `192.168.1.5`) - **Important:** If you access your app via a local network IP address, you MUST add it explicitly. Firebase does not automatically authorize IP addresses.
+- Your custom domain (e.g., `originx.com`, `www.originx.com`)
+- Your Vercel deployment URL (e.g., `originx.vercel.app`)
+
+**Note:** Changes to authorized domains take effect immediately. No need to redeploy your app.
+
+**Troubleshooting IP Address Access:**
+If you're accessing the app via a local IP address (like `http://192.168.0.100:3000`), you need to add `192.168.0.100` (just the IP, without port number) to the authorized domains list. The port number is not needed.
+
 ## Setup
 
 ### Prerequisites

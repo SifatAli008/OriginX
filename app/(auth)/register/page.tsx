@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { getFirebaseAuth, googleProvider } from "@/lib/firebase/client";
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import AuthCard from "../AuthCard";
 import { FcGoogle } from "react-icons/fc";
 import { useAppSelector } from "@/lib/store";
 import { Eye, EyeOff, Loader2, User, Mail, Lock, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, getFirebaseAuthErrorMessage } from "@/lib/utils";
 
 function getPasswordStrength(password: string): { strength: number; label: string; color: string } {
   let strength = 0;
@@ -50,6 +50,54 @@ export default function RegisterPage() {
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
+  // Handle redirect result on page load - check IMMEDIATELY
+  useEffect(() => {
+    let isMounted = true;
+    
+    const handleRedirectResult = async () => {
+      try {
+        const auth = getFirebaseAuth();
+        if (!auth) {
+          console.log("Firebase auth not initialized");
+          return;
+        }
+
+        // Check for redirect result immediately
+        const result = await getRedirectResult(auth);
+        if (result && isMounted) {
+          console.log("Redirect result received:", result.user.email);
+          // User signed in with Google
+          // Wait for AuthListener to update the state, then redirect
+          setTimeout(() => {
+            if (isMounted) {
+              window.location.href = "/dashboard";
+            }
+          }, 1000);
+        } else if (!result && isMounted) {
+          // No redirect result - check if already authenticated
+          const currentUser = auth.currentUser;
+          if (currentUser) {
+            console.log("Already authenticated, user:", currentUser.email);
+            // User is already authenticated, let AuthListener handle it
+          }
+        }
+      } catch (err: unknown) {
+        console.error("Error handling redirect result:", err);
+        if (isMounted) {
+          const errorMessage = getFirebaseAuthErrorMessage(err);
+          setError(errorMessage);
+        }
+      }
+    };
+
+    // Check immediately (no delay) to catch redirect result
+    handleRedirectResult();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -67,8 +115,7 @@ export default function RegisterPage() {
       }
       window.location.href = "/";
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Registration failed";
-      setError(errorMessage);
+      setError(getFirebaseAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -84,12 +131,16 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
-      await signInWithPopup(auth, googleProvider);
-      window.location.href = "/";
+      
+      console.log("Initiating Google sign-in redirect from:", window.location.href);
+      // Use redirect instead of popup to avoid COOP issues
+      await signInWithRedirect(auth, googleProvider);
+      // The redirect will navigate away immediately
+      // The result will be handled in the useEffect when the page loads after redirect
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Google sign-in failed";
+      console.error("Error initiating Google sign-in:", err);
+      const errorMessage = getFirebaseAuthErrorMessage(err);
       setError(errorMessage);
-    } finally {
       setLoading(false);
     }
   }

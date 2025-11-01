@@ -1,11 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { ExtendedAuthUser, UserRole } from "@/lib/types/user";
 
-export type AuthUser = {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-};
+export type AuthUser = ExtendedAuthUser;
 
 type AuthState = {
   user: AuthUser | null;

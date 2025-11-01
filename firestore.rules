@@ -1,0 +1,139 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function userDocExists() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+      
+      // Allow user to create their own document (first-time login)
+      // OR allow admin to create any user document if admin's user doc exists
+      allow create: if isAuthenticated() && (
+        // User creating their own document (most common case for new Google login)
+        (request.auth.uid == userId) ||
+        // Admin creating any document (only if admin's own doc exists)
+        (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+      
+      // Allow user to update their own document OR admin to update any user
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // Organizations collection
+    match /orgs/{orgId} {
+      // Allow authenticated users to read all organizations (for joining existing companies)
+      // Users can only write to their own org or admin can write any
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Products collection
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Batches collection
+    match /batches/{batchId} {
+      allow read: if isAuthenticated() && userDocExists() && resource.data.orgId != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && userDocExists() && resource.data.orgId != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId;
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Movements collection
+    match /movements/{moveId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && userDocExists() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'warehouse' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Verifications collection
+    match /verifications/{verificationId} {
+      allow read: if isAuthenticated();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Transactions collection
+    match /transactions/{txHash} {
+      allow read: if isAuthenticated();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Suppliers collection
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Reports collection
+    match /reports/{reportId} {
+      allow read: if isAuthenticated() && ((userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') || (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'auditor') || (resource.data.reporterId != null && request.auth.uid == resource.data.reporterId));
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Alerts collection
+    match /alerts/{alertId} {
+      allow read: if isAuthenticated() && userDocExists() && resource.data.orgId != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId;
+      allow create: if false;
+      allow update: if isAuthenticated() && userDocExists() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId);
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Company registration requests collection
+    match /companyRegistrationRequests/{requestId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+      allow create: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // User invitations collection
+    match /userInvitations/{invitationId} {
+      // Allow users to read invitations that match their email OR admin to read all
+      // This allows querying for invitations by email
+      allow read: if isAuthenticated() && (
+        resource.data.email == request.auth.token.email ||
+        (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+      allow create: if isAuthenticated() && (
+        // Allow creating invitation with user's own email (for self-registration scenarios)
+        // OR admin can create any invitation
+        resource.data.email == request.auth.token.email ||
+        (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+      // Allow users to update their own invitation (when accepting it) OR admin to update any
+      allow update: if isAuthenticated() && (
+        resource.data.email == request.auth.token.email ||
+        (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // MFA secrets (server-only)
+    match /mfa_secrets/{userId} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}
