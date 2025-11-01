@@ -165,10 +165,12 @@ jobs:
           echo "✓ Verification passed"
 
       - name: Pre-upload final check
+        id: preupload
         run: |
           set -e
           echo "=== PRE-UPLOAD FINAL CHECK ==="
-          echo "Current directory: $(pwd)"
+          WORKSPACE=$(pwd)
+          echo "Workspace directory: $WORKSPACE"
           echo "Current directory contents:"
           ls -la
           echo ""
@@ -187,16 +189,48 @@ jobs:
             exit 1
           fi
           
+          # Get absolute path
+          NEXT_DIR=$(cd .next && pwd)
+          echo "✓ .next directory: $NEXT_DIR"
           echo "✓ .next directory exists with $FILE_COUNT files"
           echo "✓ Directory size: $(du -sh .next | cut -f1)"
+          echo ""
+          echo "Verifying .next is accessible:"
+          ls -la .next/ | head -5
+          echo ""
+          echo "Setting outputs..."
+          echo "workspace=$WORKSPACE" >> $GITHUB_OUTPUT
+          echo "next-path=$NEXT_DIR" >> $GITHUB_OUTPUT
+          echo "file-count=$FILE_COUNT" >> $GITHUB_OUTPUT
           echo "✓ Ready for artifact upload"
+
+      - name: Verify .next before upload
+        run: |
+          echo "=== VERIFYING .next IMMEDIATELY BEFORE UPLOAD ==="
+          echo "Workspace: ${{ steps.preupload.outputs.workspace }}"
+          echo "Next path: ${{ steps.preupload.outputs.next-path }}"
+          echo "File count: ${{ steps.preupload.outputs.file-count }}"
+          echo ""
+          echo "Current directory: $(pwd)"
+          echo ""
+          echo "Checking .next exists:"
+          ls -la .next 2>&1 || (echo "ERROR: Cannot list .next!" && exit 1)
+          echo ""
+          echo "File count check:"
+          FILE_COUNT=$(find .next -type f 2>/dev/null | wc -l)
+          echo "Found $FILE_COUNT files"
+          if [ "$FILE_COUNT" -eq "0" ]; then
+            echo "::error::.next directory has no files right before upload!"
+            exit 1
+          fi
+          echo "✓ Verification passed - ready for upload"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: success() && steps.build.outputs.next-directory-exists == 'true'
+        if: success() && steps.build.outputs.next-directory-exists == 'true' && steps.preupload.outputs.file-count != '0'
         with:
           name: build-artifacts
-          path: .next
+          path: ${{ github.workspace }}/.next
           retention-days: 7
           if-no-files-found: error
 
