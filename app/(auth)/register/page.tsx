@@ -56,6 +56,11 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
+      if (!auth) {
+        setError("Firebase is not configured. Please contact support.");
+        setLoading(false);
+        return;
+      }
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
       if (name.trim()) {
         await updateProfile(cred.user, { displayName: name.trim() });
@@ -74,6 +79,11 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
+      if (!auth) {
+        setError("Firebase is not configured. Please contact support.");
+        setLoading(false);
+        return;
+      }
       await signInWithPopup(auth, googleProvider);
       window.location.href = "/";
     } catch (err: unknown) {

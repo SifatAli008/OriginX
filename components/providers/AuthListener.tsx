@@ -10,6 +10,14 @@ export default function AuthListener() {
   const dispatch = useAppDispatch();
   useEffect(() => {
     const auth = getFirebaseAuth();
+    
+    // If Firebase is not configured, just set user to null and stop loading
+    if (!auth) {
+      dispatch(setUser(null));
+      dispatch(setLoading());
+      return;
+    }
+    
     dispatch(setLoading());
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {

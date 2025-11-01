@@ -31,6 +31,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
+      if (!auth) {
+        setError("Firebase is not configured. Please contact support.");
+        setLoading(false);
+        return;
+      }
       await signInWithEmailAndPassword(auth, email.trim(), password);
       window.location.href = "/";
     } catch (err: unknown) {
@@ -46,6 +51,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
+      if (!auth) {
+        setError("Firebase is not configured. Please contact support.");
+        setLoading(false);
+        return;
+      }
       await signInWithPopup(auth, googleProvider);
       window.location.href = "/";
     } catch (err: unknown) {

@@ -12,8 +12,8 @@ function validateFirebaseConfig() {
   const missing = required.filter(key => !process.env[key]);
 
   if (missing.length > 0 && typeof window !== 'undefined') {
-    console.error('❌ Firebase configuration is missing. Missing variables:', missing);
-    console.error('📝 Please add Firebase environment variables in Vercel Dashboard → Settings → Environment Variables');
+    console.warn('⚠️ Firebase configuration is missing. Missing variables:', missing);
+    console.warn('📝 Please add Firebase environment variables in Vercel Dashboard → Settings → Environment Variables');
   }
 
   return missing.length === 0;
