@@ -261,7 +261,6 @@ jobs:
           path: build-artifacts.tar.gz
           retention-days: 7
           if-no-files-found: error
-          continue-on-error: false
 
   deploy:
     name: Deploy to Vercel
