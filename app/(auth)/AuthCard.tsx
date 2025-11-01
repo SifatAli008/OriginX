@@ -24,7 +24,7 @@ const containerVariants = {
       delayChildren: 0.2,
     },
   },
-};
+} as const;
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -33,10 +33,10 @@ const cardVariants = {
     y: 0,
     transition: {
       duration: 0.5,
-      ease: [0.4, 0, 0.2, 1] as const,
+      ease: "easeOut",
     },
   },
-};
+} as const;
 
 // Get initial reduced motion preference
 function getInitialReducedMotion(): boolean {
