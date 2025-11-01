@@ -55,34 +55,54 @@ jobs:
         run: npm ci
 
       - name: Build Next.js application
+        id: build
         run: |
-          echo "Starting Next.js build..."
+          set -e  # Exit on any error
+          echo "=== BUILD STEP START ==="
           echo "Current directory: $(pwd)"
+          echo ""
           echo "Directory contents before build:"
           ls -la
           echo ""
-          echo "Running npm run build..."
-          if npm run build; then
-            echo "Build command completed successfully"
-            echo "Checking for .next directory..."
-            if [ -d ".next" ]; then
-              echo "✓ .next directory created"
-              ls -la .next | head -10
-            else
-              echo "::error::Build succeeded but .next directory not found!"
-              echo "Current directory contents:"
-              ls -la
-              echo "Searching for .next in subdirectories:"
-              find . -name ".next" -type d 2>/dev/null || echo "No .next directories found"
-              exit 1
-            fi
-          else
-            BUILD_EXIT_CODE=$?
-            echo "::error::Build failed with exit code $BUILD_EXIT_CODE"
-            echo "Checking for partial build output:"
-            ls -la .next 2>/dev/null || echo ".next directory does not exist"
-            exit $BUILD_EXIT_CODE
+          echo "=== RUNNING BUILD COMMAND ==="
+          npm run build 2>&1 | tee build-output.log || BUILD_FAILED=$?
+          
+          if [ -n "$BUILD_FAILED" ]; then
+            echo "::error::Build command failed with exit code $BUILD_FAILED"
+            echo "Build output:"
+            cat build-output.log || true
+            exit $BUILD_FAILED
           fi
+          
+          echo ""
+          echo "=== BUILD COMMAND COMPLETED ==="
+          echo "Checking for .next directory immediately after build..."
+          
+          if [ ! -d ".next" ]; then
+            echo "::error::Build completed but .next directory does NOT exist!"
+            echo ""
+            echo "Current directory contents:"
+            ls -la
+            echo ""
+            echo "Searching for .next in all subdirectories:"
+            find . -name ".next" -type d 2>/dev/null | head -10 || echo "No .next directories found anywhere"
+            echo ""
+            echo "Last 50 lines of build output:"
+            tail -50 build-output.log || echo "No build log available"
+            echo ""
+            echo "::error::BUILD VERIFICATION FAILED - Missing .next directory"
+            echo "next-directory-exists=false" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✓ .next directory exists"
+            echo "Directory size:"
+            du -sh .next
+            echo ""
+            echo "Contents preview:"
+            ls -la .next/ | head -10
+            echo "next-directory-exists=true" >> $GITHUB_OUTPUT
+          fi
+          echo "=== BUILD STEP END ==="
         env:
           # Use placeholder values for build
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'placeholder' }}
@@ -94,47 +114,51 @@ jobs:
 
       - name: Verify build output
         run: |
-          echo "=== Verification Step ==="
+          set -e  # Exit on any error
+          echo "=== VERIFICATION STEP ==="
+          echo "Build step output: next-directory-exists=${{ steps.build.outputs.next-directory-exists }}"
+          
+          if [ "${{ steps.build.outputs.next-directory-exists }}" != "true" ]; then
+            echo "::error::Build step indicated .next directory was not created!"
+            exit 1
+          fi
+          
           echo "Current directory: $(pwd)"
           echo ""
-          echo "Checking for .next directory..."
+          echo "Re-checking for .next directory..."
           if [ ! -d ".next" ]; then
-            echo "::error::Build directory .next not found after build step!"
+            echo "::error::CRITICAL: .next directory disappeared between steps!"
             echo ""
             echo "Current directory contents:"
             ls -la
             echo ""
-            echo "Checking if build process created any output:"
-            find . -name ".next" -type d 2>/dev/null || echo "No .next directories found"
-            echo ""
-            echo "Checking for build errors in npm logs:"
-            tail -n 50 ~/.npm/_logs/*-debug.log 2>/dev/null || echo "No npm debug logs found"
-            echo ""
-            echo "::error::Build verification failed - .next directory missing!"
+            echo "::error::Build verification FAILED - .next directory missing!"
             exit 1
-          else
-            echo "✓ Build output found in .next directory"
-            echo "Build size:"
-            du -sh .next
-            echo ""
-            echo "Contents of .next:"
-            ls -la .next/ | head -20
-            echo ""
-            echo "✓ Verification passed - .next directory exists"
           fi
+          
+          echo "✓ .next directory verified"
+          echo "Build size:"
+          du -sh .next
+          echo ""
+          echo "Key directories in .next:"
+          ls -la .next/ | grep -E "^d" | head -10
+          echo ""
+          echo "✓ Verification passed"
 
-      - name: Pre-upload verification
+      - name: Pre-upload final check
         run: |
-          echo "=== Pre-Upload Check ==="
+          set -e
+          echo "=== PRE-UPLOAD FINAL CHECK ==="
           if [ ! -d ".next" ]; then
-            echo "::error::.next directory does not exist - aborting upload"
+            echo "::error::FATAL: .next directory does not exist before upload!"
             exit 1
           fi
-          echo "✓ .next directory confirmed - ready for upload"
+          echo "✓ .next directory exists: $(du -sh .next | cut -f1)"
+          echo "✓ Ready for artifact upload"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: success()
+        if: steps.build.outputs.next-directory-exists == 'true'
         with:
           name: build-artifacts
           path: .next
