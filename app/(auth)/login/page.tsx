@@ -718,6 +718,7 @@ export default function LoginPage() {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function handleMFAVerify(_code: string) {
     // MFA verified (code validated in MFAVerification component), proceed to dashboard
     router.push("/dashboard");

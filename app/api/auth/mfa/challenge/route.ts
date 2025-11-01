@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { verifyIdToken } from "@/lib/auth/verify-token";
 import { generateTOTPSecret, generateTOTPQRCode, generateOTPCode } from "@/lib/auth/mfa/utils";
-import { getUserDocument, updateMFAConfig } from "@/lib/firebase/firestore";
+import { getUserDocument } from "@/lib/firebase/firestore";
 
 /**
  * POST /api/auth/mfa/challenge

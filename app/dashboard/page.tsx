@@ -78,7 +78,6 @@ import DashboardChart from "@/components/charts/DashboardChart";
 import {
   Users,
   FileText,
-  UserPlus,
   Package,
   BarChart3,
   Boxes,
@@ -875,7 +874,7 @@ function WarehouseDashboard({ permissions }: { permissions: ReturnType<typeof ge
       <section>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-1">Daily Operations</h2>
-          <p className="text-gray-400 text-sm">Today's warehouse activity</p>
+          <p className="text-gray-400 text-sm">Today&apos;s warehouse activity</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
@@ -1043,9 +1042,23 @@ function LoadingSkeleton() {
 interface DataTableProps {
   title: string;
   columns: string[];
-  data: any[];
+  data: Record<string, unknown>[];
   loading?: boolean;
 }
+
+// Helper function to convert unknown to string for display
+const formatCellValue = (value: unknown): React.ReactNode => {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+  return "-";
+};
 
 function DataTable({ title, columns, data, loading = false }: DataTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -1118,7 +1131,7 @@ function DataTable({ title, columns, data, loading = false }: DataTableProps) {
                     >
                       {columns.map((column) => (
                         <td key={column} className="px-4 py-3 text-sm text-gray-300">
-                          {row[column.toLowerCase()] || "-"}
+                          {formatCellValue(row[column.toLowerCase()])}
                         </td>
                       ))}
                     </tr>
@@ -1285,9 +1298,18 @@ function StatCard({
   );
 }
 
+// Notification interface
+interface Notification {
+  id: string;
+  type: "info" | "warning" | "success";
+  icon: React.ReactNode;
+  message: string;
+  time: string;
+}
+
 // Notification Panel Component  
 function NotificationPanel() {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

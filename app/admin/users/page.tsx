@@ -13,13 +13,9 @@ import {
   Edit,
   Trash2,
   Shield,
-  Mail,
-  Building2,
-  Calendar,
   ChevronRight,
   Home,
   RefreshCw,
-  MoreVertical,
   Lock,
   Unlock,
   CheckCircle,
@@ -50,8 +46,6 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {

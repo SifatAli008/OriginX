@@ -134,7 +134,7 @@ export default function InviteUserPage() {
               Invite User
             </h1>
             <p className="text-muted-foreground mt-1">
-              Invite a user by email. They'll be able to sign in with Google and access their dashboard.
+              Invite a user by email. They&apos;ll be able to sign in with Google and access their dashboard.
             </p>
           </div>
           <Button variant="outline" onClick={() => router.push("/dashboard")}>
@@ -146,7 +146,7 @@ export default function InviteUserPage() {
           <CardHeader>
             <CardTitle>Invite New User</CardTitle>
             <CardDescription>
-              Enter the user's email and select their role. They'll receive access after signing in with Google.
+              Enter the user&apos;s email and select their role. They&apos;ll receive access after signing in with Google.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -276,9 +276,9 @@ export default function InviteUserPage() {
             <div className="mt-6 p-4 bg-muted rounded-lg">
               <h3 className="font-semibold mb-2">How it works:</h3>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Enter the user's Gmail address</li>
+                <li>Enter the user&apos;s Gmail address</li>
                 <li>Select their role (SME/Supplier, Warehouse, or Auditor)</li>
-                <li>Click "Send Invitation"</li>
+                <li>Click &quot;Send Invitation&quot;</li>
                 <li>The user signs in with Google using that email</li>
                 <li>They automatically get access to their role-specific dashboard</li>
               </ol>
