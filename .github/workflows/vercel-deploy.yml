@@ -12,9 +12,11 @@ jobs:
     name: Deploy to Vercel Production
     runs-on: ubuntu-latest
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # These secrets must be added in GitHub repository settings
+      # Settings → Secrets and variables → Actions
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }} # yamllint disable-line rule:context-access
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }} # yamllint disable-line rule:context-access
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }} # yamllint disable-line rule:context-access
     
     steps:
       - name: Checkout code
