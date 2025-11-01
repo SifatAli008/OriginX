@@ -243,14 +243,22 @@ jobs:
           echo ""
           echo "✓ Verification passed - ready for upload"
 
+      - name: Create build archive
+        if: success() && steps.build.outputs.next-directory-exists == 'true' && steps.preupload.outputs.file-count != '0'
+        run: |
+          echo "Creating archive of .next directory..."
+          tar -czf build-artifacts.tar.gz .next
+          echo "Archive created:"
+          ls -lh build-artifacts.tar.gz
+          FILE_SIZE=$(du -h build-artifacts.tar.gz | cut -f1)
+          echo "archive-size=$FILE_SIZE" >> $GITHUB_OUTPUT
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: success() && steps.build.outputs.next-directory-exists == 'true' && steps.preupload.outputs.file-count != '0'
+        if: success() && steps.build.outputs.next-directory-exists == 'true'
         with:
           name: build-artifacts
-          path: |
-            .next/**
-            !.next/cache/**
+          path: build-artifacts.tar.gz
           retention-days: 7
           if-no-files-found: error
           continue-on-error: false
