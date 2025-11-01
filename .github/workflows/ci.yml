@@ -55,7 +55,11 @@ jobs:
         run: npm ci
 
       - name: Build Next.js application
-        run: npm run build
+        run: |
+          echo "Starting Next.js build..."
+          npm run build || (echo "::error::Build failed with exit code $?" && exit 1)
+          echo "Build command completed. Checking for .next directory..."
+          ls -la .next 2>/dev/null || echo "::warning::.next directory not found immediately after build"
         env:
           # Use placeholder values for build
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'placeholder' }}
@@ -67,15 +71,24 @@ jobs:
 
       - name: Verify build output
         run: |
+          echo "Checking for build output..."
           if [ ! -d ".next" ]; then
             echo "::error::Build directory .next not found after build step!"
-            echo "Build may have failed. Checking for error logs..."
+            echo "Build may have failed. Checking current directory contents:"
             ls -la
+            echo ""
+            echo "Checking if build process created any output:"
+            find . -name ".next" -type d 2>/dev/null || echo "No .next directories found"
+            echo ""
+            echo "Checking for build errors in npm logs:"
+            tail -n 50 ~/.npm/_logs/*-debug.log 2>/dev/null || echo "No npm debug logs found"
             exit 1
           else
             echo "✓ Build output found in .next directory"
             echo "Build size:"
             du -sh .next
+            echo "Contents of .next:"
+            ls -la .next/ | head -20
           fi
 
       - name: Upload build artifacts
@@ -85,7 +98,7 @@ jobs:
           name: build-artifacts
           path: .next
           retention-days: 7
-          if-no-files-found: warn
+          if-no-files-found: error
 
   deploy:
     name: Deploy to Vercel
