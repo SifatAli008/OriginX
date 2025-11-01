@@ -61,8 +61,9 @@ export default function RegisterPage() {
         await updateProfile(cred.user, { displayName: name.trim() });
       }
       window.location.href = "/";
-    } catch (err: any) {
-      setError(err?.message || "Registration failed");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Registration failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -75,8 +76,9 @@ export default function RegisterPage() {
       const auth = getFirebaseAuth();
       await signInWithPopup(auth, googleProvider);
       window.location.href = "/";
-    } catch (err: any) {
-      setError(err?.message || "Google sign-in failed");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Google sign-in failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

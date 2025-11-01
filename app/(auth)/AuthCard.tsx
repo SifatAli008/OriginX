@@ -324,7 +324,7 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
                 <CardDescription className="text-sm mt-1.5">{subtitle}</CardDescription>
               </motion.div>
             )}
-          </CardHeader>
+        </CardHeader>
           <CardContent className="pb-8">
             <motion.div
               initial={{ opacity: 0 }}
@@ -334,7 +334,7 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
               {children}
             </motion.div>
           </CardContent>
-        </Card>
+      </Card>
       </motion.div>
     </motion.div>
   );

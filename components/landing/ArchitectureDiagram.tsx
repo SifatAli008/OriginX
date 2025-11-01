@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardBody, Chip } from "@heroui/react";
+import { Card, CardBody } from "@heroui/react";
 import { motion } from "framer-motion";
 import { Database, Cloud, Cpu, Lock, Smartphone, Server } from "lucide-react";
 

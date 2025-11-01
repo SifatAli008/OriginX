@@ -33,8 +33,9 @@ export default function LoginPage() {
       const auth = getFirebaseAuth();
       await signInWithEmailAndPassword(auth, email.trim(), password);
       window.location.href = "/";
-    } catch (err: any) {
-      setError(err?.message || "Unable to sign in");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unable to sign in";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -47,8 +48,9 @@ export default function LoginPage() {
       const auth = getFirebaseAuth();
       await signInWithPopup(auth, googleProvider);
       window.location.href = "/";
-    } catch (err: any) {
-      setError(err?.message || "Google sign-in failed");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Google sign-in failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

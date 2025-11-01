@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo } from "react";
 import Particles from "@tsparticles/react";
-import type { ISourceOptions } from "tsparticles-engine";
 import { loadSlim } from "@tsparticles/slim";
 
 type HeroParticlesProps = {
@@ -10,8 +9,9 @@ type HeroParticlesProps = {
 };
 
 export default function HeroParticles({ density = 40 }: HeroParticlesProps) {
-  const init = useCallback(async (engine: any) => {
-    await loadSlim(engine);
+  const init = useCallback(async (engine: unknown) => {
+    // Type mismatch between tsparticles-engine and @tsparticles/engine
+    await loadSlim(engine as Parameters<typeof loadSlim>[0]);
   }, []);
 
   // Reduce motion/density for users who prefer it
@@ -167,7 +167,7 @@ export default function HeroParticles({ density = 40 }: HeroParticlesProps) {
   }), [particleDensity, prefersReduced, isMobile]);
 
   return (
-    // @ts-ignore - Type mismatch between tsparticles-engine and @tsparticles/engine
+    // @ts-expect-error - Type mismatch between tsparticles-engine and @tsparticles/engine
     <Particles id="hero-particles" init={init} options={options} className="absolute inset-0 pointer-events-none" />
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -38,14 +38,6 @@ const fadeInUp = {
   }
 };
 
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: { 
-    opacity: 1,
-    transition: { duration: 0.6 }
-  }
-};
-
 const staggerContainer = {
   hidden: { opacity: 0 },
   visible: {
@@ -54,15 +46,6 @@ const staggerContainer = {
       staggerChildren: 0.1,
       delayChildren: 0.1
     }
-  }
-};
-
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.8 },
-  visible: { 
-    opacity: 1, 
-    scale: 1,
-    transition: { duration: 0.5 }
   }
 };
 
@@ -377,7 +360,7 @@ export default function LandingPage() {
                 { text: "No credit card required", delay: 0 },
                 { text: "Free for 100 products", delay: 0.1 },
                 { text: "Setup in minutes", delay: 0.2 }
-              ].map((item, idx) => (
+              ].map((item) => (
                 <motion.div
                   key={item.text}
                   initial={{ opacity: 0, y: 10 }}
@@ -960,7 +943,7 @@ export default function LandingPage() {
               Ready to protect your products?
             </h3>
             <p className="text-muted-foreground text-lg sm:text-xl mt-6 max-w-2xl mx-auto leading-relaxed font-light">
-              Join Bangladesh's leading manufacturers in the fight against counterfeits. Start with 100 free products—no credit card required.
+              Join Bangladesh&apos;s leading manufacturers in the fight against counterfeits. Start with 100 free products—no credit card required.
             </p>
             
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
