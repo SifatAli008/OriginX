@@ -1,25 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ComponentType } from "react";
 
-// Import recharts components - client-side only
-let ResponsiveContainer: any, AreaChart: any, LineChart: any, Area: any, Line: any;
-let XAxis: any, YAxis: any, CartesianGrid: any, Tooltip: any, Legend: any;
+// Type definitions for recharts component props
+type RechartsProps = Record<string, unknown>;
 
-if (typeof window !== 'undefined') {
-  const recharts = require('recharts');
-  ResponsiveContainer = recharts.ResponsiveContainer;
-  AreaChart = recharts.AreaChart;
-  LineChart = recharts.LineChart;
-  Area = recharts.Area;
-  Line = recharts.Line;
-  XAxis = recharts.XAxis;
-  YAxis = recharts.YAxis;
-  CartesianGrid = recharts.CartesianGrid;
-  Tooltip = recharts.Tooltip;
-  Legend = recharts.Legend;
+// Type definitions for recharts components
+interface RechartsComponents {
+  ResponsiveContainer: ComponentType<RechartsProps>;
+  AreaChart: ComponentType<RechartsProps>;
+  LineChart: ComponentType<RechartsProps>;
+  Area: ComponentType<RechartsProps>;
+  Line: ComponentType<RechartsProps>;
+  XAxis: ComponentType<RechartsProps>;
+  YAxis: ComponentType<RechartsProps>;
+  CartesianGrid: ComponentType<RechartsProps>;
+  Tooltip: ComponentType<RechartsProps>;
+  Legend: ComponentType<RechartsProps>;
 }
+
+// State for loaded recharts components
+let rechartsComponents: RechartsComponents | null = null;
 
 interface ChartDataPoint {
   date: string;
@@ -52,14 +55,35 @@ export default function DashboardChart({
   dataKeys,
 }: DashboardChartProps) {
   const [mounted, setMounted] = useState(false);
+  const [componentsLoaded, setComponentsLoaded] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !rechartsComponents) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const recharts = require('recharts');
+      rechartsComponents = {
+        ResponsiveContainer: recharts.ResponsiveContainer,
+        AreaChart: recharts.AreaChart,
+        LineChart: recharts.LineChart,
+        Area: recharts.Area,
+        Line: recharts.Line,
+        XAxis: recharts.XAxis,
+        YAxis: recharts.YAxis,
+        CartesianGrid: recharts.CartesianGrid,
+        Tooltip: recharts.Tooltip,
+        Legend: recharts.Legend,
+      };
+      setComponentsLoaded(true);
+    }
     setMounted(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const ChartComponent = type === "area" ? AreaChart : LineChart;
+  const ChartComponent = type === "area" 
+    ? (rechartsComponents?.AreaChart ?? null)
+    : (rechartsComponents?.LineChart ?? null);
 
-  if (!mounted || typeof window === 'undefined') {
+  if (!mounted || typeof window === 'undefined' || !componentsLoaded || !ChartComponent || !rechartsComponents?.ResponsiveContainer) {
     return (
       <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm">
         <CardHeader>
@@ -82,66 +106,83 @@ export default function DashboardChart({
         {description && <CardDescription className="text-gray-400">{description}</CardDescription>}
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={height}>
-          <ChartComponent data={data}>
-            {type === "area" && (
-              <defs>
-                {dataKeys
-                  .filter(({ isArea }) => isArea === true || isArea === undefined)
-                  .map(({ key, color }) => (
-                    <linearGradient key={key} id={`color${key}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={color} stopOpacity={0} />
-                    </linearGradient>
-                  ))}
-              </defs>
-            )}
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: "12px" }} />
-            <YAxis stroke="#9ca3af" style={{ fontSize: "12px" }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1f2937",
-                border: "1px solid #374151",
-                borderRadius: "8px",
-                color: "#fff",
-              }}
-            />
-            <Legend wrapperStyle={{ color: "#9ca3af" }} />
-            {dataKeys.map(({ key, color, name, isArea }) => {
-              // If type is "area" and isArea is true or undefined, use Area. If isArea is false, use Line.
-              // If type is "line", always use Line.
-              const useArea = type === "area" && (isArea === true || isArea === undefined);
-              
-              if (useArea) {
-                return (
-                  <Area
-                    key={key}
-                    type="monotone"
-                    dataKey={key}
-                    stroke={color}
-                    fillOpacity={1}
-                    fill={`url(#color${key})`}
-                    strokeWidth={2}
-                    name={name}
+        {rechartsComponents?.ResponsiveContainer && (
+          <rechartsComponents.ResponsiveContainer width="100%" height={height}>
+            {ChartComponent && (
+              <ChartComponent data={data}>
+                {type === "area" && (
+                  <defs>
+                    {dataKeys
+                      .filter(({ isArea }) => isArea === true || isArea === undefined)
+                      .map(({ key, color }) => (
+                        <linearGradient key={key} id={`color${key}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={color} stopOpacity={0} />
+                        </linearGradient>
+                      ))}
+                  </defs>
+                )}
+                {rechartsComponents.CartesianGrid && (
+                  <rechartsComponents.CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                )}
+                {rechartsComponents.XAxis && (
+                  <rechartsComponents.XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: "12px" }} />
+                )}
+                {rechartsComponents.YAxis && (
+                  <rechartsComponents.YAxis stroke="#9ca3af" style={{ fontSize: "12px" }} />
+                )}
+                {rechartsComponents.Tooltip && (
+                  <rechartsComponents.Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1f2937",
+                      border: "1px solid #374151",
+                      borderRadius: "8px",
+                      color: "#fff",
+                    }}
                   />
-                );
-              }
-              return (
-                <Line
-                  key={key}
-                  type="monotone"
-                  dataKey={key}
-                  stroke={color}
-                  strokeWidth={2}
-                  dot={{ fill: color, r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name={name}
-                />
-              );
-            })}
-          </ChartComponent>
-        </ResponsiveContainer>
+                )}
+                {rechartsComponents.Legend && (
+                  <rechartsComponents.Legend wrapperStyle={{ color: "#9ca3af" }} />
+                )}
+                {dataKeys.map(({ key, color, name, isArea }) => {
+                  // If type is "area" and isArea is true or undefined, use Area. If isArea is false, use Line.
+                  // If type is "line", always use Line.
+                  const useArea = type === "area" && (isArea === true || isArea === undefined);
+                  
+                  if (useArea && rechartsComponents?.Area) {
+                    return (
+                      <rechartsComponents.Area
+                        key={key}
+                        type="monotone"
+                        dataKey={key}
+                        stroke={color}
+                        fillOpacity={1}
+                        fill={`url(#color${key})`}
+                        strokeWidth={2}
+                        name={name}
+                      />
+                    );
+                  }
+                  if (rechartsComponents?.Line) {
+                    return (
+                      <rechartsComponents.Line
+                        key={key}
+                        type="monotone"
+                        dataKey={key}
+                        stroke={color}
+                        strokeWidth={2}
+                        dot={{ fill: color, r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name={name}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+              </ChartComponent>
+            )}
+          </rechartsComponents.ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

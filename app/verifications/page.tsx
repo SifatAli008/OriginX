@@ -305,7 +305,7 @@ export default function VerificationsPage() {
             <select
               value={sortBy}
               onChange={(e) => {
-                setSortBy(e.target.value as any);
+                setSortBy(e.target.value as "date" | "status" | "type");
                 setCurrentPage(1);
               }}
               className="px-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"

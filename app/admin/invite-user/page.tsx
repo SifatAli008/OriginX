@@ -108,8 +108,9 @@ export default function InviteUserPage() {
       setTimeout(() => {
         setSuccess(false);
       }, 3000);
-    } catch (err: any) {
-      setError(err.message || "Failed to invite user. Please try again.");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setError(error.message || "Failed to invite user. Please try again.");
     } finally {
       setLoading(false);
     }

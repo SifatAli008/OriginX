@@ -31,7 +31,6 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [showMFA, setShowMFA] = useState(false);
   const [mfaMethod, setMfaMethod] = useState<MFAMethod | null>(null);
-  const [pendingAuth, setPendingAuth] = useState(false);
   const authState = useAppSelector((s: RootState) => s.auth);
 
   // Handle redirect result and auth state changes
@@ -151,12 +150,13 @@ export default function LoginPage() {
                 userDoc = await getUserDocument(authUser.uid);
                 console.log("Non-admin user document created successfully:", userDoc ? "Document exists" : "Document still missing");
               }
-            } catch (createError: any) {
+            } catch (createError: unknown) {
               console.error("Error creating user document:", createError);
-              console.error("Error code:", createError.code);
-              console.error("Error message:", createError.message);
+              const error = createError as { code?: string; message?: string };
+              console.error("Error code:", error.code);
+              console.error("Error message:", error.message);
               if (isMounted) {
-                setError(`Failed to create user account: ${getFirebaseAuthErrorMessage(createError)}`);
+                setError(`Failed to create user account: ${getFirebaseAuthErrorMessage(error)}`);
                 setLoading(false);
               }
               return;
@@ -184,7 +184,6 @@ export default function LoginPage() {
             // Show MFA verification
             setMfaMethod(userDoc.mfaConfig.method);
             setShowMFA(true);
-            setPendingAuth(true);
             setLoading(false);
             return;
           }
@@ -616,7 +615,6 @@ export default function LoginPage() {
           // Show MFA verification
           setMfaMethod(userDoc.mfaConfig.method);
           setShowMFA(true);
-          setPendingAuth(true);
           setLoading(false);
           return;
         }
@@ -721,7 +719,7 @@ export default function LoginPage() {
   }
 
   async function handleMFAVerify(_code: string) {
-    // MFA verified, proceed to dashboard
+    // MFA verified (code validated in MFAVerification component), proceed to dashboard
     router.push("/dashboard");
   }
 
@@ -735,7 +733,6 @@ export default function LoginPage() {
           onCancel={() => {
             setShowMFA(false);
             setMfaMethod(null);
-            setPendingAuth(false);
             // Sign out the user
             const auth = getFirebaseAuth();
             auth?.signOut();
@@ -776,7 +773,7 @@ export default function LoginPage() {
             )}
           />
           <p className="text-xs text-muted-foreground">
-            Admin: Use "admin" as email and "admin" as password (static credentials)
+            Admin: Use &quot;admin&quot; as email and &quot;admin&quot; as password (static credentials)
           </p>
         </motion.div>
 
