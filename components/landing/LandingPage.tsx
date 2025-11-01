@@ -49,16 +49,20 @@ const staggerContainer = {
   }
 };
 
+// Get initial reduced motion preference
+function getInitialReducedMotion(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 export default function LandingPage() {
   const [pointer, setPointer] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(getInitialReducedMotion);
 
-  // Check for reduced motion preference
+  // Subscribe to reduced motion preference changes
   useEffect(() => {
     if (typeof window !== "undefined" && window.matchMedia) {
       const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-      setReduced(mediaQuery.matches);
-      
       const handleChange = (e: MediaQueryListEvent) => setReduced(e.matches);
       mediaQuery.addEventListener("change", handleChange);
       return () => mediaQuery.removeEventListener("change", handleChange);

@@ -38,17 +38,21 @@ const cardVariants = {
   },
 };
 
+// Get initial reduced motion preference
+function getInitialReducedMotion(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [pointer, setPointer] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(getInitialReducedMotion);
 
   useEffect(() => {
-    // Check for reduced motion preference
+    // Subscribe to reduced motion preference changes
     if (typeof window !== "undefined" && window.matchMedia) {
       const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-      setReduced(mediaQuery.matches);
-      
       const handleChange = (e: MediaQueryListEvent) => setReduced(e.matches);
       mediaQuery.addEventListener("change", handleChange);
       return () => mediaQuery.removeEventListener("change", handleChange);

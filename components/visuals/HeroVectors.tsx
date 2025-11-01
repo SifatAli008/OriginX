@@ -9,11 +9,17 @@ interface HeroVectorsProps {
 }
 
 export default function HeroVectors({ pointer, reduced = false }: HeroVectorsProps) {
-  const [windowSize, setWindowSize] = useState({ width: 1920, height: 1080 });
+  const [windowSize, setWindowSize] = useState(() => {
+    if (typeof window !== "undefined") {
+      return { width: window.innerWidth, height: window.innerHeight };
+    }
+    return { width: 1920, height: 1080 };
+  });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    // Set mounted state in next tick to avoid setState in effect
+    const timer = setTimeout(() => setMounted(true), 0);
     const updateSize = () => {
       setWindowSize({
         width: window.innerWidth,
@@ -23,7 +29,10 @@ export default function HeroVectors({ pointer, reduced = false }: HeroVectorsPro
     
     updateSize();
     window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateSize);
+    };
   }, []);
 
   if (!mounted) return null;
