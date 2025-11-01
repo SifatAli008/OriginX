@@ -32,6 +32,7 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Check Vercel Secrets
+        id: check-secrets
         run: |
           MISSING_SECRETS=()
           
@@ -46,14 +47,16 @@ jobs:
           fi
           
           if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
-            echo "::error::Missing required Vercel secrets: ${MISSING_SECRETS[*]}"
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            echo "::warning::Missing Vercel secrets: ${MISSING_SECRETS[*]}"
             echo ""
-            echo "## ❌ Deployment Failed - Missing Secrets"
+            echo "## ⚠️  Deployment Skipped - Secrets Not Configured"
             echo ""
-            echo "To fix this, add the following secrets to your GitHub repository:"
+            echo "To enable automatic deployment, add the following secrets to your GitHub repository:"
             echo ""
-            echo "1. Go to: Repository Settings → Secrets and variables → Actions"
-            echo "2. Add the following secrets:"
+            echo "### Quick Setup:"
+            echo "1. Go to: **Settings** → **Secrets and variables** → **Actions**"
+            echo "2. Click **New repository secret** and add each:"
             echo ""
             for secret in "${MISSING_SECRETS[@]}"; do
               echo "   - **$secret**"
@@ -61,33 +64,42 @@ jobs:
             echo ""
             echo "### How to get these values:"
             echo ""
-            echo "- **VERCEL_TOKEN**: Get from https://vercel.com/account/tokens"
-            echo "- **VERCEL_ORG_ID**: Found in Vercel Dashboard → Settings → General (Team ID)"
-            echo "- **VERCEL_PROJECT_ID**: Found in Vercel Dashboard → Your Project → Settings → General"
+            echo "- **VERCEL_TOKEN**: Create at https://vercel.com/account/tokens"
+            echo "- **VERCEL_ORG_ID**: Vercel Dashboard → Team Settings → General → Team ID"
+            echo "- **VERCEL_PROJECT_ID**: Vercel Dashboard → Project → Settings → General → Project ID"
             echo ""
-            echo "See \`.github/workflows/SETUP.md\` for detailed instructions."
-            exit 1
+            echo "📖 See \`.github/workflows/QUICK_SETUP.md\` for detailed step-by-step instructions."
+            echo ""
+            echo "💡 **Note:** Deployment will be skipped until secrets are configured."
+          else
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+            echo "✓ All Vercel secrets are configured"
           fi
-          
-          echo "✓ All Vercel secrets are configured"
 
       - name: Pull Vercel Environment Information
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
         continue-on-error: true
 
       - name: Build Project Artifacts
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: vercel build --prod --token="$VERCEL_TOKEN"
         continue-on-error: true
 
       - name: Deploy Project Artifacts to Vercel
+        if: steps.check-secrets.outputs.has_secrets == 'true'
         run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
         continue-on-error: true
 
       - name: Deployment Status
-        if: success()
+        if: success() && steps.check-secrets.outputs.has_secrets == 'true'
         run: echo "✅ Successfully deployed to Vercel Production"
-
-      - name: Deployment Failure
-        if: failure()
-        run: echo "❌ Deployment to Vercel failed"
+      
+      - name: Skipped Deployment Notice
+        if: steps.check-secrets.outputs.has_secrets == 'false'
+        run: |
+          echo "ℹ️  Deployment was skipped because Vercel secrets are not configured."
+          echo ""
+          echo "This is expected if you haven't set up Vercel deployment yet."
+          echo "To enable automatic deployment, add the required secrets in GitHub repository settings."
 
