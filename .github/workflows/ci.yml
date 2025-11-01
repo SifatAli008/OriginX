@@ -78,6 +78,7 @@ jobs:
           echo "=== BUILD COMMAND COMPLETED ==="
           echo "Checking for .next directory immediately after build..."
           
+          # Check if .next directory exists AND has content
           if [ ! -d ".next" ]; then
             echo "::error::Build completed but .next directory does NOT exist!"
             echo ""
@@ -93,15 +94,33 @@ jobs:
             echo "::error::BUILD VERIFICATION FAILED - Missing .next directory"
             echo "next-directory-exists=false" >> $GITHUB_OUTPUT
             exit 1
-          else
-            echo "✓ .next directory exists"
-            echo "Directory size:"
-            du -sh .next
-            echo ""
-            echo "Contents preview:"
-            ls -la .next/ | head -10
-            echo "next-directory-exists=true" >> $GITHUB_OUTPUT
           fi
+          
+          # Verify .next has actual files (not just empty directory)
+          FILE_COUNT=$(find .next -type f 2>/dev/null | wc -l)
+          if [ "$FILE_COUNT" -eq "0" ]; then
+            echo "::error::.next directory exists but contains NO files!"
+            echo "Directory structure:"
+            ls -laR .next/ | head -30
+            echo ""
+            echo "Last 50 lines of build output:"
+            tail -50 build-output.log || echo "No build log available"
+            echo ""
+            echo "::error::BUILD VERIFICATION FAILED - Empty .next directory"
+            echo "next-directory-exists=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "✓ .next directory exists with $FILE_COUNT files"
+          echo "Directory size:"
+          du -sh .next
+          echo ""
+          echo "Key subdirectories:"
+          ls -la .next/ | head -10
+          echo ""
+          echo "Sample files (first 10):"
+          find .next -type f | head -10
+          echo "next-directory-exists=true" >> $GITHUB_OUTPUT
           echo "=== BUILD STEP END ==="
         env:
           # Use placeholder values for build
@@ -149,16 +168,32 @@ jobs:
         run: |
           set -e
           echo "=== PRE-UPLOAD FINAL CHECK ==="
+          echo "Current directory: $(pwd)"
+          echo "Current directory contents:"
+          ls -la
+          echo ""
+          
           if [ ! -d ".next" ]; then
             echo "::error::FATAL: .next directory does not exist before upload!"
             exit 1
           fi
-          echo "✓ .next directory exists: $(du -sh .next | cut -f1)"
+          
+          # Verify files actually exist
+          FILE_COUNT=$(find .next -type f 2>/dev/null | wc -l)
+          if [ "$FILE_COUNT" -eq "0" ]; then
+            echo "::error::FATAL: .next directory exists but is EMPTY!"
+            echo "Directory contents:"
+            ls -laR .next/ | head -50
+            exit 1
+          fi
+          
+          echo "✓ .next directory exists with $FILE_COUNT files"
+          echo "✓ Directory size: $(du -sh .next | cut -f1)"
           echo "✓ Ready for artifact upload"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: steps.build.outputs.next-directory-exists == 'true'
+        if: success() && steps.build.outputs.next-directory-exists == 'true'
         with:
           name: build-artifacts
           path: .next
