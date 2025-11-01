@@ -46,6 +46,10 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {
