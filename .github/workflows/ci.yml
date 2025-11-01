@@ -57,9 +57,32 @@ jobs:
       - name: Build Next.js application
         run: |
           echo "Starting Next.js build..."
-          npm run build || (echo "::error::Build failed with exit code $?" && exit 1)
-          echo "Build command completed. Checking for .next directory..."
-          ls -la .next 2>/dev/null || echo "::warning::.next directory not found immediately after build"
+          echo "Current directory: $(pwd)"
+          echo "Directory contents before build:"
+          ls -la
+          echo ""
+          echo "Running npm run build..."
+          if npm run build; then
+            echo "Build command completed successfully"
+            echo "Checking for .next directory..."
+            if [ -d ".next" ]; then
+              echo "✓ .next directory created"
+              ls -la .next | head -10
+            else
+              echo "::error::Build succeeded but .next directory not found!"
+              echo "Current directory contents:"
+              ls -la
+              echo "Searching for .next in subdirectories:"
+              find . -name ".next" -type d 2>/dev/null || echo "No .next directories found"
+              exit 1
+            fi
+          else
+            BUILD_EXIT_CODE=$?
+            echo "::error::Build failed with exit code $BUILD_EXIT_CODE"
+            echo "Checking for partial build output:"
+            ls -la .next 2>/dev/null || echo ".next directory does not exist"
+            exit $BUILD_EXIT_CODE
+          fi
         env:
           # Use placeholder values for build
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'placeholder' }}
