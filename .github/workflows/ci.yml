@@ -94,10 +94,14 @@ jobs:
 
       - name: Verify build output
         run: |
-          echo "Checking for build output..."
+          echo "=== Verification Step ==="
+          echo "Current directory: $(pwd)"
+          echo ""
+          echo "Checking for .next directory..."
           if [ ! -d ".next" ]; then
             echo "::error::Build directory .next not found after build step!"
-            echo "Build may have failed. Checking current directory contents:"
+            echo ""
+            echo "Current directory contents:"
             ls -la
             echo ""
             echo "Checking if build process created any output:"
@@ -105,14 +109,28 @@ jobs:
             echo ""
             echo "Checking for build errors in npm logs:"
             tail -n 50 ~/.npm/_logs/*-debug.log 2>/dev/null || echo "No npm debug logs found"
+            echo ""
+            echo "::error::Build verification failed - .next directory missing!"
             exit 1
           else
             echo "✓ Build output found in .next directory"
             echo "Build size:"
             du -sh .next
+            echo ""
             echo "Contents of .next:"
             ls -la .next/ | head -20
+            echo ""
+            echo "✓ Verification passed - .next directory exists"
           fi
+
+      - name: Pre-upload verification
+        run: |
+          echo "=== Pre-Upload Check ==="
+          if [ ! -d ".next" ]; then
+            echo "::error::.next directory does not exist - aborting upload"
+            exit 1
+          fi
+          echo "✓ .next directory confirmed - ready for upload"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
