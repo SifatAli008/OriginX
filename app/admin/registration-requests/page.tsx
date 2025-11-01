@@ -235,7 +235,12 @@ export default function RegistrationRequestsPage() {
           <div className="flex gap-2">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "all" | "pending" | "approved" | "rejected")}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "all" || value === "pending" || value === "approved" || value === "rejected") {
+                  setStatusFilter(value);
+                }
+              }}
               className="px-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"
             >
               <option value="all">All Status</option>
