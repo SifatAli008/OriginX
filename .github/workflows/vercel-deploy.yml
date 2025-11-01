@@ -31,18 +31,42 @@ jobs:
 
       - name: Check Vercel Secrets
         run: |
+          MISSING_SECRETS=()
+          
           if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::error::VERCEL_TOKEN secret is not set"
-            exit 1
+            MISSING_SECRETS+=("VERCEL_TOKEN")
           fi
           if [ -z "$VERCEL_ORG_ID" ]; then
-            echo "::error::VERCEL_ORG_ID secret is not set"
-            exit 1
+            MISSING_SECRETS+=("VERCEL_ORG_ID")
           fi
           if [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "::error::VERCEL_PROJECT_ID secret is not set"
+            MISSING_SECRETS+=("VERCEL_PROJECT_ID")
+          fi
+          
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "::error::Missing required Vercel secrets: ${MISSING_SECRETS[*]}"
+            echo ""
+            echo "## ❌ Deployment Failed - Missing Secrets"
+            echo ""
+            echo "To fix this, add the following secrets to your GitHub repository:"
+            echo ""
+            echo "1. Go to: Repository Settings → Secrets and variables → Actions"
+            echo "2. Add the following secrets:"
+            echo ""
+            for secret in "${MISSING_SECRETS[@]}"; do
+              echo "   - **$secret**"
+            done
+            echo ""
+            echo "### How to get these values:"
+            echo ""
+            echo "- **VERCEL_TOKEN**: Get from https://vercel.com/account/tokens"
+            echo "- **VERCEL_ORG_ID**: Found in Vercel Dashboard → Settings → General (Team ID)"
+            echo "- **VERCEL_PROJECT_ID**: Found in Vercel Dashboard → Your Project → Settings → General"
+            echo ""
+            echo "See \`.github/workflows/SETUP.md\` for detailed instructions."
             exit 1
           fi
+          
           echo "✓ All Vercel secrets are configured"
 
       - name: Pull Vercel Environment Information
