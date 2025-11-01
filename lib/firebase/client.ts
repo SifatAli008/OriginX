@@ -10,6 +10,18 @@ let authInstance: Auth | undefined;
 
 export function getFirebaseApp(): FirebaseApp {
   if (!appInstance) {
+    // Validate Firebase config before initializing
+    const hasRequiredConfig = firebaseConfig.apiKey && 
+                              firebaseConfig.authDomain && 
+                              firebaseConfig.projectId;
+    
+    if (!hasRequiredConfig && typeof window !== 'undefined') {
+      throw new Error(
+        'Firebase is not configured. Please add Firebase environment variables in Vercel Dashboard. ' +
+        'See: Settings → Environment Variables'
+      );
+    }
+    
     appInstance = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
   }
   return appInstance;
