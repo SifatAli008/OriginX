@@ -99,8 +99,9 @@ export default function SelectRolePage() {
         return;
       }
       // User already has a specific role that's not the default sme/supplier
-      // If they have warehouse, auditor, or admin role, they've already selected and should go to dashboard
-      if (user.role === "warehouse" || user.role === "auditor" || user.role === "admin") {
+      // If they have warehouse or auditor role, they've already selected and should go to dashboard
+      // (Admin case is already handled above)
+      if (user.role === "warehouse" || user.role === "auditor") {
         router.push("/dashboard");
         return;
       }
