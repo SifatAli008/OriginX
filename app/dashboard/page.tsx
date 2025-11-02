@@ -65,7 +65,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { getRolePermissions } from "@/lib/types/user";
@@ -88,14 +88,12 @@ import {
   Settings,
   LogOut,
   Building2,
-  ShoppingCart,
   Truck,
   ClipboardCheck,
   Shield,
   FileCheck,
   Search,
   Bell,
-  AlertCircle,
   CheckCircle,
   Clock,
   Database,
@@ -104,15 +102,12 @@ import {
   DollarSign,
   Eye,
   Download,
-  Upload,
-  Globe,
   Home,
   Menu,
   X,
   ChevronRight,
   RefreshCw,
   Filter,
-  Calendar,
   FileDown,
 } from "lucide-react";
 
@@ -143,7 +138,7 @@ export default function DashboardPage() {
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
 
   // Export dashboard data
-  const handleExportData = () => {
+  const handleExportData = useCallback(() => {
     // TODO: Implement actual export logic
     const data = {
       stats: dashboardData.stats,
@@ -160,7 +155,7 @@ export default function DashboardPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  };
+  }, [dashboardData.stats, user?.email]);
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -219,7 +214,7 @@ export default function DashboardPage() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
+  }, [handleExportData]);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {
@@ -484,7 +479,7 @@ export default function DashboardPage() {
   );
 }
 
-function AdminDashboard({ permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+function AdminDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
   return (
     <div className="space-y-8">
       {/* Top Row - Key Metrics */}
@@ -692,7 +687,7 @@ function AdminDashboard({ permissions }: { permissions: ReturnType<typeof getRol
   );
 }
 
-function SMEDashboard({ permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
   return (
     <div className="space-y-8">
       {/* Key Business Metrics */}
@@ -867,7 +862,7 @@ function SMEDashboard({ permissions }: { permissions: ReturnType<typeof getRoleP
   );
 }
 
-function WarehouseDashboard({ permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+function WarehouseDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
   return (
     <div className="space-y-8">
       {/* Daily Operations */}
@@ -956,7 +951,7 @@ function WarehouseDashboard({ permissions }: { permissions: ReturnType<typeof ge
   );
 }
 
-function AuditorDashboard({ permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+function AuditorDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
   return (
     <div className="space-y-8">
       {/* Statistics Section */}
@@ -1356,7 +1351,7 @@ function NotificationPanel() {
           <div className="text-center py-8">
             <Bell className="h-12 w-12 text-gray-600 mx-auto mb-3" />
             <p className="text-gray-400 text-sm">No notifications</p>
-            <p className="text-gray-500 text-xs mt-1">You're all caught up!</p>
+            <p className="text-gray-500 text-xs mt-1">You&apos;re all caught up!</p>
           </div>
         ) : (
           <>
@@ -1390,9 +1385,18 @@ function NotificationPanel() {
   );
 }
 
+// System interface
+interface System {
+  name: string;
+  status: "operational" | "healthy" | "warning" | "error";
+  uptime: number;
+  lastCheck: Date;
+  icon: React.ReactNode;
+}
+
 // System Health Panel Component
 function SystemHealthPanel() {
-  const [systems, setSystems] = useState<any[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1467,9 +1471,17 @@ function SystemHealthPanel() {
   );
 }
 
+// Quick Stat interface
+interface QuickStat {
+  label: string;
+  value: string | number;
+  trend?: "up" | "down";
+  icon: React.ReactNode;
+}
+
 // Quick Stats Panel Component
 function QuickStatsPanel() {
-  const [stats, setStats] = useState<any[]>([]);
+  const [stats, setStats] = useState<QuickStat[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1521,9 +1533,22 @@ function QuickStatsPanel() {
   );
 }
 
+// Activity interface
+interface Activity {
+  id: string;
+  type: string;
+  description: string;
+  timestamp: Date;
+  user?: string;
+  action: string;
+  time: string;
+  color: "blue" | "green" | "purple" | "orange";
+  icon: React.ReactNode;
+}
+
 // Recent Activity Component
 function RecentActivity() {
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -1627,7 +1652,12 @@ function Sidebar({
       { label: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
     ];
 
-    const roleSpecificItems: Record<UserRole, any[]> = {
+    interface NavItem {
+      label: string;
+      icon: React.ReactNode;
+      href: string;
+    }
+    const roleSpecificItems: Record<UserRole, NavItem[]> = {
       admin: [
         { label: "Registration Requests", icon: <FileText className="h-5 w-5" />, href: "/admin/registration-requests" },
         { label: "User Management", icon: <Users className="h-5 w-5" />, href: "/admin/users" },

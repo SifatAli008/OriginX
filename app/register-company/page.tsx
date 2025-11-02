@@ -66,7 +66,7 @@ export default function RegisterCompanyPage() {
         try {
           const orgs = await getAllOrganizations();
           setOrganizations(orgs);
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("Failed to load organizations:", err);
           setError("Failed to load existing companies. Please try again.");
         } finally {
@@ -167,8 +167,9 @@ export default function RegisterCompanyPage() {
           router.push("/dashboard");
         }, 2000);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to process request. Please try again.");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setError(error.message || "Failed to process request. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -305,7 +306,7 @@ export default function RegisterCompanyPage() {
                 </Select>
               )}
               <p className="text-xs text-muted-foreground">
-                You'll gain immediate access to the selected company and can choose your role next.
+                You&apos;ll gain immediate access to the selected company and can choose your role next.
               </p>
             </div>
           ) : (
@@ -427,7 +428,7 @@ export default function RegisterCompanyPage() {
 
           {mode === "new" && (
             <p className="text-sm text-muted-foreground text-center">
-              After submitting, you'll be notified once an admin approves your request.
+              After submitting, you&apos;ll be notified once an admin approves your request.
             </p>
           )}
         </form>
