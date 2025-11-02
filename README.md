@@ -266,6 +266,8 @@ CLOUDINARY_API_SECRET=your-cloudinary-api-secret
 
 ### Vercel Production Deployment
 
+**📖 For detailed step-by-step instructions, see [VERCEL_FIREBASE_SETUP.md](./VERCEL_FIREBASE_SETUP.md)**
+
 For production deployments on Vercel, add all `NEXT_PUBLIC_*` environment variables in the Vercel Dashboard:
 
 1. Go to **Vercel Dashboard** → Your Project → **Settings** → **Environment Variables**
@@ -282,6 +284,8 @@ For production deployments on Vercel, add all `NEXT_PUBLIC_*` environment variab
 4. **Redeploy** after adding variables
 
 ⚠️ **Important:** The app will load even if Firebase variables are missing (with warnings), but authentication features won't work until variables are configured.
+
+**🔧 Troubleshooting:** If you see "Firebase is not configured" errors, check [VERCEL_FIREBASE_SETUP.md](./VERCEL_FIREBASE_SETUP.md) for detailed troubleshooting steps.
 
 ## Troubleshooting
 
