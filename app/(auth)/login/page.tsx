@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { getFirebaseAuth, googleProvider } from "@/lib/firebase/client";
-import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithRedirect, signInWithPopup, getRedirectResult, onAuthStateChanged } from "firebase/auth";
 import AuthCard from "../AuthCard";
 import { FcGoogle } from "react-icons/fc";
 import { useAppSelector, RootState } from "@/lib/store";
@@ -20,6 +20,7 @@ import { getUserDocument, createOrUpdateUserDocument } from "@/lib/firebase/fire
 import { linkUserToInvitation } from "@/lib/firebase/firestore";
 import MFAVerification from "@/components/mfa/MFAVerification";
 import type { MFAMethod } from "@/lib/types/user";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,6 +32,8 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [showMFA, setShowMFA] = useState(false);
   const [mfaMethod, setMfaMethod] = useState<MFAMethod | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
+  const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
   const authState = useAppSelector((s: RootState) => s.auth);
 
   // Handle redirect result and auth state changes
@@ -57,24 +60,57 @@ export default function LoginPage() {
         return;
       }
       
+      // Set flag immediately to prevent duplicate processing
       redirectHandled = true;
+      // Remove sessionStorage flag since we're processing
+      sessionStorage.removeItem('google_auth_redirect');
       console.log("🔄 Handling Google auth success for:", firebaseUser.email);
+      console.log("📝 Firebase user details:", {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL
+      });
       
       try {
         setLoading(true);
-        const user = firebaseUser;
+        console.log("🔄 Step 1: Starting Google auth success handling...");
+        
+        // Get the current user from Firebase Auth directly to ensure we have all info
+        const auth = getFirebaseAuth();
+        if (!auth || !isMounted) {
+          console.log("⚠️ Auth not available or component unmounted, returning");
+          return;
+        }
+        
+        // Use auth.currentUser directly - it has the most up-to-date information
+        const authUser = auth.currentUser;
+        if (!authUser) {
+          console.log("⚠️ auth.currentUser is null, cannot proceed");
+          setError("User authentication failed. Please try again.");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("🔄 Step 2: Got auth.currentUser:", {
+          uid: authUser.uid,
+          email: authUser.email,
+          displayName: authUser.displayName,
+          photoURL: authUser.photoURL,
+          providerData: authUser.providerData.map(p => p.providerId)
+        });
         
         // Check if user was invited (has pending document)
         // Wrap in try-catch in case of permission errors (user might not be invited)
-        if (user.email) {
+        if (authUser.email) {
           try {
-            const linkedUser = await linkUserToInvitation(user.uid, user.email);
+            const linkedUser = await linkUserToInvitation(authUser.uid, authUser.email);
             if (linkedUser) {
               // User was invited, use their existing role and org
-              await createOrUpdateUserDocument(user.uid, {
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
+              await createOrUpdateUserDocument(authUser.uid, {
+                email: authUser.email || "",
+                displayName: authUser.displayName,
+                photoURL: authUser.photoURL,
                 role: linkedUser.role,
                 orgId: linkedUser.orgId,
                 orgName: linkedUser.orgName,
@@ -82,20 +118,25 @@ export default function LoginPage() {
                 mfaEnabled: false,
               });
               // User was successfully linked, skip the rest and redirect
-              const auth = getFirebaseAuth();
-              if (auth?.currentUser && isMounted) {
-                const userDoc = await getUserDocument(auth.currentUser.uid);
-                if (userDoc) {
+              const userDoc = await getUserDocument(authUser.uid);
+              if (userDoc && isMounted) {
+                setRedirecting(true);
+                setLoading(false);
                   if (userDoc.role === "admin") {
+                  setTimeout(() => {
                     router.push("/dashboard");
+                  }, 500);
                     return;
                   } else if (userDoc.status === "pending" && !userDoc.orgId) {
+                  setTimeout(() => {
                     router.push("/register-company");
+                  }, 500);
                     return;
                   } else {
+                  setTimeout(() => {
                     router.push("/dashboard");
+                  }, 500);
                     return;
-                  }
                 }
               }
             }
@@ -107,54 +148,67 @@ export default function LoginPage() {
           }
         }
 
-        const auth = getFirebaseAuth();
-        if (!auth || !isMounted) return;
-
+        console.log("🔄 Step 3: Waiting for Firestore operations...");
         // Wait a moment for Firestore operations to complete
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Check if user has MFA enabled
-        const authUser = auth.currentUser;
-        if (authUser && isMounted) {
-          let userDoc = await getUserDocument(authUser.uid);
+        // Re-check authUser in case it changed
+        const currentAuthUser = auth.currentUser;
+        if (!currentAuthUser || !isMounted) {
+          console.log("⚠️ auth.currentUser is null after wait, cannot proceed");
+          setError("User authentication failed. Please try again.");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("🔄 Step 4: Fetching user document...");
+        let userDoc = await getUserDocument(currentAuthUser.uid);
           
           // Check if this is admin user (Google login)
-          const isAdminUser = authUser.email === "admin@originx.com";
+        const isAdminUser = currentAuthUser.email === "admin@originx.com";
+        console.log("🔄 Step 5: User document status:", {
+          exists: !!userDoc,
+          isAdminUser,
+          email: currentAuthUser.email,
+          actualEmail: currentAuthUser.email,
+          providerData: currentAuthUser.providerData.map(p => ({ providerId: p.providerId, email: p.email }))
+        });
           
           // If user doc doesn't exist, create it
           if (!userDoc) {
             try {
               if (isAdminUser) {
-                console.log("Creating admin user document...");
-                await createOrUpdateUserDocument(authUser.uid, {
-                  email: authUser.email || "",
-                  displayName: "Admin",
+              console.log("🔄 Step 6: Creating admin user document...");
+              await createOrUpdateUserDocument(currentAuthUser.uid, {
+                email: currentAuthUser.email || "",
+                displayName: currentAuthUser.displayName || "Admin",
+                photoURL: currentAuthUser.photoURL,
                   role: "admin",
                   status: "active",
                   mfaEnabled: false,
                 });
-                userDoc = await getUserDocument(authUser.uid);
-                console.log("Admin user document created successfully");
+              userDoc = await getUserDocument(currentAuthUser.uid);
+              console.log("✅ Admin user document created successfully");
               } else {
-                console.log("Creating non-admin user document for:", authUser.email);
-                await createOrUpdateUserDocument(authUser.uid, {
-                  email: authUser.email || "",
-                  displayName: authUser.displayName,
-                  photoURL: authUser.photoURL,
+              console.log("🔄 Step 6: Creating non-admin user document for:", currentAuthUser.email);
+              await createOrUpdateUserDocument(currentAuthUser.uid, {
+                email: currentAuthUser.email || "",
+                displayName: currentAuthUser.displayName,
+                photoURL: currentAuthUser.photoURL,
                   role: "sme",
                   status: "pending", // Will be activated after company registration
                   mfaEnabled: false,
                 });
                 // Wait a moment for Firestore write to complete
                 await new Promise(resolve => setTimeout(resolve, 300));
-                userDoc = await getUserDocument(authUser.uid);
-                console.log("Non-admin user document created successfully:", userDoc ? "Document exists" : "Document still missing");
+              userDoc = await getUserDocument(currentAuthUser.uid);
+              console.log("✅ Non-admin user document created:", userDoc ? "Document exists" : "Document still missing");
               }
             } catch (createError: unknown) {
-              console.error("Error creating user document:", createError);
+            console.error("❌ Error creating user document:", createError);
               const error = createError as { code?: string; message?: string };
-              console.error("Error code:", error.code);
-              console.error("Error message:", error.message);
+            console.error("❌ Error code:", error.code);
+            console.error("❌ Error message:", error.message);
               if (isMounted) {
                 setError(`Failed to create user account: ${getFirebaseAuthErrorMessage(error)}`);
                 setLoading(false);
@@ -163,19 +217,62 @@ export default function LoginPage() {
             }
           } else if (isAdminUser) {
             // If user doc exists but admin user, force update to admin role and active status
-            await createOrUpdateUserDocument(authUser.uid, {
+          console.log("🔄 Step 6: Updating existing admin user document...");
+          await createOrUpdateUserDocument(currentAuthUser.uid, {
               role: "admin",
               status: "active",
-              displayName: "Admin",
+            displayName: currentAuthUser.displayName || "Admin",
+            email: currentAuthUser.email || "",
+            photoURL: currentAuthUser.photoURL,
             });
-            userDoc = await getUserDocument(authUser.uid);
-          }
+          userDoc = await getUserDocument(currentAuthUser.uid);
+          console.log("✅ Admin user document updated");
+        }
 
-          if (!isMounted) return;
+        console.log("🔄 Step 7: Checking redirect logic...");
+        console.log("📋 User doc status:", {
+          exists: !!userDoc,
+          role: userDoc?.role,
+          status: userDoc?.status,
+          orgId: userDoc?.orgId,
+          isAdminUser,
+          email: currentAuthUser.email,
+          providerIds: currentAuthUser.providerData.map(p => p.providerId)
+        });
 
           // CRITICAL: Admin users skip all checks and go directly to dashboard
+        // IMPORTANT: Do redirect IMMEDIATELY, before any unmount checks
+        // router.push will work even if component unmounts during navigation
           if (isAdminUser || userDoc?.role === "admin") {
             // Admin bypasses MFA and company registration - go straight to dashboard
+          console.log("✅ Admin user detected, redirecting to dashboard...");
+          console.log("🚀 Executing router.push('/dashboard') NOW (no delay)...");
+          
+          // Set state first (but don't wait for it)
+          try {
+            setRedirecting(true);
+            setLoading(false);
+          } catch (e) {
+            // Ignore errors if component unmounted - redirect will still work
+          }
+          
+          // Redirect immediately - don't use setTimeout, just redirect now
+          router.push("/dashboard");
+          
+          // Use window.location as backup if router.push doesn't work
+          setTimeout(() => {
+            if (typeof window !== 'undefined' && window.location.pathname !== "/dashboard") {
+              console.log("🚀 Router.push didn't redirect, using window.location as backup...");
+              window.location.href = "/dashboard";
+            }
+          }, 1000);
+          
+          return;
+        }
+        
+        // For non-admin users, check if component is still mounted before showing UI
+        if (!isMounted) {
+          console.log("⚠️ Component unmounted for non-admin user, redirecting to dashboard as fallback");
             router.push("/dashboard");
             return;
           }
@@ -190,33 +287,40 @@ export default function LoginPage() {
 
           // Redirect based on user status (non-admin users only)
           // Re-fetch user doc to ensure we have the latest data
-          userDoc = await getUserDocument(authUser.uid);
+          userDoc = await getUserDocument(currentAuthUser.uid);
           
-          console.log("User doc after Google login:", {
+          console.log("🔄 Step 8: User doc after Google login:", {
             status: userDoc?.status,
             orgId: userDoc?.orgId,
             role: userDoc?.role,
             email: userDoc?.email
           });
 
+          setRedirecting(true);
+          setLoading(false);
+
           if (userDoc?.status === "pending" && !userDoc?.orgId) {
             // User needs to register company
             console.log("✅ Redirecting to register-company");
-            // Use router.push for client-side navigation (faster than window.location)
+            setTimeout(() => {
             router.push("/register-company");
+            }, 500);
             return;
           } else if (userDoc?.orgId && userDoc.status === "active" && userDoc.role === "sme") {
             // User has been approved but still has default "sme" role
             // They need to select their specific role
             console.log("✅ Redirecting to select-role");
+            setTimeout(() => {
             router.push("/select-role");
+            }, 500);
             return;
           } else {
             // User is fully set up, go to dashboard
             console.log("✅ Redirecting to dashboard");
+            setTimeout(() => {
             router.push("/dashboard");
+            }, 500);
             return;
-          }
         }
       } catch (err: unknown) {
         console.error("❌ Error handling Google auth success:", err);
@@ -236,13 +340,63 @@ export default function LoginPage() {
           return;
         }
 
+        // IMPORTANT: Check hash immediately - Next.js router might clear it during navigation
+        // Capture hash before any other operations
+        const hashOnPageLoad = window.location.hash;
+        const urlOnPageLoad = window.location.href;
+
         // Check URL parameters to see if we're actually returning from Google
         const urlParams = new URLSearchParams(window.location.search);
         const hash = window.location.hash;
+        console.log("🔍 URL on page load:", urlOnPageLoad.substring(0, 500));
+        console.log("🔍 Hash on page load:", hashOnPageLoad.substring(0, 200), "length:", hashOnPageLoad.length);
         console.log("🔍 URL params:", Object.fromEntries(urlParams.entries()));
-        console.log("🔍 URL hash:", hash.substring(0, 100)); // First 100 chars to see if there's auth data
+        console.log("🔍 URL hash length (current):", hash.length);
+        console.log("🔍 URL hash (first 200 chars):", hash.substring(0, 200));
+        console.log("🔍 Full URL (first 500 chars):", window.location.href.substring(0, 500));
+        
+        // Check if hash was present but got cleared
+        if (hashOnPageLoad.length > 0 && hash.length === 0) {
+          console.warn("⚠️ WARNING: Hash was present on page load but is now empty! Next.js might have cleared it.");
+          console.warn("⚠️ Original hash:", hashOnPageLoad.substring(0, 500));
+        }
+        
+        // Check if hash contains Firebase auth tokens
+        const hasAuthToken = hash.includes('access_token') || hash.includes('id_token') || hash.includes('auth');
+        console.log("🔍 Hash contains auth tokens:", hasAuthToken);
         
         // Check if URL indicates we're returning from Google OAuth
+        const wasRedirecting = sessionStorage.getItem('google_auth_redirect') === 'true';
+        
+        // CRITICAL: If URL hash is empty but we have redirect flag, this means Firebase didn't redirect back properly
+        // This usually happens when the domain/IP isn't authorized in Firebase Console
+        if (!hasAuthToken && wasRedirecting && hash.length === 0 && !urlParams.has('error')) {
+          const currentHostname = window.location.hostname;
+          const isIpAddress = /^\d+\.\d+\.\d+\.\d+$/.test(currentHostname);
+          
+          if (isIpAddress) {
+            console.error("❌ Empty redirect - IP address likely not authorized in Firebase");
+            console.error("❌ Current hostname:", currentHostname);
+            if (isMounted) {
+              setError(
+                `Unauthorized IP address: ${currentHostname}\n\n` +
+                `Firebase requires IP addresses to be explicitly authorized.\n\n` +
+                `SOLUTION:\n` +
+                `1. Go to Firebase Console → Authentication → Settings → Authorized domains\n` +
+                `2. Click "Add domain"\n` +
+                `3. Enter: ${currentHostname} (without port number)\n` +
+                `4. Save and wait 2-3 minutes for changes to propagate\n` +
+                `5. Clear browser cache (Ctrl+Shift+R) and try again\n\n` +
+                `QUICK TEST: Try using localhost:3000 instead - it should work immediately`
+              );
+              setLoading(false);
+              sessionStorage.removeItem('google_auth_redirect');
+              sessionStorage.removeItem('google_auth_redirect_url');
+            }
+            return;
+          }
+        }
+        
         const hasOAuthParams = urlParams.has('mode') || 
                               urlParams.has('apiKey') || 
                               hash.includes('access_token') ||
@@ -250,12 +404,20 @@ export default function LoginPage() {
                               sessionStorage.getItem('google_auth_redirect') === 'true';
         
         console.log("🔍 Has OAuth params:", hasOAuthParams);
-        console.log("🔍 Checking for redirect result...");
+        console.log("🔍 SessionStorage redirect flag:", wasRedirecting);
         
         // IMPORTANT: getRedirectResult must be called to process the redirect
         // It can only be called once per redirect, so we need to call it IMMEDIATELY
         // before any other component might consume it
+        // Call it even if we don't see OAuth params, as they might be in hash or already processed
+        console.log("🔍 Checking for redirect result (calling getRedirectResult)...");
         let result = await getRedirectResult(auth);
+        
+        // If no redirect result and no indicators, skip further processing
+        if (!result && !hasOAuthParams && !wasRedirecting) {
+          console.log("ℹ️ No redirect result and no OAuth indicators, skipping redirect handling");
+          return;
+        }
         
         if (result) {
           console.log("✅ Redirect result received:", result.user.email);
@@ -265,51 +427,69 @@ export default function LoginPage() {
             user: result.user.email
           });
           if (isMounted) {
+            // redirectHandled and sessionStorage cleanup will be handled in handleGoogleAuthSuccess
             setLoading(true);
             await handleGoogleAuthSuccess(result.user);
             return;
           }
         } else {
           console.log("⚠️ No redirect result found on first check");
-          if (hasOAuthParams) {
-            console.log("⚠️ WARNING: URL suggests OAuth redirect, but getRedirectResult returned null");
+          if (hasOAuthParams || wasRedirecting) {
+            console.log("⚠️ WARNING: OAuth indicators present, but getRedirectResult returned null");
             console.log("⚠️ This might mean the redirect result was already consumed or Firebase hasn't processed it yet");
+            console.log("⚠️ Will check auth.currentUser as fallback...");
+            
+            // Check if user is authenticated even though getRedirectResult returned null
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+              const isGoogleProvider = currentUser.providerData.some(p => p.providerId === 'google.com');
+              if ((isGoogleProvider || wasRedirecting) && !redirectHandled && isMounted) {
+                console.log("✅ Found authenticated user despite null redirect result:", currentUser.email);
+                // redirectHandled and sessionStorage cleanup will be handled in handleGoogleAuthSuccess
+                setLoading(true);
+                await handleGoogleAuthSuccess(currentUser);
+                return;
+              }
+            }
           }
         }
-
-        // Wait a moment for Firebase to process the redirect (after checking result)
-        console.log("⏳ Waiting 300ms for Firebase to process redirect...");
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // Check again for redirect result (in case it wasn't ready the first time)
-        console.log("🔍 Checking for redirect result again...");
-        result = await getRedirectResult(auth);
         
-        if (result) {
-          console.log("✅ Redirect result received (second check):", result.user.email);
-          if (isMounted) {
+        // If we have redirect flag or OAuth params but no result, wait and check auth state
+        // Note: getRedirectResult can only be called once, so if it returned null,
+        // we need to rely on auth.currentUser instead
+        if (wasRedirecting || hasOAuthParams) {
+          // Wait a moment for Firebase to process the redirect
+          console.log("⏳ Waiting 500ms for Firebase to process redirect...");
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Check auth.currentUser directly (getRedirectResult can only be called once)
+          const currentUser = auth.currentUser;
+          if (currentUser && !redirectHandled) {
+            const isGoogleProvider = currentUser.providerData.some(p => p.providerId === 'google.com');
+            if (isGoogleProvider || wasRedirecting) {
+              console.log("✅ Found authenticated user after wait:", currentUser.email);
+              // redirectHandled and sessionStorage cleanup will be handled in handleGoogleAuthSuccess
             setLoading(true);
-            await handleGoogleAuthSuccess(result.user);
+              await handleGoogleAuthSuccess(currentUser);
             return;
           }
-        } else {
-          console.log("⚠️ No redirect result found on second check either");
         }
 
-        // Wait longer and check one more time
+          // If still no user, wait longer and check again
         console.log("⏳ Waiting 1000ms more for Firebase...");
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        result = await getRedirectResult(auth);
-        if (result) {
-          console.log("✅ Redirect result received (third check):", result.user.email);
-          if (isMounted) {
+          const delayedUser = auth.currentUser;
+          if (delayedUser && !redirectHandled) {
+            const isGoogleProvider = delayedUser.providerData.some(p => p.providerId === 'google.com');
+            if (isGoogleProvider || wasRedirecting) {
+              console.log("✅ Found authenticated user after longer wait:", delayedUser.email);
+              // redirectHandled and sessionStorage cleanup will be handled in handleGoogleAuthSuccess
             setLoading(true);
-            await handleGoogleAuthSuccess(result.user);
+              await handleGoogleAuthSuccess(delayedUser);
             return;
           }
-        } else {
-          console.log("⚠️ No redirect result found on third check");
+          }
         }
 
         // Check if user is already authenticated (might be set by AuthListener)
@@ -320,8 +500,11 @@ export default function LoginPage() {
           
           // Check if this is from Google login
           const isGoogleProvider = currentUser.providerData.some(p => p.providerId === 'google.com');
-          if (isGoogleProvider && !redirectHandled && isMounted) {
+          const wasRedirectingCheck = sessionStorage.getItem('google_auth_redirect') === 'true';
+          if ((isGoogleProvider || wasRedirectingCheck) && !redirectHandled && isMounted) {
             console.log("✅ Detected Google provider, processing auth success");
+            // redirectHandled and sessionStorage cleanup will be handled in handleGoogleAuthSuccess
+            setLoading(true);
             await handleGoogleAuthSuccess(currentUser);
             return;
           }
@@ -336,40 +519,83 @@ export default function LoginPage() {
           console.log("ℹ️ Setting up auth state listener to catch Google authentication");
           let initialCheck = true; // Track if this is the initial (null) state
           
+          let listenerSetupTime = Date.now();
+          let hasSeenUser = false;
+          
           authStateUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            console.log("🔔 Auth state changed event fired, user:", firebaseUser?.email || "null", "initialCheck:", initialCheck);
+            const timeSinceSetup = Date.now() - listenerSetupTime;
+            console.log("🔔 Auth state changed event fired, user:", firebaseUser?.email || "null", "initialCheck:", initialCheck, "timeSinceSetup:", timeSinceSetup + "ms", "hasSeenUser:", hasSeenUser);
             
             // Skip the initial null state - we only want to handle actual auth changes
             if (initialCheck) {
               initialCheck = false;
               // If user is already authenticated on first check, handle it
               if (firebaseUser) {
-                console.log("User authenticated on initial listener check");
+                hasSeenUser = true;
+                console.log("✅ User authenticated on initial listener check:", firebaseUser.email);
                 const isGoogleProvider = firebaseUser.providerData.some(p => p.providerId === 'google.com');
-                if (isGoogleProvider && !redirectHandled && isMounted) {
-                  console.log("✅ User already authenticated on initial listener check:", firebaseUser.email);
-                  redirectHandled = true;
+                const wasRedirecting = sessionStorage.getItem('google_auth_redirect') === 'true';
+                console.log("Provider check - isGoogleProvider:", isGoogleProvider, "providerIds:", firebaseUser.providerData.map(p => p.providerId), "wasRedirecting:", wasRedirecting);
+                
+                if ((isGoogleProvider || wasRedirecting) && !redirectHandled && isMounted) {
+                  console.log("✅ Processing authenticated user from initial listener check");
+                  // redirectHandled and sessionStorage cleanup will be handled in handleGoogleAuthSuccess
                   setLoading(true);
                   await handleGoogleAuthSuccess(firebaseUser);
                   return;
                 }
+              } else {
+                console.log("⚠️ Initial state is null - no user authenticated yet");
               }
-              console.log("Skipping initial null state");
               return; // Don't process the initial null state
             }
             
             // Handle subsequent auth state changes (this is when redirect completes)
-            if (firebaseUser && !redirectHandled && isMounted) {
+            if (firebaseUser) {
+              hasSeenUser = true;
+              if (!redirectHandled && isMounted) {
               const isGoogleProvider = firebaseUser.providerData.some(p => p.providerId === 'google.com');
-              console.log("Auth state change - isGoogleProvider:", isGoogleProvider, "redirectHandled:", redirectHandled);
-              if (isGoogleProvider) {
+                const wasRedirecting = sessionStorage.getItem('google_auth_redirect') === 'true';
+                console.log("🔔 Auth state change - isGoogleProvider:", isGoogleProvider, "wasRedirecting:", wasRedirecting, "redirectHandled:", redirectHandled, "user:", firebaseUser.email, "providers:", firebaseUser.providerData.map(p => p.providerId));
+                
+                // Process if it's a Google provider OR if we have the redirect flag set
+                if (isGoogleProvider || wasRedirecting) {
                 console.log("✅ Auth state changed - Google user authenticated:", firebaseUser.email);
-                redirectHandled = true; // Set flag before processing to prevent duplicate
+                  // redirectHandled and sessionStorage cleanup will be handled in handleGoogleAuthSuccess
                 setLoading(true);
                 await handleGoogleAuthSuccess(firebaseUser);
+                } else {
+                  console.log("⚠️ User authenticated but not via Google and no redirect flag");
+                }
+              }
+            } else if (!hasSeenUser && timeSinceSetup > 5000) {
+              // If we've been waiting more than 5 seconds and still no user, something went wrong
+              const wasRedirecting = sessionStorage.getItem('google_auth_redirect') === 'true';
+              if (wasRedirecting) {
+                console.error("❌ Google redirect appears to have failed - no user after 5 seconds");
+                sessionStorage.removeItem('google_auth_redirect');
+                if (isMounted) {
+                  setError("Google sign-in failed. Please try signing in again.");
+                  setLoading(false);
+                }
               }
             }
           });
+          
+          // Set a timeout to check if auth completes within 15 seconds
+          setTimeout(() => {
+            if (!redirectHandled && sessionStorage.getItem('google_auth_redirect') === 'true') {
+              const currentUser = auth.currentUser;
+              if (!currentUser) {
+                console.error("❌ Google redirect timeout - no user authenticated after 15 seconds");
+                sessionStorage.removeItem('google_auth_redirect');
+                if (isMounted) {
+                  setError("Google sign-in timed out. The redirect may have been cancelled. Please try again.");
+                  setLoading(false);
+                }
+              }
+            }
+          }, 15000);
         }
       } catch (err: unknown) {
         console.error("❌ Error handling redirect result:", err);
@@ -396,7 +622,7 @@ export default function LoginPage() {
     
     if (hasRedirectParams || wasRedirecting) {
       console.log("🔄 Detected return from Google redirect, handling...");
-      sessionStorage.removeItem('google_auth_redirect');
+      // Don't remove the flag yet - keep it until we successfully authenticate
       
       // When returning from redirect, give Firebase more time to process
       // Check auth state at multiple intervals since Firebase might take time
@@ -415,13 +641,29 @@ export default function LoginPage() {
             const isGoogleProvider = currentUser.providerData.some(p => p.providerId === 'google.com');
             if (isGoogleProvider && !redirectHandled && isMounted) {
               console.log("✅ User authenticated after redirect delay, processing:", currentUser.email);
-              redirectHandled = true;
+              // redirectHandled will be set inside handleGoogleAuthSuccess
               setLoading(true);
               await handleGoogleAuthSuccess(currentUser);
               return;
             }
           } else {
             console.log(`⚠️ User still not authenticated after ${delay}ms (attempt ${attempt})`);
+          }
+          
+          // Also check Redux state - AuthListener might have updated it
+          if (authState.user && !redirectHandled && isMounted) {
+            const user = authState.user;
+            const auth = getFirebaseAuth();
+            if (auth?.currentUser) {
+              const isGoogleProvider = auth.currentUser.providerData.some(p => p.providerId === 'google.com');
+              if (isGoogleProvider) {
+                console.log("✅ User found in Redux state during auth check, processing:", user.email);
+                // redirectHandled will be set inside handleGoogleAuthSuccess
+                setLoading(true);
+                await handleGoogleAuthSuccess(auth.currentUser);
+                return;
+              }
+            }
           }
           
           // If still not authenticated after multiple attempts, try one more time with longer delay
@@ -444,7 +686,38 @@ export default function LoginPage() {
         authStateUnsubscribe();
       }
     };
-  }, [router]);
+  }, [router, authState.user]);
+  
+  // Separate effect to handle Redux auth state changes (AuthListener updates)
+  useEffect(() => {
+    if (!authState.user || redirecting) return;
+    
+    const wasRedirecting = sessionStorage.getItem('google_auth_redirect') === 'true';
+    if (!wasRedirecting) return;
+    
+    // User was authenticated via Google redirect and now Redux state has updated
+    const auth = getFirebaseAuth();
+    if (!auth?.currentUser) return;
+    
+    const isGoogleProvider = auth.currentUser.providerData.some(p => p.providerId === 'google.com');
+    if (!isGoogleProvider) return;
+    
+    console.log("✅ User authenticated via Google (detected via Redux state):", authState.user.email);
+    sessionStorage.removeItem('google_auth_redirect');
+    setRedirecting(true);
+    setLoading(false);
+    
+    const user = authState.user;
+    if (user.role === "admin") {
+      setTimeout(() => router.push("/dashboard"), 500);
+    } else if (user.status === "pending" && !user.orgId) {
+      setTimeout(() => router.push("/register-company"), 500);
+    } else if (user.orgId && user.status === "active" && user.role === "sme") {
+      setTimeout(() => router.push("/select-role"), 500);
+    } else {
+      setTimeout(() => router.push("/dashboard"), 500);
+    }
+  }, [authState.user, redirecting, router]);
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -607,7 +880,11 @@ export default function LoginPage() {
         // CRITICAL: Admin users skip all checks and go directly to dashboard
         if (isAdminUser || userDoc?.role === "admin") {
           // Admin bypasses MFA and company registration - go straight to dashboard
+          setRedirecting(true);
+          setLoading(false);
+          setTimeout(() => {
           router.push("/dashboard");
+          }, 500);
           return;
         }
 
@@ -630,21 +907,30 @@ export default function LoginPage() {
           email: userDoc?.email
         });
 
+        setRedirecting(true);
+        setLoading(false);
+
         if (userDoc?.status === "pending" && !userDoc?.orgId) {
           // User needs to register company
           console.log("✅ Redirecting to register-company (email login)");
+          setTimeout(() => {
           router.push("/register-company");
+          }, 500);
           return;
         } else if (userDoc?.orgId && userDoc.status === "active" && userDoc.role === "sme") {
           // User has been approved but still has default "sme" role
           // They need to select their specific role
           console.log("✅ Redirecting to select-role (email login)");
+          setTimeout(() => {
           router.push("/select-role");
+          }, 500);
           return;
         } else {
           // User is fully set up, go to dashboard
           console.log("✅ Redirecting to dashboard (email login)");
+          setTimeout(() => {
           router.push("/dashboard");
+          }, 500);
           return;
         }
       }
@@ -656,13 +942,22 @@ export default function LoginPage() {
   }
 
   async function handleGoogle() {
+    // Prevent multiple simultaneous sign-in attempts
+    if (isGoogleSignInInProgress || loading || redirecting) {
+      console.log("⚠️ Google sign-in already in progress, ignoring click");
+      return;
+    }
+
     setError(null);
     setLoading(true);
+    setIsGoogleSignInInProgress(true);
+    
     try {
       const auth = getFirebaseAuth();
       if (!auth) {
         setError("Firebase is not configured. Please check your environment variables and restart the dev server.");
         setLoading(false);
+        setIsGoogleSignInInProgress(false);
         return;
       }
 
@@ -670,28 +965,231 @@ export default function LoginPage() {
       if (!googleProvider) {
         setError("Google authentication provider is not configured.");
         setLoading(false);
+        setIsGoogleSignInInProgress(false);
         return;
       }
 
       const currentUrl = window.location.href;
-      console.log("🔄 Initiating Google sign-in redirect from:", currentUrl);
-      console.log("Firebase auth domain:", auth.config?.authDomain);
+      const currentOrigin = window.location.origin;
+      const currentHostname = window.location.hostname;
+      const isIpAddress = /^\d+\.\d+\.\d+\.\d+$/.test(currentHostname);
       
-      // Mark that we're initiating a redirect so we can detect return
-      sessionStorage.setItem('google_auth_redirect', 'true');
+      console.log("🔄 Initiating Google sign-in from:", currentUrl);
+      console.log("🔄 Current origin:", currentOrigin);
+      console.log("🔄 Current hostname:", currentHostname);
+      console.log("🔄 Is IP address:", isIpAddress);
+      console.log("🔄 Firebase auth domain:", auth.config?.authDomain);
+      console.log("🔄 Full Firebase config:", {
+        apiKey: auth.config?.apiKey?.substring(0, 10) + "...",
+        authDomain: auth.config?.authDomain
+      });
       
       // Set additional scopes if needed
       googleProvider.addScope('email');
       googleProvider.addScope('profile');
       
       try {
-        // Store the current URL to redirect back after auth
-        // Firebase will automatically redirect back to the current page
+        // For IP addresses, use popup instead of redirect (popups work better with IPs)
+        // For localhost and regular domains, use redirect
+        if (isIpAddress) {
+          console.log("🔄 Using popup method for IP address (redirects may not work with IPs)");
+          sessionStorage.setItem('google_auth_popup', 'true');
+          
+          try {
+            const result = await signInWithPopup(auth, googleProvider);
+            console.log("✅ Google popup sign-in successful:", result.user.email);
+            sessionStorage.removeItem('google_auth_popup');
+            
+            // Process the authentication immediately
+            const firebaseUser = result.user;
+            
+            // Process popup authentication similar to redirect
+            // Check if user was invited
+            if (firebaseUser.email) {
+              try {
+                const linkedUser = await linkUserToInvitation(firebaseUser.uid, firebaseUser.email);
+                if (linkedUser) {
+                  await createOrUpdateUserDocument(firebaseUser.uid, {
+                    email: firebaseUser.email || "",
+                    displayName: firebaseUser.displayName,
+                    photoURL: firebaseUser.photoURL,
+                    role: linkedUser.role,
+                    orgId: linkedUser.orgId,
+                    orgName: linkedUser.orgName,
+                    status: "active",
+                    mfaEnabled: false,
+                  });
+                  const userDoc = await getUserDocument(firebaseUser.uid);
+                  if (userDoc) {
+                    setRedirecting(true);
+                    setLoading(false);
+                    setIsGoogleSignInInProgress(false); // Reset the flag on successful sign-in
+                    if (userDoc.role === "admin") {
+                      router.push("/dashboard");
+                      return;
+                    } else if (userDoc.status === "pending" && !userDoc.orgId) {
+                      router.push("/register-company");
+                      return;
+                    } else {
+                      router.push("/dashboard");
+                      return;
+                    }
+                  }
+                }
+              } catch (invitationError) {
+                console.log("No invitation found, continuing normal flow");
+              }
+            }
+            
+            // Get or create user document
+            let userDoc = await getUserDocument(firebaseUser.uid);
+            const isAdminUser = firebaseUser.email === "admin@originx.com";
+            
+            if (!userDoc) {
+              if (isAdminUser) {
+                await createOrUpdateUserDocument(firebaseUser.uid, {
+                  email: firebaseUser.email || "",
+                  displayName: firebaseUser.displayName || "Admin",
+                  photoURL: firebaseUser.photoURL,
+                  role: "admin",
+                  status: "active",
+                  mfaEnabled: false,
+                });
+                userDoc = await getUserDocument(firebaseUser.uid);
+              } else {
+                // Non-admin users start as pending until they register company
+                await createOrUpdateUserDocument(firebaseUser.uid, {
+                  email: firebaseUser.email || "",
+                  displayName: firebaseUser.displayName,
+                  photoURL: firebaseUser.photoURL,
+                  role: "sme",
+                  status: "pending", // MUST be pending until company registration
+                  mfaEnabled: false,
+                });
+                await new Promise(resolve => setTimeout(resolve, 300));
+                userDoc = await getUserDocument(firebaseUser.uid);
+              }
+            } else if (isAdminUser) {
+              // Ensure admin users are always admin and active
+              await createOrUpdateUserDocument(firebaseUser.uid, {
+                role: "admin",
+                status: "active",
+                displayName: firebaseUser.displayName || "Admin",
+                email: firebaseUser.email || "",
+                photoURL: firebaseUser.photoURL,
+              });
+              userDoc = await getUserDocument(firebaseUser.uid);
+            } else {
+              // CRITICAL: Non-admin users without orgId MUST be pending
+              // Fix any incorrectly set status
+              if (!userDoc.orgId && userDoc.status === "active") {
+                console.log("⚠️ Fixing incorrect user status: non-admin user without orgId should be pending");
+                await createOrUpdateUserDocument(firebaseUser.uid, {
+                  status: "pending", // Force to pending if no orgId
+                  role: "sme", // Ensure role is sme if not set
+                });
+                userDoc = await getUserDocument(firebaseUser.uid);
+              }
+            }
+            
+            // Redirect based on user status
+            setRedirecting(true);
+            setLoading(false);
+            
+            console.log("🔄 Popup auth - User doc status:", {
+              role: userDoc?.role,
+              status: userDoc?.status,
+              orgId: userDoc?.orgId,
+              isAdminUser,
+              email: firebaseUser.email
+            });
+            
+            // CRITICAL: Admin users skip all checks and go directly to dashboard
+            if (isAdminUser || userDoc?.role === "admin") {
+              console.log("✅ Admin user - redirecting to dashboard");
+              router.push("/dashboard");
+              return;
+            }
+            
+            // Non-admin users: Check MFA first
+            if (userDoc?.mfaEnabled && userDoc?.mfaConfig?.method) {
+              console.log("🔐 MFA required - showing MFA verification");
+              setMfaMethod(userDoc.mfaConfig.method);
+              setShowMFA(true);
+              setLoading(false);
+              return;
+            }
+            
+            // Non-admin flow: Check if user needs to register company
+            if (userDoc?.status === "pending" && !userDoc?.orgId) {
+              console.log("📝 New user - redirecting to register-company");
+              router.push("/register-company");
+              return;
+            }
+            
+            // Non-admin flow: User has org but needs to select role
+            if (userDoc?.orgId && userDoc.status === "active" && userDoc.role === "sme") {
+              console.log("👤 User needs to select role - redirecting to select-role");
+              router.push("/select-role");
+              return;
+            }
+            
+            // Non-admin users with active status but no orgId shouldn't reach dashboard
+            // Redirect them to register-company
+            if (userDoc?.status === "active" && !userDoc?.orgId) {
+              console.log("⚠️ Active user without orgId - redirecting to register-company");
+              router.push("/register-company");
+              return;
+            }
+            
+            // Final fallback: Only allow dashboard for users with complete setup
+            if (userDoc?.orgId && userDoc.status === "active" && userDoc.role && userDoc.role !== "sme") {
+              console.log("✅ User fully set up - redirecting to dashboard");
+              router.push("/dashboard");
+              return;
+            }
+            
+            // Default: Redirect to register-company for incomplete setup
+            console.log("⚠️ User setup incomplete - redirecting to register-company");
+            router.push("/register-company");
+          } catch (popupError: unknown) {
+            sessionStorage.removeItem('google_auth_popup');
+            const error = popupError as { code?: string; message?: string };
+            
+            if (error.code === "auth/popup-blocked") {
+              setError("Popup was blocked by your browser. Please allow popups and try again, or use localhost:3000 instead.");
+            } else if (error.code === "auth/popup-closed-by-user") {
+              setError("Sign-in popup was closed. Please try again.");
+            } else if (error.code === "auth/cancelled-popup-request") {
+              // This happens when multiple popup requests are made simultaneously
+              // Don't show an error, just reset the state - user can try again
+              console.log("⚠️ Popup request was cancelled (likely due to multiple clicks). User can try again.");
+              setError(null); // Don't show error for cancelled popup
+            } else {
+              throw popupError; // Re-throw to be caught by outer catch
+            }
+            setLoading(false);
+            setIsGoogleSignInInProgress(false);
+            return;
+          }
+        } else {
+          // Use redirect for localhost and regular domains
+          console.log("🔄 Using redirect method for domain:", currentHostname);
+          sessionStorage.setItem('google_auth_redirect', 'true');
+          sessionStorage.setItem('google_auth_redirect_url', currentUrl);
+          
+          console.log("🔄 Calling signInWithRedirect now...");
+          console.log("🔄 Redirect URL will be:", currentOrigin + "/login");
+          
         await signInWithRedirect(auth, googleProvider);
+          console.log("⚠️ signInWithRedirect returned (this shouldn't happen - should redirect immediately)");
+        }
         
         // The redirect will navigate away immediately - this code won't run
         // The result will be handled in the useEffect when the page loads after redirect
       } catch (redirectErr: unknown) {
+        // Remove flag on error
+        sessionStorage.removeItem('google_auth_redirect');
         // Enhanced error handling for redirect errors
         console.error("Google sign-in redirect error:", redirectErr);
         const redirectError = redirectErr as { code?: string; message?: string };
@@ -721,7 +1219,16 @@ export default function LoginPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function handleMFAVerify(_code: string) {
     // MFA verified (code validated in MFAVerification component), proceed to dashboard
+    setRedirecting(true);
+    setShowMFA(false);
+    setTimeout(() => {
     router.push("/dashboard");
+    }, 500);
+  }
+
+  // Show loading screen when redirecting
+  if (redirecting) {
+    return <LoadingScreen message="Preparing your dashboard..." />;
   }
 
   // Show MFA verification if required
@@ -876,20 +1383,18 @@ export default function LoginPage() {
         >
           <Button
             type="submit"
+            variant="outline"
             size="lg"
             disabled={loading}
             className={cn(
               "w-full font-semibold h-12",
-              "relative overflow-hidden",
-              "transition-all duration-300",
-              "hover:shadow-lg hover:shadow-primary/25",
+              "transition-all duration-200",
+              "hover:bg-accent hover:border-primary/50",
               "hover:scale-[1.02] active:scale-[0.98]",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-              "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/10 before:to-primary/0",
-              "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
+              "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >
-            <span className="relative z-10 flex items-center gap-2">
+            <span className="flex items-center gap-2">
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? "Signing in..." : "Sign in"}
             </span>
@@ -919,17 +1424,17 @@ export default function LoginPage() {
             variant="outline"
             size="lg"
             onClick={handleGoogle}
-            disabled={loading}
+            disabled={loading || isGoogleSignInInProgress || redirecting}
             className={cn(
               "w-full font-medium h-12",
               "transition-all duration-200",
               "hover:bg-accent hover:border-primary/50",
               "hover:scale-[1.02] active:scale-[0.98]",
-              "disabled:opacity-50"
+              "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >
             <FcGoogle size={20} className="mr-2" />
-            Continue with Google
+            {loading || isGoogleSignInInProgress ? "Connecting..." : "Continue with Google"}
           </Button>
         </motion.div>
 

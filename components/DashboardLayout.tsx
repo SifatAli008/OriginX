@@ -23,6 +23,7 @@ import {
   FileCheck,
   Search,
   Package,
+  ShieldCheck,
 } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import type { UserRole } from "@/lib/types/user";
@@ -115,15 +116,25 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
       <aside className="hidden lg:flex lg:flex-col w-72 bg-gradient-to-b from-gray-900 to-black border-r border-gray-800 max-h-screen overflow-hidden relative z-10">
         {/* Header */}
         <div className="flex-shrink-0 p-6 border-b border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg">
-              <Package className="h-6 w-6 text-white" />
+          <Link
+            href="/"
+            className="flex items-center gap-3 group"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-lg blur-md group-hover:bg-primary/30 transition-colors" />
+              <div className="relative bg-primary/10 rounded-lg p-2.5 group-hover:bg-primary/15 transition-all duration-300 group-hover:scale-105">
+                <ShieldCheck className="h-6 w-6 text-primary" strokeWidth={2.5} />
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">OriginX</h2>
-              <p className="text-xs text-gray-400">Supply Chain</p>
+            <div className="flex flex-col items-start">
+              <span className="text-xl font-bold text-primary tracking-tight transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-lg">
+                OriginX
+              </span>
+              <span className="text-xs text-gray-400 font-medium">
+                Anti‑Counterfeit Platform
+              </span>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Navigation */}
@@ -188,15 +199,26 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
             {/* Header */}
             <div className="flex-shrink-0 p-6 border-b border-gray-800">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg">
-                    <Package className="h-6 w-6 text-white" />
+                <Link
+                  href="/"
+                  className="flex items-center gap-3 group"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 rounded-lg blur-md group-hover:bg-primary/30 transition-colors" />
+                    <div className="relative bg-primary/10 rounded-lg p-2.5 group-hover:bg-primary/15 transition-all duration-300 group-hover:scale-105">
+                      <ShieldCheck className="h-6 w-6 text-primary" strokeWidth={2.5} />
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">OriginX</h2>
-                    <p className="text-xs text-gray-400">Supply Chain</p>
+                  <div className="flex flex-col items-start">
+                    <span className="text-xl font-bold text-primary tracking-tight transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-lg">
+                      OriginX
+                    </span>
+                    <span className="text-xs text-gray-400 font-medium">
+                      Anti‑Counterfeit Platform
+                    </span>
                   </div>
-                </div>
+                </Link>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -274,15 +296,23 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">O</span>
+          <Link
+            href="/"
+            className="flex items-center gap-3 group"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-lg blur-md group-hover:bg-primary/30 transition-colors" />
+              <div className="relative bg-primary/10 rounded-lg p-2 group-hover:bg-primary/15 transition-all duration-300 group-hover:scale-105">
+                <ShieldCheck className="h-5 w-5 text-primary" strokeWidth={2.5} />
+              </div>
             </div>
-            <div>
-              <h2 className="text-white font-bold">OriginX</h2>
+            <div className="flex flex-col items-start">
+              <span className="text-lg font-bold text-primary tracking-tight transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-lg">
+                OriginX
+              </span>
               {userName && <p className="text-gray-400 text-xs">{userName}</p>}
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Page Content */}

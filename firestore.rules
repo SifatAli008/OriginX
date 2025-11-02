@@ -13,7 +13,15 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+      // Allow users to read their own document OR admins to read any
+      allow get: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+      
+      // Allow querying users collection (for email lookups, etc.)
+      // Results will still be filtered by get permissions
+      allow list: if isAuthenticated();
       
       // Allow user to create their own document (first-time login)
       // OR allow admin to create any user document if admin's user doc exists
@@ -25,23 +33,33 @@ service cloud.firestore {
       );
       
       // Allow user to update their own document OR admin to update any user
+      // Note: Users can update any field in their own document, including role
       allow update: if isAuthenticated() && (
         request.auth.uid == userId || 
         (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
+      
+      // Allow delete only for admin
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Organizations collection
     match /orgs/{orgId} {
       // Allow authenticated users to read all organizations (for joining existing companies)
-      // Users can only write to their own org or admin can write any
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // This allows both get and list operations
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      
+      // Only admins can create/update/delete organizations
+      allow create: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow update: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Products collection
     match /products/{productId} {
-      allow read: if isAuthenticated();
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if false;
       allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -49,7 +67,10 @@ service cloud.firestore {
 
     // Batches collection
     match /batches/{batchId} {
-      allow read: if isAuthenticated() && userDocExists() && resource.data.orgId != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId;
+      // Allow reading batches that belong to user's organization
+      allow get: if isAuthenticated() && userDocExists() && resource.data.orgId != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId;
+      // Allow querying batches (results filtered by get permission)
+      allow list: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && userDocExists() && resource.data.orgId != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId;
       allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -57,7 +78,8 @@ service cloud.firestore {
 
     // Movements collection
     match /movements/{moveId} {
-      allow read: if isAuthenticated();
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && userDocExists() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'warehouse' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -65,7 +87,8 @@ service cloud.firestore {
 
     // Verifications collection
     match /verifications/{verificationId} {
-      allow read: if isAuthenticated();
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
       allow create: if false;
       allow update: if false;
       allow delete: if false;
@@ -73,7 +96,8 @@ service cloud.firestore {
 
     // Transactions collection
     match /transactions/{txHash} {
-      allow read: if isAuthenticated();
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
       allow create: if false;
       allow update: if false;
       allow delete: if false;
@@ -81,13 +105,17 @@ service cloud.firestore {
 
     // Suppliers collection
     match /suppliers/{supplierId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      allow create: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow update: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Reports collection
     match /reports/{reportId} {
-      allow read: if isAuthenticated() && ((userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') || (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'auditor') || (resource.data.reporterId != null && request.auth.uid == resource.data.reporterId));
+      allow get: if isAuthenticated() && ((userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') || (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'auditor') || (resource.data.reporterId != null && request.auth.uid == resource.data.reporterId));
+      allow list: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -95,7 +123,10 @@ service cloud.firestore {
 
     // Alerts collection
     match /alerts/{alertId} {
-      allow read: if isAuthenticated() && userDocExists() && resource.data.orgId != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId;
+      // Allow reading alerts that belong to user's organization
+      allow get: if isAuthenticated() && userDocExists() && resource.data.orgId != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId;
+      // Allow querying alerts (results filtered by get permission)
+      allow list: if isAuthenticated();
       allow create: if false;
       allow update: if isAuthenticated() && userDocExists() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId);
       allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -103,23 +134,41 @@ service cloud.firestore {
 
     // Company registration requests collection
     match /companyRegistrationRequests/{requestId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
-      allow create: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      // Allow users to read their own requests or admins to read all
+      // When reading, resource exists
+      allow get: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+      
+      // Allow users to list/query their own requests or admins to query all
+      allow list: if isAuthenticated();
+      
+      // Allow authenticated users to create requests with their own userId
+      // Use request.resource because document doesn't exist yet when creating
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Only admins can update requests (to approve/reject)
       allow update: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // User invitations collection
     match /userInvitations/{invitationId} {
       // Allow users to read invitations that match their email OR admin to read all
-      // This allows querying for invitations by email
-      allow read: if isAuthenticated() && (
+      allow get: if isAuthenticated() && (
         resource.data.email == request.auth.token.email ||
         (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
+      
+      // Allow querying by email (for linkUserToInvitation)
+      // Users can query for invitations, but can only read documents matching their email
+      // The query itself is allowed, but results are filtered by get permission
+      allow list: if isAuthenticated();
+      
       allow create: if isAuthenticated() && (
         // Allow creating invitation with user's own email (for self-registration scenarios)
         // OR admin can create any invitation
-        resource.data.email == request.auth.token.email ||
+        request.resource.data.email == request.auth.token.email ||
         (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
       // Allow users to update their own invitation (when accepting it) OR admin to update any

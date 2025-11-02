@@ -45,6 +45,17 @@ export default function AuthListener() {
           } else {
             // Update last login
             await updateLastLogin(uid);
+            
+            // CRITICAL: Ensure non-admin users without orgId are pending
+            // Fix any incorrectly set status (should not be active without orgId)
+            const isAdmin = email === "admin@originx.com";
+            if (!isAdmin && !userDoc.orgId && userDoc.status === "active") {
+              console.log("⚠️ Fixing incorrect user status: non-admin user without orgId should be pending");
+              await createOrUpdateUserDocument(uid, {
+                status: "pending", // Force to pending if no orgId
+              });
+              userDoc = await getUserDocument(uid); // Re-fetch after update
+            }
           }
           
           if (userDoc) {

@@ -14,6 +14,9 @@ import { useAppSelector } from "@/lib/store";
 import { Eye, EyeOff, Loader2, User, Mail, Lock, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, getFirebaseAuthErrorMessage } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { createOrUpdateUserDocument, getUserDocument } from "@/lib/firebase/firestore";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 
 function getPasswordStrength(password: string): { strength: number; label: string; color: string } {
   let strength = 0;
@@ -39,6 +42,7 @@ const passwordRequirements = [
 ];
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,11 +50,13 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showRequirements, setShowRequirements] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const authState = useAppSelector((s) => s.auth);
+  const user = authState.user;
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
-  // Handle redirect result on page load - check IMMEDIATELY
+  // Handle redirect result for Google sign-in
   useEffect(() => {
     let isMounted = true;
     
@@ -65,20 +71,24 @@ export default function RegisterPage() {
         // Check for redirect result immediately
         const result = await getRedirectResult(auth);
         if (result && isMounted) {
-          console.log("Redirect result received:", result.user.email);
-          // User signed in with Google
-          // Wait for AuthListener to update the state, then redirect
-          setTimeout(() => {
+          console.log("Google redirect result received:", result.user.email);
+          setRedirecting(true);
+          
+          // Wait for AuthListener to create user document
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Check user document and redirect accordingly
+          const userDoc = await getUserDocument(result.user.uid);
+          const isAdmin = result.user.email === "admin@originx.com";
+          
             if (isMounted) {
-              window.location.href = "/dashboard";
+            if (isAdmin || userDoc?.role === "admin") {
+              router.push("/dashboard");
+            } else if (userDoc?.status === "pending" && !userDoc?.orgId) {
+              router.push("/register-company");
+            } else {
+              router.push("/dashboard");
             }
-          }, 1000);
-        } else if (!result && isMounted) {
-          // No redirect result - check if already authenticated
-          const currentUser = auth.currentUser;
-          if (currentUser) {
-            console.log("Already authenticated, user:", currentUser.email);
-            // User is already authenticated, let AuthListener handle it
           }
         }
       } catch (err: unknown) {
@@ -86,17 +96,23 @@ export default function RegisterPage() {
         if (isMounted) {
           const errorMessage = getFirebaseAuthErrorMessage(err);
           setError(errorMessage);
+          setRedirecting(false);
         }
       }
     };
 
-    // Check immediately (no delay) to catch redirect result
+    // Check immediately to catch redirect result
     handleRedirectResult();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [router]);
+  
+  // Show loading screen when redirecting
+  if (redirecting) {
+    return <LoadingScreen message="Setting up your account..." />;
+  }
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -109,14 +125,53 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
+      
+      // Create Firebase Auth account
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      
+      // Update display name if provided
       if (name.trim()) {
         await updateProfile(cred.user, { displayName: name.trim() });
       }
-      window.location.href = "/";
+      
+      // Create user document in Firestore
+      const isAdmin = email.trim().toLowerCase() === "admin@originx.com";
+      await createOrUpdateUserDocument(cred.user.uid, {
+        email: email.trim(),
+        displayName: name.trim() || null,
+        photoURL: null,
+        role: isAdmin ? "admin" : "sme",
+        status: isAdmin ? "active" : "pending",
+        mfaEnabled: false,
+      });
+      
+      // Wait for user document to be created
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check user document and redirect accordingly
+      const userDoc = await getUserDocument(cred.user.uid);
+      
+      setRedirecting(true);
+      setLoading(false);
+      
+      if (isAdmin || userDoc?.role === "admin") {
+        // Admin goes directly to dashboard
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 500);
+      } else if (userDoc?.status === "pending" && !userDoc?.orgId) {
+        // Non-admin users need to register company
+        setTimeout(() => {
+          router.push("/register-company");
+        }, 500);
+      } else {
+        // Otherwise go to dashboard
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 500);
+      }
     } catch (err: unknown) {
       setError(getFirebaseAuthErrorMessage(err));
-    } finally {
       setLoading(false);
     }
   }
@@ -333,20 +388,18 @@ export default function RegisterPage() {
         >
           <Button
             type="submit"
+            variant="outline"
             size="lg"
             disabled={loading}
             className={cn(
               "w-full font-semibold h-12",
-              "relative overflow-hidden",
-              "transition-all duration-300",
-              "hover:shadow-lg hover:shadow-primary/25",
+              "transition-all duration-200",
+              "hover:bg-accent hover:border-primary/50",
               "hover:scale-[1.02] active:scale-[0.98]",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-              "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/10 before:to-primary/0",
-              "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
+              "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >
-            <span className="relative z-10 flex items-center gap-2">
+            <span className="flex items-center gap-2">
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? "Creating account..." : "Create account"}
             </span>

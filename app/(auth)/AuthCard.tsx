@@ -5,14 +5,20 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { motion, Variants } from "framer-motion";
 import Link from "next/link";
-import { ShieldCheck, ArrowLeft, Home } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ShieldCheck, ArrowLeft, LogOut } from "lucide-react";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { cn } from "@/lib/utils";
 import HeroVectors from "@/components/visuals/HeroVectors";
+import { useAppSelector } from "@/lib/store";
 
 type AuthCardProps = {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  showLogout?: boolean;
+  onBack?: () => void;
 };
 
 const containerVariants = {
@@ -44,7 +50,21 @@ function getInitialReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
+function AuthCard({ title, subtitle, children, maxWidth = "md", showLogout = false, onBack }: AuthCardProps) {
+  const router = useRouter();
+  const authState = useAppSelector((state) => state.auth);
+  
+  const handleSignOut = async () => {
+    try {
+      const auth = getFirebaseAuth();
+      if (auth) {
+        await auth.signOut();
+      }
+      router.push("/login");
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [pointer, setPointer] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [reduced, setReduced] = useState(getInitialReducedMotion);
@@ -253,7 +273,7 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
         />
       </div>
 
-      {/* Back to Home Button */}
+      {/* Back Button */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -261,32 +281,79 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
         className="absolute top-6 left-6 z-20"
       >
         <Button
-          asChild
           variant="ghost"
           size="sm"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (showLogout) {
+              handleSignOut();
+            } else if (onBack) {
+              onBack();
+            } else {
+              const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+              
+              // For login and register pages, go to home page
+              if (pathname === "/login" || pathname === "/register") {
+                router.push("/");
+                return;
+              }
+              
+              // If user is authenticated, always go to dashboard instead of landing page
+              if (authState.status === "authenticated" && authState.user) {
+                router.push("/dashboard");
+                return;
+              }
+              
+              // For register-company page, go to dashboard (user shouldn't go back to login)
+              if (pathname === "/register-company") {
+                router.push("/dashboard");
+              } else {
+                // For other pages, go to home page
+                router.push("/");
+              }
+            }
+          }}
           className={cn(
-            "gap-2 text-muted-foreground hover:text-foreground",
-            "hover:bg-accent/50 transition-all duration-200",
+            "gap-2 text-muted-foreground hover:text-foreground transition-all duration-200",
             "backdrop-blur-sm bg-background/50 border border-border/50",
-            "hover:scale-105 active:scale-95"
+            "hover:scale-105 active:scale-95",
+            showLogout && "hover:text-red-400 hover:bg-red-500/10"
           )}
         >
-          <Link href="/">
+          {showLogout ? (
+            <>
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </>
+          ) : (
+            <>
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to Home</span>
-            <Home className="h-4 w-4 sm:hidden" />
-          </Link>
+              <span>Back</span>
+            </>
+          )}
         </Button>
       </motion.div>
 
-      <motion.div variants={cardVariants} className="w-full max-w-md mx-auto relative z-10">
+      <motion.div 
+        variants={cardVariants} 
+        className={cn(
+          "w-full mx-auto relative z-10",
+          maxWidth === "sm" && "max-w-sm",
+          maxWidth === "md" && "max-w-md",
+          maxWidth === "lg" && "max-w-lg",
+          maxWidth === "xl" && "max-w-xl",
+          maxWidth === "2xl" && "max-w-2xl",
+          maxWidth === "full" && "max-w-full"
+        )}
+      >
         <Card className="shadow-2xl border-border/50 bg-card/95 backdrop-blur-xl">
           {/* Logo Section */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            className="pt-8 px-6 pb-4 border-b border-border/50"
+            className="pt-6 px-6 pb-3 border-b border-border/50"
           >
             <Link
               href="/"
@@ -309,13 +376,13 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
             </Link>
           </motion.div>
 
-          <CardHeader className="flex flex-col items-start gap-1 pb-6 pt-6">
+          <CardHeader className="flex flex-col items-start gap-1 pb-4 pt-4">
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <CardTitle className="text-3xl font-bold text-foreground">
                 {title}
               </CardTitle>
             </motion.div>
@@ -329,7 +396,7 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
               </motion.div>
             )}
         </CardHeader>
-          <CardContent className="pb-8">
+          <CardContent className="pb-6">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -344,4 +411,5 @@ export default function AuthCard({ title, subtitle, children }: AuthCardProps) {
   );
 }
 
+export default AuthCard;
 

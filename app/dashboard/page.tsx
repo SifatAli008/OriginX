@@ -109,7 +109,9 @@ import {
   RefreshCw,
   Filter,
   FileDown,
+  ShieldCheck,
 } from "lucide-react";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 
 // Types for dashboard data
 interface DashboardData {
@@ -241,6 +243,14 @@ export default function DashboardPage() {
         return;
       }
       
+      // CRITICAL: Non-admin users MUST have an orgId to access dashboard
+      // If they don't have orgId, redirect to register-company regardless of status
+      if (!user.orgId) {
+        console.log("Dashboard - Non-admin user without orgId - redirecting to register-company");
+        router.push("/register-company");
+        return;
+      }
+      
       // Check if user needs to register company (only for non-admin users)
       // Status should be "pending" and no orgId
       if (user.status === "pending" && !user.orgId) {
@@ -256,18 +266,18 @@ export default function DashboardPage() {
         router.push("/select-role");
         return;
       }
+      
+      // Final check: Non-admin users must have orgId and active status with a specific role (not "sme")
+      if (user.role !== "admin" && (!user.orgId || user.status !== "active" || user.role === "sme")) {
+        console.log("Dashboard - User setup incomplete - redirecting to register-company");
+        router.push("/register-company");
+        return;
+      }
     }
   }, [authState.status, user, router]);
 
   if (authState.status === "loading" || !user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-black">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-gray-800 border-t-white rounded-full animate-spin"></div>
-        </div>
-        <p className="mt-4 text-gray-400 text-sm">Loading your dashboard...</p>
-      </div>
-    );
+    return <LoadingScreen message="Loading your dashboard..." />;
   }
 
   const permissions = getRolePermissions(user.role);
@@ -1728,15 +1738,25 @@ function Sidebar({
         {/* Header */}
         <div className="flex-shrink-0 p-6 border-b border-gray-800">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg">
-                <Package className="h-6 w-6 text-white" />
+            <Link
+              href="/"
+              className="flex items-center gap-3 group"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 rounded-lg blur-md group-hover:bg-primary/30 transition-colors" />
+                <div className="relative bg-primary/10 rounded-lg p-2.5 group-hover:bg-primary/15 transition-all duration-300 group-hover:scale-105">
+                  <ShieldCheck className="h-6 w-6 text-primary" strokeWidth={2.5} />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-white">OriginX</h2>
-                <p className="text-xs text-gray-400">Supply Chain</p>
               </div>
+              <div className="flex flex-col items-start">
+                <span className="text-xl font-bold text-primary tracking-tight transition-all duration-300 group-hover:scale-105 group-hover:drop-shadow-lg">
+                  OriginX
+                </span>
+                <span className="text-xs text-gray-400 font-medium">
+                  Anti‑Counterfeit Platform
+                </span>
             </div>
+            </Link>
             <Button
               variant="ghost"
               size="icon"
