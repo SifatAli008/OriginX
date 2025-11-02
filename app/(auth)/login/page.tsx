@@ -252,7 +252,7 @@ export default function LoginPage() {
           try {
             setRedirecting(true);
             setLoading(false);
-          } catch (e) {
+          } catch {
             // Ignore errors if component unmounted - redirect will still work
           }
           
@@ -411,7 +411,7 @@ export default function LoginPage() {
         // before any other component might consume it
         // Call it even if we don't see OAuth params, as they might be in hash or already processed
         console.log("🔍 Checking for redirect result (calling getRedirectResult)...");
-        let result = await getRedirectResult(auth);
+        const result = await getRedirectResult(auth);
         
         // If no redirect result and no indicators, skip further processing
         if (!result && !hasOAuthParams && !wasRedirecting) {
@@ -519,7 +519,7 @@ export default function LoginPage() {
           console.log("ℹ️ Setting up auth state listener to catch Google authentication");
           let initialCheck = true; // Track if this is the initial (null) state
           
-          let listenerSetupTime = Date.now();
+          const listenerSetupTime = Date.now();
           let hasSeenUser = false;
           
           authStateUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -1036,7 +1036,7 @@ export default function LoginPage() {
                     }
                   }
                 }
-              } catch (invitationError) {
+              } catch {
                 console.log("No invitation found, continuing normal flow");
               }
             }

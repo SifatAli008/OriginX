@@ -52,7 +52,6 @@ export default function RegisterPage() {
   const [showRequirements, setShowRequirements] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const authState = useAppSelector((s) => s.auth);
-  const user = authState.user;
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
