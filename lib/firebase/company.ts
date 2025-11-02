@@ -3,17 +3,15 @@
 import { 
   doc, 
   getDoc, 
-  setDoc, 
   updateDoc, 
   collection, 
   query, 
   where, 
   getDocs,
   addDoc,
-  serverTimestamp
 } from "firebase/firestore";
 import { getFirestore } from "./client";
-import type { CompanyRegistrationRequest, RegistrationRequestStatus } from "@/lib/types/company";
+import type { CompanyRegistrationRequest } from "@/lib/types/company";
 
 /**
  * Create a company registration request
@@ -202,7 +200,7 @@ export async function getAllOrganizations(): Promise<Array<{ id: string; name: s
 /**
  * Get organization by ID
  */
-export async function getOrganization(orgId: string): Promise<{ id: string; name: string; [key: string]: any } | null> {
+export async function getOrganization(orgId: string): Promise<{ id: string; name: string; [key: string]: unknown } | null> {
   const db = getFirestore();
   if (!db) {
     return null;

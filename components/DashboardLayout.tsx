@@ -56,7 +56,12 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
       { label: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
     ];
 
-    const roleSpecificItems: Record<UserRole, any[]> = {
+    interface NavItem {
+      label: string;
+      icon: React.ReactNode;
+      href: string;
+    }
+    const roleSpecificItems: Record<UserRole, NavItem[]> = {
       admin: [
         { label: "Registration Requests", icon: <FileText className="h-5 w-5" />, href: "/admin/registration-requests" },
         { label: "User Management", icon: <Users className="h-5 w-5" />, href: "/admin/users" },

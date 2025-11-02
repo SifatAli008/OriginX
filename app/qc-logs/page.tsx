@@ -19,8 +19,6 @@ import {
   Plus,
   FileText,
   Download,
-  Filter,
-  TrendingUp,
 } from "lucide-react";
 import DashboardChart from "@/components/charts/DashboardChart";
 

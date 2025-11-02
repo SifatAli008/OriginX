@@ -10,9 +10,6 @@ import {
   where,
   orderBy,
   limit,
-  startAfter,
-  type QueryDocumentSnapshot,
-  type DocumentData,
 } from "firebase/firestore";
 import { getFirestore } from "./client";
 import type {

@@ -33,7 +33,7 @@ export function verifyTOTPToken(token: string, secret: string): boolean {
   };
   try {
     return authenticator.verify({ token, secret });
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -50,7 +50,7 @@ export async function generateTOTPQRCode(
   try {
     const qrCodeDataUrl = await QRCode.toDataURL(otpAuthUrl);
     return qrCodeDataUrl;
-  } catch (error) {
+  } catch {
     throw new Error("Failed to generate QR code");
   }
 }

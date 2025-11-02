@@ -1,7 +1,7 @@
 "use client";
 
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface ChartData {
   date: string;
@@ -25,14 +25,10 @@ export default function LineChartWrapper({
   type = "line", 
   dataKeys, 
   height = 300,
-  title,
-  description 
+  title: _title, // eslint-disable-line @typescript-eslint/no-unused-vars
+  description: _description // eslint-disable-line @typescript-eslint/no-unused-vars 
 }: LineChartWrapperProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [mounted] = useState(() => typeof window !== 'undefined');
 
   if (!mounted) {
     return (

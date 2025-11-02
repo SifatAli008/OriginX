@@ -43,7 +43,7 @@ export interface ProductDocument {
     serialNumber?: string;
     manufacturingDate?: number;    // Timestamp
     expiryDate?: number;          // Timestamp (for perishables)
-    [key: string]: any;
+    [key: string]: unknown;
   };
   createdAt: number;              // Timestamp
   updatedAt?: number;              // Timestamp (rarely updated)
@@ -83,7 +83,7 @@ export interface ProductRegistrationForm {
     serialNumber?: string;
     manufacturingDate?: string;   // ISO date string
     expiryDate?: string;         // ISO date string
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

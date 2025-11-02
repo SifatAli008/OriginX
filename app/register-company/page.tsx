@@ -11,8 +11,8 @@ import { getFirebaseAuth } from "@/lib/firebase/client";
 import { createCompanyRegistrationRequest, getAllOrganizations, getOrganization } from "@/lib/firebase/company";
 import { updateDoc, doc } from "firebase/firestore";
 import { getFirestore } from "@/lib/firebase/client";
-import { updateUserRole, updateUserStatus } from "@/lib/firebase/firestore";
-import { Loader2, Building2, CheckCircle2, Search, Plus, Users } from "lucide-react";
+import { updateUserRole } from "@/lib/firebase/firestore";
+import { Loader2, Building2, CheckCircle2, Plus, Users } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -147,7 +147,8 @@ export default function RegisterCompanyPage() {
           return;
         }
 
-        const requestId = await createCompanyRegistrationRequest(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _requestId = await createCompanyRegistrationRequest(
           user.uid,
           user.email || "",
           user.displayName || undefined,

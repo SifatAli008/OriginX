@@ -148,7 +148,7 @@ export default function MFAVerification({ method, onVerify, onCancel }: MFAVerif
 
         {method === "totp" && (
           <p className="text-xs text-center text-muted-foreground">
-            Don't have access? Use a backup code instead.
+            Don&apos;t have access? Use a backup code instead.
           </p>
         )}
       </div>

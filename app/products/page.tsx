@@ -21,8 +21,6 @@ import {
   Box,
   Trash2,
   Download,
-  Upload,
-  Filter as FilterIcon,
   X,
   Check,
   AlertTriangle,
@@ -62,7 +60,9 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showBulkActions, setShowBulkActions] = useState(false);
   const itemsPerPage = 10;
 

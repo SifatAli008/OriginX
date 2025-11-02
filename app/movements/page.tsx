@@ -12,7 +12,6 @@ import {
   Plus,
   Eye,
   MapPin,
-  Calendar,
   ChevronRight,
   Home,
   RefreshCw,

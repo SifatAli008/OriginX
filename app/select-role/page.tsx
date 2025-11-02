@@ -76,6 +76,7 @@ export default function SelectRolePage() {
       // User has orgId and is active, but still has default role - show role selection
       if (user.orgId && user.status === "active" && (user.role === "sme" || user.role === "supplier")) {
         // Allow them to stay on this page to select role
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(false);
         return;
       }
@@ -103,8 +104,9 @@ export default function SelectRolePage() {
 
         // User has approved request but hasn't selected role yet
         setLoading(false);
-      } catch (err: any) {
-        setError(err.message || "Failed to check registration status");
+      } catch (err: unknown) {
+        const error = err as { message?: string };
+        setError(error.message || "Failed to check registration status");
         setLoading(false);
       }
     };
@@ -112,6 +114,7 @@ export default function SelectRolePage() {
     if (user && user.orgId) {
       checkRegistrationStatus();
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
     }
   }, [user, router]);
@@ -127,8 +130,9 @@ export default function SelectRolePage() {
       
       // Redirect to dashboard
       router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Failed to update role. Please try again.");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setError(error.message || "Failed to update role. Please try again.");
       setSelecting(false);
     }
   };

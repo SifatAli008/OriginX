@@ -1014,7 +1014,8 @@ function DefaultDashboard() {
   );
 }
 
-// Loading Skeleton Component
+// Loading Skeleton Component (kept for potential future use)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
@@ -1220,7 +1221,8 @@ function generateChartData(days: number) {
   return data;
 }
 
-// Mini Chart Component for visualizing trends
+// Mini Chart Component for visualizing trends (kept for potential future use)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function MiniChart({ data, color }: { data: number[]; color: string }) {
   const maxValue = Math.max(...data, 1);
   
@@ -1643,7 +1645,8 @@ function Sidebar({
   userRole: UserRole;
   onSignOut: () => void;
 }) {
-  const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _router = useRouter();
 
   const getNavItems = () => {
     const commonItems = [

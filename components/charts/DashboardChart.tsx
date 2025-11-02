@@ -76,9 +76,7 @@ export default function DashboardChart({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setComponentsLoaded(true);
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const ChartComponent = type === "area" 

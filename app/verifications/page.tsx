@@ -17,11 +17,7 @@ import {
   Home,
   RefreshCw,
   FileCheck,
-  AlertTriangle,
   Download,
-  Filter,
-  Calendar,
-  TrendingUp,
 } from "lucide-react";
 import DashboardChart from "@/components/charts/DashboardChart";
 

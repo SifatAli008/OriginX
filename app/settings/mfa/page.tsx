@@ -7,12 +7,12 @@ import { AuthGuard } from "@/lib/middleware/auth-guard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Shield, CheckCircle2, XCircle } from "lucide-react";
-import { getFirebaseAuth } from "@/lib/firebase/client";
 import { getUserDocument, updateMFAConfig } from "@/lib/firebase/firestore";
 import MFASetup from "@/components/mfa/MFASetup";
 
 export default function MFASettingsPage() {
-  const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _router = useRouter();
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
   const [loading, setLoading] = useState(true);

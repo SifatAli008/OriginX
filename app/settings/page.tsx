@@ -12,7 +12,6 @@ import {
   Bell,
   Shield,
   Palette,
-  Globe,
   ChevronRight,
   Home,
   Save,

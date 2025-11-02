@@ -147,7 +147,7 @@ export default function MFASetup({ onComplete }: MFASetupProps) {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Store these codes securely. You'll need them if you lose access to your authenticator app.
+                Store these codes securely. You&apos;ll need them if you lose access to your authenticator app.
               </p>
             </div>
           )}

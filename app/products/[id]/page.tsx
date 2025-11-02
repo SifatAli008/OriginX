@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { AuthGuard } from "@/lib/middleware/auth-guard";
@@ -16,19 +16,14 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const productId = params.id as string;
-  const authState = useAppSelector((state) => state.auth);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _authState = useAppSelector((state) => state.auth);
 
   const [product, setProduct] = useState<ProductDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (productId) {
-      loadProduct();
-    }
-  }, [productId]);
-
-  const loadProduct = async () => {
+  const loadProduct = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -44,7 +39,13 @@ export default function ProductDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
+
+  useEffect(() => {
+    if (productId) {
+      loadProduct();
+    }
+  }, [productId, loadProduct]);
 
   const handleDownloadQR = () => {
     if (product?.qrDataUrl) {
