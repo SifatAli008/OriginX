@@ -479,6 +479,7 @@ export default function DashboardPage() {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function AdminDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
   return (
     <div className="space-y-8">
@@ -687,6 +688,7 @@ function AdminDashboard({ permissions: _permissions }: { permissions: ReturnType
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
   return (
     <div className="space-y-8">
@@ -862,6 +864,7 @@ function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<t
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function WarehouseDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
   return (
     <div className="space-y-8">
@@ -951,6 +954,7 @@ function WarehouseDashboard({ permissions: _permissions }: { permissions: Return
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function AuditorDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
   return (
     <div className="space-y-8">

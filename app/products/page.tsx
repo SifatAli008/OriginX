@@ -501,6 +501,7 @@ export default function ProductsPage() {
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
                                 {product.image ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
                                   <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-lg" />
                                 ) : (
                                   <Box className="h-5 w-5 text-gray-400" />
@@ -664,6 +665,7 @@ export default function ProductsPage() {
               <div className="space-y-4">
                 {selectedProduct.image && (
                   <div className="w-full h-48 bg-gray-800 rounded-lg overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" />
                   </div>
                 )}

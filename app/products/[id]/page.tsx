@@ -170,6 +170,7 @@ export default function ProductDetailPage() {
             {product.imgUrl && (
               <Card className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Product Image</h2>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={product.imgUrl}
                   alt={product.name}
@@ -189,6 +190,7 @@ export default function ProductDetailPage() {
               {product.qrDataUrl ? (
                 <div className="space-y-4">
                   <div className="flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={product.qrDataUrl}
                       alt="Product QR Code"

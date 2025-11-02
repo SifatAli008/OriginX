@@ -165,6 +165,7 @@ export default function MFASetup({ onComplete }: MFASetupProps) {
             Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
           </p>
           <div className="flex justify-center mb-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qrCode} alt="TOTP QR Code" className="border rounded-lg" />
           </div>
         </div>
