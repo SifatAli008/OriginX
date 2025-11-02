@@ -369,10 +369,12 @@ export default function LoginPage() {
         const wasRedirecting = sessionStorage.getItem('google_auth_redirect') === 'true';
         
         // CRITICAL: If URL hash is empty but we have redirect flag, this means Firebase didn't redirect back properly
-        // This usually happens when the domain/IP isn't authorized in Firebase Console
+        // This usually happens when the domain/IP isn't authorized in Firebase Console or on Vercel
         if (!hasAuthToken && wasRedirecting && hash.length === 0 && !urlParams.has('error')) {
           const currentHostname = window.location.hostname;
           const isIpAddress = /^\d+\.\d+\.\d+\.\d+$/.test(currentHostname);
+          const isVercelDeployment = currentHostname.includes('.vercel.app') || 
+                                      currentHostname.includes('vercel.app');
           
           if (isIpAddress) {
             console.error("❌ Empty redirect - IP address likely not authorized in Firebase");
@@ -388,6 +390,24 @@ export default function LoginPage() {
                 `4. Save and wait 2-3 minutes for changes to propagate\n` +
                 `5. Clear browser cache (Ctrl+Shift+R) and try again\n\n` +
                 `QUICK TEST: Try using localhost:3000 instead - it should work immediately`
+              );
+              setLoading(false);
+              sessionStorage.removeItem('google_auth_redirect');
+              sessionStorage.removeItem('google_auth_redirect_url');
+            }
+            return;
+          } else if (isVercelDeployment) {
+            console.error("❌ Empty redirect on Vercel - redirects are unreliable on Vercel");
+            console.error("❌ Current hostname:", currentHostname);
+            if (isMounted) {
+              setError(
+                `Google sign-in redirect failed on Vercel.\n\n` +
+                `Redirects are unreliable on Vercel due to Next.js router interference.\n\n` +
+                `The app should automatically use popup method on Vercel.\n` +
+                `If you see this error, please try:\n` +
+                `1. Refresh the page and try signing in again\n` +
+                `2. The popup method should be used automatically\n` +
+                `3. If popup is blocked, allow popups for this site and try again`
               );
               setLoading(false);
               sessionStorage.removeItem('google_auth_redirect');
@@ -973,11 +993,15 @@ export default function LoginPage() {
       const currentOrigin = window.location.origin;
       const currentHostname = window.location.hostname;
       const isIpAddress = /^\d+\.\d+\.\d+\.\d+$/.test(currentHostname);
+      // Vercel deployments often have issues with redirects - use popup instead
+      const isVercelDeployment = currentHostname.includes('.vercel.app') || 
+                                  currentHostname.includes('vercel.app');
       
       console.log("🔄 Initiating Google sign-in from:", currentUrl);
       console.log("🔄 Current origin:", currentOrigin);
       console.log("🔄 Current hostname:", currentHostname);
       console.log("🔄 Is IP address:", isIpAddress);
+      console.log("🔄 Is Vercel deployment:", isVercelDeployment);
       console.log("🔄 Firebase auth domain:", auth.config?.authDomain);
       console.log("🔄 Full Firebase config:", {
         apiKey: auth.config?.apiKey?.substring(0, 10) + "...",
@@ -989,10 +1013,12 @@ export default function LoginPage() {
       googleProvider.addScope('profile');
       
       try {
-        // For IP addresses, use popup instead of redirect (popups work better with IPs)
+        // For IP addresses and Vercel deployments, use popup instead of redirect
+        // Redirects can be unreliable on Vercel due to Next.js router interference
         // For localhost and regular domains, use redirect
-        if (isIpAddress) {
-          console.log("🔄 Using popup method for IP address (redirects may not work with IPs)");
+        if (isIpAddress || isVercelDeployment) {
+          const reason = isVercelDeployment ? "Vercel deployment (redirects unreliable)" : "IP address (redirects may not work with IPs)";
+          console.log(`🔄 Using popup method for ${reason}`);
           sessionStorage.setItem('google_auth_popup', 'true');
           
           try {
