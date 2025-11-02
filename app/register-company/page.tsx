@@ -55,7 +55,7 @@ export default function RegisterCompanyPage() {
 
   useEffect(() => {
     // Wait for auth to finish loading
-    if (authState.status === "loading") {
+    if (authState.status === "loading" || authState.status === "idle") {
       return;
     }
     
@@ -246,17 +246,19 @@ export default function RegisterCompanyPage() {
   };
 
   // Show loading screen while checking authentication
-  if (authState.status === "loading") {
+  // Type assertion needed because TypeScript narrows the type incorrectly after useEffect checks
+  const authStatus = authState.status as "idle" | "loading" | "authenticated" | "unauthenticated";
+  if (authStatus === "loading" || authStatus === "idle") {
     return <LoadingScreen message="Loading..." />;
   }
 
   // Redirect unauthenticated users (will be handled by useEffect, but show loading while redirecting)
-  if (authState.status === "unauthenticated") {
+  if (authStatus === "unauthenticated") {
     return <LoadingScreen message="Redirecting to login..." />;
   }
 
   // Only show page if user is authenticated
-  if (!user || authState.status !== "authenticated") {
+  if (!user || authStatus !== "authenticated") {
     return <LoadingScreen message="Loading..." />;
   }
 

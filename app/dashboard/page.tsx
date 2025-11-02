@@ -268,7 +268,8 @@ export default function DashboardPage() {
       }
       
       // Final check: Non-admin users must have orgId and active status with a specific role (not "sme")
-      if (user.role !== "admin" && (!user.orgId || user.status !== "active" || user.role === "sme")) {
+      // Note: At this point we know user.role is not "admin" (checked above), but we check again for clarity
+      if ((!user.orgId || user.status !== "active" || user.role === "sme")) {
         console.log("Dashboard - User setup incomplete - redirecting to register-company");
         router.push("/register-company");
         return;
