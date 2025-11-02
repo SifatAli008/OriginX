@@ -46,6 +46,7 @@ export interface UserDocument {
   createdAt: number;              // Timestamp
   updatedAt: number;              // Timestamp
   lastLoginAt?: number;           // Timestamp
+  roleSelectedAt?: number;        // Timestamp when user explicitly selected their role
   createdBy?: string;              // UID of user who created this (for admin)
 }
 

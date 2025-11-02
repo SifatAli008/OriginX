@@ -8,18 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppSelector } from "@/lib/store";
 import { getFirebaseAuth } from "@/lib/firebase/client";
-import { createCompanyRegistrationRequest, getAllOrganizations, getOrganization } from "@/lib/firebase/company";
+import { createCompanyRegistrationRequest, getOrganization } from "@/lib/firebase/company";
 import { updateDoc, doc } from "firebase/firestore";
 import { getFirestore } from "@/lib/firebase/client";
 import { updateUserRole } from "@/lib/firebase/firestore";
-import { Loader2, Building2, CheckCircle2, Plus, Users } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Loader2, Building2, CheckCircle2, Plus, Users, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -32,15 +25,15 @@ export default function RegisterCompanyPage() {
   const user = authState.user;
   
   const [mode, setMode] = useState<"new" | "existing" | null>(null); // Start with null - user must select first
-  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
-  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; type?: string }>>([]);
+  const [companyId, setCompanyId] = useState<string>("");
+  const [companyPassword, setCompanyPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [companyType, setCompanyType] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
@@ -51,6 +44,8 @@ export default function RegisterCompanyPage() {
     description?: string;
     address?: string;
     phone?: string;
+    companyId?: string;
+    companyPassword?: string;
   }>({});
 
   useEffect(() => {
@@ -80,26 +75,6 @@ export default function RegisterCompanyPage() {
     }
   }, [authState.status, user, router]);
 
-  // Load existing organizations when user selects "Join Existing"
-  useEffect(() => {
-    const loadOrganizations = async () => {
-      if (mode === "existing") {
-        setLoadingOrgs(true);
-        try {
-          const orgs = await getAllOrganizations();
-          setOrganizations(orgs);
-        } catch (err: unknown) {
-          console.error("Failed to load organizations:", err);
-          setError("Failed to load existing companies. Please try again.");
-        } finally {
-          setLoadingOrgs(false);
-        }
-      }
-    };
-    if (mode === "existing") {
-    loadOrganizations();
-    }
-  }, [mode]);
 
   if (authState.status === "loading" || !user) {
     return <LoadingScreen message="Loading..." />;
@@ -137,6 +112,26 @@ export default function RegisterCompanyPage() {
     return undefined;
   };
 
+  const validateCompanyId = (id: string): string | undefined => {
+    if (!id.trim()) {
+      return "Company ID is required";
+    }
+    if (id.trim().length < 3) {
+      return "Company ID must be at least 3 characters";
+    }
+    return undefined;
+  };
+
+  const validateCompanyPassword = (password: string): string | undefined => {
+    if (!password.trim()) {
+      return "Company password is required";
+    }
+    if (password.trim().length < 6) {
+      return "Password must be at least 6 characters";
+    }
+    return undefined;
+  };
+
   const validateForm = (): boolean => {
     const errors: typeof fieldErrors = {};
     
@@ -144,6 +139,9 @@ export default function RegisterCompanyPage() {
       errors.companyName = validateCompanyName(companyName);
       errors.phone = validatePhone(phone);
       errors.description = validateDescription(description);
+    } else if (mode === "existing") {
+      errors.companyId = validateCompanyId(companyId);
+      errors.companyPassword = validateCompanyPassword(companyPassword);
     }
     
     setFieldErrors(errors);
@@ -172,17 +170,37 @@ export default function RegisterCompanyPage() {
       }
 
       if (mode === "existing") {
-        // User wants to join existing company
-        if (!selectedOrgId) {
-          setError("Please select a company to join.");
+        // User wants to join existing company using ID and password
+        if (!companyId.trim()) {
+          setError("Please enter a company ID.");
           setLoading(false);
           return;
         }
 
-        // Get organization details
-        const org = await getOrganization(selectedOrgId);
+        if (!companyPassword.trim()) {
+          setError("Please enter a company password.");
+          setLoading(false);
+          return;
+        }
+
+        // Get organization details by ID
+        const org = await getOrganization(companyId.trim());
         if (!org) {
-          setError("Selected company not found. Please try again.");
+          setError("Company not found. Please check your company ID and try again.");
+          setLoading(false);
+          return;
+        }
+
+        // Validate password - check if organization has a password field
+        // For now, we'll check if password exists in org data
+        // Note: In production, passwords should be hashed and stored securely
+        const orgPassword = (org as { password?: string }).password;
+        if (!orgPassword) {
+          // If no password is set, allow access (backward compatibility)
+          // In production, you might want to require password setup
+          console.warn("Organization does not have a password set.");
+        } else if (orgPassword !== companyPassword.trim()) {
+          setError("Invalid company ID or password. Please try again.");
           setLoading(false);
           return;
         }
@@ -197,7 +215,7 @@ export default function RegisterCompanyPage() {
 
         const userRef = doc(db, "users", user.uid);
         await updateDoc(userRef, {
-          orgId: selectedOrgId,
+          orgId: companyId.trim(),
           orgName: org.name,
           status: "active",
           updatedAt: Date.now(),
@@ -396,60 +414,112 @@ export default function RegisterCompanyPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
               >
-            <div className="space-y-2">
-                  <Label htmlFor="existingCompany" className="text-sm font-medium flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                Select Company <span className="text-destructive">*</span>
-              </Label>
-              {loadingOrgs ? (
-                    <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-lg bg-muted/30">
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      <span className="ml-3 text-sm text-muted-foreground">Loading companies...</span>
-                </div>
-              ) : organizations.length === 0 ? (
-                    <div className="p-6 border-2 border-dashed rounded-lg bg-muted/30 text-center">
-                      <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
-                      <p className="text-sm text-muted-foreground font-medium">
-                        No existing companies found.
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Please register a new company instead.
-                  </p>
-                </div>
-              ) : (
-                <Select
-                  value={selectedOrgId}
-                  onValueChange={setSelectedOrgId}
-                  disabled={loading}
+                {/* Company ID Field */}
+                <motion.div
+                  className="space-y-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
                 >
-                      <SelectTrigger className={cn(
-                        "h-12 transition-all duration-200",
+                  <Label htmlFor="companyId" className="text-sm font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    Company ID <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="companyId"
+                    type="text"
+                    value={companyId}
+                    onChange={(e) => {
+                      setCompanyId(e.target.value);
+                      if (fieldErrors.companyId) {
+                        setFieldErrors(prev => ({ ...prev, companyId: validateCompanyId(e.target.value) }));
+                      }
+                    }}
+                    onBlur={() => {
+                      setFieldErrors(prev => ({ ...prev, companyId: validateCompanyId(companyId) }));
+                    }}
+                    placeholder="Enter your company ID"
+                    required
+                    minLength={3}
+                    disabled={loading}
+                    className={cn(
+                      "h-12 transition-all duration-200",
+                      "focus:ring-2 focus:ring-primary/20",
+                      "hover:border-primary/50",
+                      fieldErrors.companyId && "border-destructive focus:ring-destructive/20"
+                    )}
+                  />
+                  {fieldErrors.companyId && (
+                    <p className="text-xs text-destructive flex items-center gap-1">
+                      <span className="h-1 w-1 rounded-full bg-destructive" />
+                      {fieldErrors.companyId}
+                    </p>
+                  )}
+                </motion.div>
+
+                {/* Company Password Field */}
+                <motion.div
+                  className="space-y-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9 }}
+                >
+                  <Label htmlFor="companyPassword" className="text-sm font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    Company Password <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="companyPassword"
+                      type={showPassword ? "text" : "password"}
+                      value={companyPassword}
+                      onChange={(e) => {
+                        setCompanyPassword(e.target.value);
+                        if (fieldErrors.companyPassword) {
+                          setFieldErrors(prev => ({ ...prev, companyPassword: validateCompanyPassword(e.target.value) }));
+                        }
+                      }}
+                      onBlur={() => {
+                        setFieldErrors(prev => ({ ...prev, companyPassword: validateCompanyPassword(companyPassword) }));
+                      }}
+                      placeholder="Enter your company password"
+                      required
+                      minLength={6}
+                      disabled={loading}
+                      autoComplete="current-password"
+                      className={cn(
+                        "h-12 pr-10 transition-all duration-200",
                         "focus:ring-2 focus:ring-primary/20",
-                        "hover:border-primary/50"
-                      )}>
-                    <SelectValue placeholder="Select a company to join" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {organizations.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{org.name}</span>
-                              {org.type && (
-                                <span className="text-xs text-muted-foreground">{org.type}</span>
-                              )}
-                            </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-                </div>
+                        "hover:border-primary/50",
+                        fieldErrors.companyPassword && "border-destructive focus:ring-destructive/20"
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-12 px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword((s) => !s)}
+                      disabled={loading}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </Button>
+                  </div>
+                  {fieldErrors.companyPassword && (
+                    <p className="text-xs text-destructive flex items-center gap-1">
+                      <span className="h-1 w-1 rounded-full bg-destructive" />
+                      {fieldErrors.companyPassword}
+                    </p>
+                  )}
+                </motion.div>
+
                 <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
                   <p className="text-xs text-primary flex items-center gap-2">
                     <CheckCircle2 className="h-3 w-3" />
                     You&apos;ll gain immediate access and can choose your role next.
-              </p>
-            </div>
+                  </p>
+                </div>
               </motion.div>
           ) : (
             /* Register New Company Form */
@@ -684,7 +754,7 @@ export default function RegisterCompanyPage() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: mode === "existing" ? 0.9 : 1.3 }}
+              transition={{ delay: mode === "existing" ? 1.0 : 1.3 }}
             >
           <Button
             type="submit"

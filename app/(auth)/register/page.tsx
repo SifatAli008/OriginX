@@ -392,13 +392,22 @@ export default function RegisterPage() {
             disabled={loading}
             className={cn(
               "w-full font-semibold h-12",
-              "transition-all duration-200",
-              "hover:bg-accent hover:border-primary/50",
-              "hover:scale-[1.02] active:scale-[0.98]",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
+              "border-2 border-border/50 bg-gradient-to-br from-background/50 to-background/30",
+              "hover:border-primary hover:bg-gradient-to-br hover:from-primary/20 hover:to-primary/10",
+              "hover:text-primary hover:shadow-lg hover:shadow-primary/20",
+              "transition-all duration-300 ease-out",
+              "hover:scale-[1.03] hover:-translate-y-0.5",
+              "active:scale-[0.98] active:translate-y-0",
+              "backdrop-blur-sm relative overflow-hidden group",
+              "hover:ring-2 hover:ring-primary/30",
+              "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0"
             )}
           >
-            <span className="flex items-center gap-2">
+            {/* Shine effect on hover */}
+            <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            
+            {/* Button content */}
+            <span className="relative z-10 flex items-center gap-2">
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? "Creating account..." : "Create account"}
             </span>
@@ -431,14 +440,25 @@ export default function RegisterPage() {
             disabled={loading}
             className={cn(
               "w-full font-medium h-12",
-              "transition-all duration-200",
-              "hover:bg-accent hover:border-primary/50",
-              "hover:scale-[1.02] active:scale-[0.98]",
-              "disabled:opacity-50"
+              "border-2 border-border/50 bg-gradient-to-br from-background/50 to-background/30",
+              "hover:border-primary hover:bg-gradient-to-br hover:from-primary/20 hover:to-primary/10",
+              "hover:text-primary hover:shadow-lg hover:shadow-primary/20",
+              "transition-all duration-300 ease-out",
+              "hover:scale-[1.03] hover:-translate-y-0.5",
+              "active:scale-[0.98] active:translate-y-0",
+              "backdrop-blur-sm relative overflow-hidden group",
+              "hover:ring-2 hover:ring-primary/30",
+              "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0"
             )}
           >
-            <FcGoogle size={20} className="mr-2" />
-            Continue with Google
+            {/* Shine effect on hover */}
+            <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            
+            {/* Button content */}
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              <FcGoogle size={20} className="transition-transform duration-300 group-hover:scale-110" />
+              Continue with Google
+            </span>
           </Button>
         </motion.div>
 

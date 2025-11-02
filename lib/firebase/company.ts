@@ -89,6 +89,24 @@ export async function getPendingRegistrationRequests(): Promise<CompanyRegistrat
 }
 
 /**
+ * Get all registration requests (admin only) - for admin dashboard
+ */
+export async function getAllRegistrationRequests(): Promise<CompanyRegistrationRequest[]> {
+  const db = getFirestore();
+  if (!db) {
+    return [];
+  }
+
+  const requestsRef = collection(db, "companyRegistrationRequests");
+  const querySnapshot = await getDocs(requestsRef);
+  
+  return querySnapshot.docs.map(doc => ({
+    requestId: doc.id,
+    ...doc.data(),
+  } as CompanyRegistrationRequest));
+}
+
+/**
  * Get registration requests by user ID
  */
 export async function getRegistrationRequestsByUser(userId: string): Promise<CompanyRegistrationRequest[]> {

@@ -112,6 +112,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import LoadingScreen from "@/components/loading/LoadingScreen";
+import { getPendingRegistrationRequests } from "@/lib/firebase/company";
+import { getUserDocument } from "@/lib/firebase/firestore";
 
 // Types for dashboard data
 interface DashboardData {
@@ -259,21 +261,35 @@ export default function DashboardPage() {
         return;
       }
       
-      // Check if user needs to select role (approved but still has default "sme" role and orgId exists)
-      // This means they were just approved and need to choose their specific role
-      if (user.orgId && user.status === "active" && user.role === "sme") {
-        console.log("Dashboard - Redirecting to select-role");
-        router.push("/select-role");
-        return;
-      }
-      
-      // Final check: Non-admin users must have orgId and active status with a specific role (not "sme")
-      // Note: At this point we know user.role is not "admin" (checked above), but we check again for clarity
-      if ((!user.orgId || user.status !== "active" || user.role === "sme")) {
+      // Final check: Non-admin users must have orgId and active status to access dashboard
+      if (!user.orgId || user.status !== "active") {
         console.log("Dashboard - User setup incomplete - redirecting to register-company");
         router.push("/register-company");
         return;
       }
+      
+      // Check if user needs to select role (approved but hasn't explicitly selected a role yet)
+      // Fetch user document to check if roleSelectedAt exists
+      // If roleSelectedAt doesn't exist, they need to select their role first
+      const checkRoleSelection = async () => {
+        try {
+          const userDoc = await getUserDocument(user.uid);
+          if (userDoc && !userDoc.roleSelectedAt) {
+            // User has orgId and is active, but hasn't explicitly selected a role yet
+            console.log("Dashboard - User needs to select role, redirecting to select-role");
+            router.push("/select-role");
+            return;
+          }
+          // User has already selected a role (roleSelectedAt exists) - allow dashboard access
+          console.log("Dashboard - User has access with role:", user.role);
+        } catch (error) {
+          console.error("Dashboard - Error checking user document:", error);
+          // Continue to dashboard on error - better to show dashboard than block user
+          console.log("Dashboard - User has access with role:", user.role);
+        }
+      };
+      
+      checkRoleSelection();
     }
   }, [authState.status, user, router]);
 
@@ -492,6 +508,30 @@ export default function DashboardPage() {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function AdminDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      try {
+        setLoadingRequests(true);
+        const requests = await getPendingRegistrationRequests();
+        setPendingRequestsCount(requests.length);
+      } catch (error) {
+        console.error("Failed to fetch pending requests:", error);
+        setPendingRequestsCount(0);
+      } finally {
+        setLoadingRequests(false);
+      }
+    };
+
+    fetchPendingRequests();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPendingRequests, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Top Row - Key Metrics */}
@@ -510,10 +550,12 @@ function AdminDashboard({ permissions: _permissions }: { permissions: ReturnType
           />
           <StatCard 
             title="Pending Requests" 
-            value="0" 
-            change="0" 
-            trend="down" 
+            value={loadingRequests ? "..." : pendingRequestsCount.toString()} 
+            change={pendingRequestsCount > 0 ? `${pendingRequestsCount} new` : "0"} 
+            trend={pendingRequestsCount > 0 ? "up" : "down"} 
             icon={<FileText className="h-6 w-6" />}
+            onClick={() => router.push("/admin/registration-requests")}
+            clickable={true}
           />
           <StatCard 
             title="Active Products" 
@@ -699,15 +741,26 @@ function AdminDashboard({ permissions: _permissions }: { permissions: ReturnType
   );
 }
 
+// SME/Supplier Dashboard - Focus on product management and business operations
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+  const router = useRouter();
+  
   return (
     <div className="space-y-8">
-      {/* Key Business Metrics */}
+      {/* Welcome Section */}
       <section>
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white mb-1">Business Overview</h2>
-          <p className="text-gray-400 text-sm">Your company performance metrics</p>
+          <h2 className="text-3xl font-bold text-white mb-2">Business Dashboard</h2>
+          <p className="text-gray-400 text-sm">Manage your products, track shipments, and monitor business performance</p>
+        </div>
+      </section>
+
+      {/* Primary Business Metrics */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white mb-1">Key Performance Indicators</h3>
+          <p className="text-gray-400 text-sm">Your core business metrics at a glance</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
@@ -741,45 +794,100 @@ function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<t
         </div>
       </section>
 
-      {/* Secondary Metrics */}
+      {/* Product & Supply Chain Metrics */}
       <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white mb-1">Product & Supply Chain</h3>
+          <p className="text-gray-400 text-sm">Track your product catalog and supply chain operations</p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
-            title="Orders Fulfilled" 
+            title="Products Pending Registration" 
             value="0" 
-            change="0%" 
-            trend="up" 
-            icon={<CheckCircle className="h-6 w-6" />}
-          />
-          <StatCard 
-            title="Pending Orders" 
-            value="0" 
-            change="0" 
+            change="0 awaiting" 
             trend="down" 
             icon={<Clock className="h-6 w-6" />}
           />
           <StatCard 
-            title="Product Views" 
+            title="Active Batches" 
             value="0" 
-            change="0%" 
+            change="0 batches" 
             trend="up" 
-            icon={<Eye className="h-6 w-6" />}
+            icon={<Boxes className="h-6 w-6" />}
           />
           <StatCard 
-            title="Avg Delivery" 
+            title="Verification Success Rate" 
+            value="0%" 
+            change="0% verified" 
+            trend="up" 
+            icon={<CheckCircle className="h-6 w-6" />}
+          />
+          <StatCard 
+            title="Avg Time to Market" 
             value="0 Days" 
-            change="0" 
+            change="0 days" 
             trend="down" 
             icon={<Zap className="h-6 w-6" />}
           />
         </div>
       </section>
 
+      {/* Quick Actions */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white mb-1">Quick Actions</h3>
+          <p className="text-gray-400 text-sm">Common tasks and operations</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/products/new")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Boxes className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Register New Product</CardTitle>
+                  <CardDescription>Add a new product to your catalog</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/movements")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Truck className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Track Shipments</CardTitle>
+                  <CardDescription>Monitor your product movements</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/verifications")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">View Verifications</CardTitle>
+                  <CardDescription>Check product authenticity status</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        </div>
+      </section>
+
       {/* Business Performance Charts */}
       <section>
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white mb-1">Business Performance</h2>
-          <p className="text-gray-400 text-sm">Sales and order trends</p>
+          <h3 className="text-xl font-semibold text-white mb-1">Business Analytics</h3>
+          <p className="text-gray-400 text-sm">Sales trends and product performance insights</p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <DashboardChart
@@ -808,12 +916,12 @@ function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<t
         </div>
       </section>
 
-      {/* Reports Section */}
+      {/* Business Reports Section */}
       <section>
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">Business Reports</h2>
-            <p className="text-gray-400 text-sm">Sales and order reports</p>
+            <h3 className="text-xl font-semibold text-white mb-1">Business Reports</h3>
+            <p className="text-gray-400 text-sm">Generate insights and performance reports</p>
           </div>
           <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
             <Download className="h-4 w-4 mr-2" />
@@ -875,79 +983,153 @@ function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<t
   );
 }
 
+// Warehouse Dashboard - Focus on operations, inventory, and QC
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function WarehouseDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+  const router = useRouter();
+  
   return (
     <div className="space-y-8">
-      {/* Daily Operations */}
+      {/* Welcome Section */}
       <section>
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white mb-1">Daily Operations</h2>
-          <p className="text-gray-400 text-sm">Today&apos;s warehouse activity</p>
+          <h2 className="text-3xl font-bold text-white mb-2">Warehouse Operations Dashboard</h2>
+          <p className="text-gray-400 text-sm">Manage inbound/outbound shipments, QC processes, and inventory levels</p>
+        </div>
+      </section>
+
+      {/* Daily Operations Overview */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white mb-1">Today&apos;s Operations</h3>
+          <p className="text-gray-400 text-sm">Real-time warehouse activity and movement tracking</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
-            title="Inbound Today" 
+            title="Inbound Shipments" 
             value="0" 
-            change="0" 
+            change="0 today" 
             trend="up" 
             icon={<Truck className="h-6 w-6" />}
+            onClick={() => router.push("/movements?type=inbound")}
+            clickable={true}
           />
           <StatCard 
-            title="Outbound Today" 
+            title="Outbound Shipments" 
             value="0" 
-            change="0" 
+            change="0 today" 
             trend="up" 
             icon={<Package className="h-6 w-6" />}
+            onClick={() => router.push("/movements?type=outbound")}
+            clickable={true}
           />
           <StatCard 
-            title="QC Pending" 
+            title="QC Logs Pending" 
             value="0" 
-            change="0" 
+            change="0 awaiting review" 
             trend="down" 
             icon={<ClipboardCheck className="h-6 w-6" />}
+            onClick={() => router.push("/qc-logs")}
+            clickable={true}
           />
           <StatCard 
             title="Total Movements" 
             value="0" 
-            change="0%" 
+            change="0% this week" 
             trend="up" 
             icon={<Activity className="h-6 w-6" />}
+            onClick={() => router.push("/movements")}
+            clickable={true}
           />
         </div>
       </section>
 
-      {/* Inventory & Capacity */}
+      {/* Inventory & Capacity Management */}
       <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white mb-1">Inventory & Performance</h3>
+          <p className="text-gray-400 text-sm">Warehouse capacity, stock levels, and operational efficiency</p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
-            title="Storage Capacity" 
+            title="Storage Utilization" 
             value="0%" 
-            change="0%" 
+            change="0% capacity used" 
             trend="up" 
             icon={<Database className="h-6 w-6" />}
           />
           <StatCard 
-            title="Items in Stock" 
+            title="Units in Stock" 
             value="0" 
-            change="0%" 
+            change="0 items stored" 
             trend="up" 
             icon={<Boxes className="h-6 w-6" />}
           />
           <StatCard 
-            title="Processing Time" 
+            title="Avg Processing Time" 
             value="0h" 
-            change="0h" 
+            change="0h per shipment" 
             trend="down" 
             icon={<Clock className="h-6 w-6" />}
           />
           <StatCard 
             title="QC Pass Rate" 
             value="0%" 
-            change="0%" 
+            change="0% passed" 
             trend="up" 
             icon={<CheckCircle className="h-6 w-6" />}
           />
+        </div>
+      </section>
+
+      {/* Quick Actions for Warehouse */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white mb-1">Quick Operations</h3>
+          <p className="text-gray-400 text-sm">Common warehouse tasks and workflows</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/movements?type=inbound")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Truck className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Process Inbound</CardTitle>
+                  <CardDescription>Record incoming shipments</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/qc-logs")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <ClipboardCheck className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">QC Logs</CardTitle>
+                  <CardDescription>Manage quality control records</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/movements")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Activity className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">All Movements</CardTitle>
+                  <CardDescription>View complete movement history</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
         </div>
       </section>
 
@@ -965,45 +1147,111 @@ function WarehouseDashboard({ permissions: _permissions }: { permissions: Return
   );
 }
 
+// Auditor Dashboard - Focus on verifications, compliance, and read-only analytics
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function AuditorDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+  const router = useRouter();
+  
   return (
     <div className="space-y-8">
-      {/* Statistics Section */}
+      {/* Welcome Section */}
       <section>
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white mb-1">Audit Overview</h2>
-          <p className="text-gray-400 text-sm">Compliance and audit metrics</p>
+          <h2 className="text-3xl font-bold text-white mb-2">Audit & Compliance Dashboard</h2>
+          <p className="text-gray-400 text-sm">Monitor verifications, review compliance reports, and track audit trails (read-only)</p>
+        </div>
+      </section>
+
+      {/* Audit Metrics Overview */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white mb-1">Verification & Compliance Metrics</h3>
+          <p className="text-gray-400 text-sm">Track product verifications and system compliance status</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
-            title="Verifications" 
+            title="Total Verifications" 
             value="0" 
-            change="0" 
+            change="0 verified" 
             trend="up" 
             icon={<Shield className="h-6 w-6" />}
+            onClick={() => router.push("/verifications")}
+            clickable={true}
           />
           <StatCard 
-            title="Reports Filed" 
+            title="Compliance Reports" 
             value="0" 
-            change="0%" 
+            change="0 reports generated" 
             trend="up" 
             icon={<FileCheck className="h-6 w-6" />}
+            onClick={() => router.push("/reports")}
+            clickable={true}
           />
           <StatCard 
-            title="Compliance Rate" 
+            title="System Compliance Rate" 
             value="0%" 
-            change="0%" 
+            change="0% compliant" 
             trend="up" 
             icon={<TrendingUp className="h-6 w-6" />}
           />
           <StatCard 
-            title="Audits Pending" 
+            title="Pending Audits" 
             value="0" 
-            change="0" 
+            change="0 awaiting review" 
             trend="down" 
             icon={<ClipboardCheck className="h-6 w-6" />}
           />
+        </div>
+      </section>
+
+      {/* Audit Quick Access */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white mb-1">Audit Tools</h3>
+          <p className="text-gray-400 text-sm">Access verification records and compliance reports</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/verifications")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Product Verifications</CardTitle>
+                  <CardDescription>View all product verification records</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/reports")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <FileCheck className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Compliance Reports</CardTitle>
+                  <CardDescription>Access audit and compliance reports</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/blockchain")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Activity className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Blockchain Audit</CardTitle>
+                  <CardDescription>View immutable audit trails</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
         </div>
       </section>
 
@@ -1268,16 +1516,20 @@ function StatCard({
   value, 
   change, 
   trend, 
-  icon 
+  icon,
+  onClick,
+  clickable = false
 }: { 
   title: string; 
   value: string; 
   change: string; 
   trend: "up" | "down"; 
   icon: React.ReactNode;
+  onClick?: () => void;
+  clickable?: boolean;
 }) {
-  return (
-    <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm">
+  const cardContent = (
+    <>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-gray-400">
           {title}
@@ -1303,9 +1555,33 @@ function StatCard({
             )}
             <span className="font-semibold">{change}</span>
           </div>
-          <span className="text-gray-500 ml-2">vs last month</span>
+          {change !== "0 new" && change !== "0" && !change.includes("%") && (
+            <span className="text-gray-500 ml-2">new requests</span>
+          )}
+          {(change === "0" || change.includes("%")) && (
+            <span className="text-gray-500 ml-2">vs last month</span>
+          )}
         </div>
       </CardContent>
+    </>
+  );
+
+  if (clickable && onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="w-full text-left"
+      >
+        <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm cursor-pointer hover:border-gray-700 hover:shadow-lg transition-all duration-200">
+          {cardContent}
+        </Card>
+      </button>
+    );
+  }
+
+  return (
+    <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm">
+      {cardContent}
     </Card>
   );
 }

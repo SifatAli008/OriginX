@@ -101,6 +101,7 @@ export async function updateUserRole(uid: string, role: UserRole): Promise<void>
   const userRef = doc(db, "users", uid);
   await updateDoc(userRef, {
     role,
+    roleSelectedAt: Date.now(), // Track when role was explicitly selected
     updatedAt: Date.now(),
   });
 }
