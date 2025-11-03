@@ -8,12 +8,10 @@ import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Shield,
-  QrCode,
   CheckCircle,
   XCircle,
   AlertTriangle,
   Upload,
-  Camera,
   Loader2,
   Home,
   ChevronRight,

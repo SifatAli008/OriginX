@@ -102,11 +102,22 @@ export async function POST(request: NextRequest) {
       
       rows = lines.slice(1).map(line => {
         const values = line.split(",").map(v => v.trim());
-        const row: any = {};
+        const row: Record<string, string> = {};
         headers.forEach((header, index) => {
           row[header] = values[index] || "";
         });
-        return row as ProductRow;
+        return {
+          name: row.name || "",
+          sku: row.sku || "",
+          category: (row.category || "other").toLowerCase() as ProductCategory,
+          description: row.description,
+          brand: row.brand,
+          model: row.model,
+          serialNumber: row.serialnumber || row["serial number"],
+          manufacturingDate: row.manufacturingdate || row["manufacturing date"],
+          expiryDate: row.expirydate || row["expiry date"],
+          imageUrl: row.imageurl || row["image url"],
+        } as ProductRow;
       });
     } else {
       // Parse XLS/XLSX - requires xlsx library
@@ -115,21 +126,21 @@ export async function POST(request: NextRequest) {
         const workbook = xlsxLib.read(buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = xlsxLib.utils.sheet_to_json(worksheet);
+        const jsonData = xlsxLib.utils.sheet_to_json(worksheet) as Array<Record<string, unknown>>;
         
-        rows = jsonData.map((row: any) => ({
-          name: row.name || row.Name || row.NAME || "",
-          sku: row.sku || row.SKU || "",
-          category: (row.category || row.Category || row.CATEGORY || "other").toLowerCase() as ProductCategory,
-          description: row.description || row.Description || row.DESCRIPTION,
-          brand: row.brand || row.Brand || row.BRAND,
-          model: row.model || row.Model || row.MODEL,
-          serialNumber: row.serialNumber || row["Serial Number"] || row["SERIAL NUMBER"],
-          manufacturingDate: row.manufacturingDate || row["Manufacturing Date"] || row["MANUFACTURING DATE"],
-          expiryDate: row.expiryDate || row["Expiry Date"] || row["EXPIRY DATE"],
-          imageUrl: row.imageUrl || row["Image URL"] || row["IMAGE URL"],
+        rows = jsonData.map((row) => ({
+          name: (row.name || row.Name || row.NAME || "") as string,
+          sku: (row.sku || row.SKU || "") as string,
+          category: ((row.category || row.Category || row.CATEGORY || "other") as string).toLowerCase() as ProductCategory,
+          description: (row.description || row.Description || row.DESCRIPTION) as string | undefined,
+          brand: (row.brand || row.Brand || row.BRAND) as string | undefined,
+          model: (row.model || row.Model || row.MODEL) as string | undefined,
+          serialNumber: (row.serialNumber || row["Serial Number"] || row["SERIAL NUMBER"]) as string | undefined,
+          manufacturingDate: (row.manufacturingDate || row["Manufacturing Date"] || row["MANUFACTURING DATE"]) as string | undefined,
+          expiryDate: (row.expiryDate || row["Expiry Date"] || row["EXPIRY DATE"]) as string | undefined,
+          imageUrl: (row.imageUrl || row["Image URL"] || row["IMAGE URL"]) as string | undefined,
         }));
-      } catch (xlsxError) {
+      } catch {
         return NextResponse.json(
           { error: "XLS/XLSX parsing requires the 'xlsx' library. Please install it: npm install xlsx" },
           { status: 500 }

@@ -87,7 +87,6 @@ export async function GET(request: NextRequest) {
       query: buildQuery,
       where: buildWhere,
       orderBy: buildOrderBy,
-      limitQuery,
       getDocs,
       getFirestore,
       getFirebaseApp,
@@ -134,12 +133,15 @@ export async function GET(request: NextRequest) {
     const allDocs = await getDocs(q);
     let items = allDocs.docs.map((doc) => ({
       ...doc.data(),
-    })) as any[];
+    })) as Array<Record<string, unknown>>;
 
     // Filter by productId in payload if provided (client-side)
     if (productId) {
       items = items.filter(
-        (tx) => tx.payload?.productId === productId
+        (tx) => {
+          const payload = tx.payload as Record<string, unknown> | undefined;
+          return payload?.productId === productId;
+        }
       );
     }
 

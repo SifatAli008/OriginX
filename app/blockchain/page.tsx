@@ -15,7 +15,6 @@ import {
   ChevronRight,
   Home,
   RefreshCw,
-  Link as LinkIcon,
   CheckCircle,
   Box,
   X,
@@ -119,8 +118,9 @@ export default function BlockchainPage() {
   };
 
   const filteredTransactions = transactions.filter(tx => {
-    const productName = (tx.payload as any)?.productName || "";
-    const productId = tx.refType === "product" ? tx.refId : (tx.payload as any)?.productId || "";
+    const payload = tx.payload as Record<string, unknown> | undefined;
+    const productName = (payload?.productName as string) || "";
+    const productId = tx.refType === "product" ? tx.refId : (payload?.productId as string) || "";
     
     const matchesSearch = 
       tx.txHash.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -300,8 +300,9 @@ export default function BlockchainPage() {
             ) : (
               <div className="space-y-4">
                 {filteredTransactions.map((tx) => {
-                  const productName = (tx.payload as any)?.productName || "N/A";
-                  const productId = tx.refType === "product" ? tx.refId : (tx.payload as any)?.productId || tx.refId;
+                  const payload = tx.payload as Record<string, unknown> | undefined;
+                  const productName = (payload?.productName as string) || "N/A";
+                  const productId = tx.refType === "product" ? tx.refId : (payload?.productId as string) || tx.refId;
                   
                   return (
                     <div

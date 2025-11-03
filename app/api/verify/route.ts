@@ -53,7 +53,7 @@ export interface VerificationDocument {
  * - Location-based anomalies
  */
 async function calculateCounterfeitScore(
-  product: any,
+  product: { productId: string; name?: string; status?: string; manufacturerId?: string; orgId?: string } | null,
   qrPayload: QRPayload,
   imageUrl?: string
 ): Promise<{ score: number; confidence: number; factors: string[] }> {

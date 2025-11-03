@@ -6,7 +6,8 @@ import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ChevronRight, Home, Save, X, Upload, Image as ImageIcon } from "lucide-react";
+import { Package, ChevronRight, Home, Save, X, Upload } from "lucide-react";
+import Image from "next/image";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import type { ProductCategory } from "@/lib/types/products";
 
@@ -287,10 +288,13 @@ export default function NewProductPage() {
                     className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors bg-gray-800/50"
                   >
                     {imagePreview ? (
-                      <img
+                      <Image
                         src={imagePreview}
                         alt="Preview"
+                        width={400}
+                        height={192}
                         className="w-full h-full object-contain rounded-lg"
+                        unoptimized
                       />
                     ) : (
                       <div className="flex flex-col items-center text-gray-400">
@@ -325,7 +329,7 @@ export default function NewProductPage() {
                 <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg">
                   <p className="text-green-400 text-sm mb-2">Product created successfully! QR Code:</p>
                   <div className="flex justify-center">
-                    <img src={qrPreview} alt="QR Code" className="w-48 h-48" />
+                    <Image src={qrPreview} alt="QR Code" width={192} height={192} className="w-48 h-48" unoptimized />
                   </div>
                   <p className="text-gray-400 text-xs mt-2 text-center">Redirecting to products page...</p>
                 </div>

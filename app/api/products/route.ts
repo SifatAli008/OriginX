@@ -227,7 +227,15 @@ export async function GET(request: NextRequest) {
     const batchId = searchParams.get("batchId");
 
     // Build filters (non-admin users can only see their org's products)
-    const filters: any = {
+    const filters: {
+      orgId: string;
+      page: number;
+      pageSize: number;
+      category?: ProductCategory;
+      status?: ProductStatus;
+      search?: string;
+      batchId?: string;
+    } = {
       orgId: userDoc.orgId,
       page,
       pageSize,
