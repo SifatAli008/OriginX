@@ -12,8 +12,10 @@ interface RechartsComponents {
   ResponsiveContainer: ComponentType<RechartsProps>;
   AreaChart: ComponentType<RechartsProps>;
   LineChart: ComponentType<RechartsProps>;
+  BarChart: ComponentType<RechartsProps>;
   Area: ComponentType<RechartsProps>;
   Line: ComponentType<RechartsProps>;
+  Bar: ComponentType<RechartsProps>;
   XAxis: ComponentType<RechartsProps>;
   YAxis: ComponentType<RechartsProps>;
   CartesianGrid: ComponentType<RechartsProps>;
@@ -34,7 +36,7 @@ interface ChartDataPoint {
 
 interface DashboardChartProps {
   data: ChartDataPoint[];
-  type: "area" | "line";
+  type: "area" | "line" | "bar";
   title: string;
   description?: string;
   height?: number;
@@ -65,8 +67,10 @@ export default function DashboardChart({
         ResponsiveContainer: recharts.ResponsiveContainer,
         AreaChart: recharts.AreaChart,
         LineChart: recharts.LineChart,
+        BarChart: recharts.BarChart,
         Area: recharts.Area,
         Line: recharts.Line,
+        Bar: recharts.Bar,
         XAxis: recharts.XAxis,
         YAxis: recharts.YAxis,
         CartesianGrid: recharts.CartesianGrid,
@@ -81,7 +85,9 @@ export default function DashboardChart({
 
   const ChartComponent = type === "area" 
     ? (rechartsComponents?.AreaChart ?? null)
-    : (rechartsComponents?.LineChart ?? null);
+    : type === "bar"
+      ? (rechartsComponents?.BarChart ?? null)
+      : (rechartsComponents?.LineChart ?? null);
 
   if (!mounted || typeof window === 'undefined' || !componentsLoaded || !ChartComponent || !rechartsComponents?.ResponsiveContainer) {
     return (
@@ -160,6 +166,17 @@ export default function DashboardChart({
                         fill={`url(#color${key})`}
                         strokeWidth={2}
                         name={name}
+                      />
+                    );
+                  }
+                  if (type === "bar" && rechartsComponents?.Bar) {
+                    return (
+                      <rechartsComponents.Bar
+                        key={key}
+                        dataKey={key}
+                        name={name}
+                        fill={color}
+                        radius={[4, 4, 0, 0]}
                       />
                     );
                   }

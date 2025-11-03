@@ -21,7 +21,10 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  ClipboardCheck,
+  UserCheck,
 } from "lucide-react";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 
 interface Movement {
   id: string;
@@ -60,11 +63,53 @@ function MovementsContent() {
   const fetchMovements = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setMovements([]);
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      const params = new URLSearchParams({
+        page: "1",
+        pageSize: "50",
+      });
+
+      if (typeFilter !== "all") {
+        params.append("type", typeFilter);
+      }
+
+      const response = await fetch(`/api/movements?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch movements");
+      }
+
+      const data = await response.json();
+      const movementsData = (data.items || []).map((item: Record<string, unknown>) => ({
+        id: item.id,
+        type: item.type || "outbound",
+        product: (item.productName as string) || "Unknown Product",
+        quantity: (item.quantity as number) || 1,
+        from: (item.from as string) || "",
+        to: (item.to as string) || "",
+        status: (item.status as string) || "pending",
+        trackingNumber: (item.trackingNumber as string) || "",
+        createdAt: new Date((item.createdAt as number) || Date.now()),
+        estimatedDelivery: item.estimatedDelivery ? new Date(item.estimatedDelivery as number) : undefined,
+      }));
+      setMovements(movementsData);
     } catch (error) {
       console.error("Failed to fetch movements:", error);
+      setMovements([]);
     } finally {
       setLoading(false);
     }
@@ -305,14 +350,45 @@ function MovementsContent() {
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="flex flex-col gap-2">
+                        {(user.role === "warehouse" || user.role === "admin") && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // TODO: Open QC modal
+                                console.log("QC check for movement:", movement.id);
+                              }}
+                              className="border-gray-700 text-white hover:bg-gray-800"
+                            >
+                              <ClipboardCheck className="h-4 w-4 mr-1" />
+                              QC Check
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // TODO: Open handover modal
+                                console.log("Handover for movement:", movement.id);
+                              }}
+                              className="border-gray-700 text-white hover:bg-gray-800"
+                            >
+                              <UserCheck className="h-4 w-4 mr-1" />
+                              Handover
+                            </Button>
+                          </>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => {
+                            router.push(`/movements/${movement.id}`);
+                          }}
                           className="border-gray-700 text-white hover:bg-gray-800"
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          Track
+                          View
                         </Button>
                       </div>
                     </div>

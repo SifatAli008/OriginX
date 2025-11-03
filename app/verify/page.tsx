@@ -25,6 +25,7 @@ interface VerificationResult {
   verdict: VerificationVerdict;
   aiScore: number;
   confidence: number;
+  riskLevel?: "low" | "medium" | "high" | "critical";
   factors?: string[];
   product?: {
     productId: string;
@@ -325,7 +326,7 @@ export default function VerifyPage() {
                 </div>
 
                 {/* Scores */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="p-4 bg-gray-800/50 rounded-lg">
                     <p className="text-sm text-gray-400 mb-1">AI Authenticity Score</p>
                     <p className="text-2xl font-bold text-white">{verificationResult.aiScore.toFixed(1)}%</p>
@@ -352,6 +353,32 @@ export default function VerifyPage() {
                       />
                     </div>
                   </div>
+                  {verificationResult.riskLevel && (
+                    <div className="p-4 bg-gray-800/50 rounded-lg">
+                      <p className="text-sm text-gray-400 mb-1">Risk Level</p>
+                      <p className={`text-2xl font-bold ${
+                        verificationResult.riskLevel === "low" ? "text-green-400" :
+                        verificationResult.riskLevel === "medium" ? "text-yellow-400" :
+                        verificationResult.riskLevel === "high" ? "text-orange-400" :
+                        "text-red-400"
+                      }`}>
+                        {verificationResult.riskLevel.toUpperCase()}
+                      </p>
+                      <div className="mt-2">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          verificationResult.riskLevel === "low" ? "bg-green-500/20 text-green-400" :
+                          verificationResult.riskLevel === "medium" ? "bg-yellow-500/20 text-yellow-400" :
+                          verificationResult.riskLevel === "high" ? "bg-orange-500/20 text-orange-400" :
+                          "bg-red-500/20 text-red-400"
+                        }`}>
+                          {verificationResult.riskLevel === "low" ? "Safe" :
+                           verificationResult.riskLevel === "medium" ? "Caution" :
+                           verificationResult.riskLevel === "high" ? "Warning" :
+                           "Critical"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Factors */}

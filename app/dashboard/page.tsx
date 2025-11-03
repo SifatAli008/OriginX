@@ -923,6 +923,20 @@ function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<t
               </div>
             </CardHeader>
           </Card>
+
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/analytics")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Analytics</CardTitle>
+                  <CardDescription>View KPIs and trend analysis</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
         </div>
       </section>
 
@@ -1291,6 +1305,20 @@ function AuditorDashboard({ permissions: _permissions }: { permissions: ReturnTy
                 <div>
                   <CardTitle className="text-white">Blockchain Audit</CardTitle>
                   <CardDescription>View immutable audit trails</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/analytics")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Analytics Dashboard</CardTitle>
+                  <CardDescription>View KPIs, trends, and reports</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -2004,6 +2032,7 @@ function Sidebar({
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
         { label: "QC Logs", icon: <ClipboardCheck className="h-5 w-5" />, href: "/qc-logs" },
         { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
+        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
         { label: "Reports", icon: <FileCheck className="h-5 w-5" />, href: "/reports" },
       ],
       sme: [
@@ -2014,6 +2043,7 @@ function Sidebar({
         { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
         { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
+        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
       ],
       supplier: [
         { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
@@ -2023,6 +2053,7 @@ function Sidebar({
         { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
         { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
+        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
       ],
       warehouse: [
         { label: "Inbound", icon: <Truck className="h-5 w-5" />, href: "/movements?type=inbound" },
@@ -2033,6 +2064,7 @@ function Sidebar({
       auditor: [
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
         { label: "Reports", icon: <FileCheck className="h-5 w-5" />, href: "/reports" },
+        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
         { label: "Products", icon: <Search className="h-5 w-5" />, href: "/products" },
         { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
       ],

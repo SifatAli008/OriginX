@@ -44,89 +44,188 @@ export interface VerificationDocument {
 }
 
 /**
- * AI-powered counterfeit scoring (stubbed in MVP)
- * In production, this would use machine learning models to analyze:
- * - Product image features
- * - QR code integrity
- * - Product metadata consistency
- * - Historical verification patterns
- * - Location-based anomalies
+ * AI-powered counterfeit scoring
+ * 
+ * MVP Phase: Deterministic score via metadata checks
+ * Phase 2: Real ML model (CNN + OCR) for hologram/logo verification
+ * 
+ * Current implementation (MVP):
+ * - Product metadata consistency checks
+ * - QR code integrity validation
+ * - Timestamp validity checks
+ * - Basic risk scoring
+ * 
+ * Future implementation (Phase 2):
+ * - CNN model for product image analysis
+ * - OCR for hologram/logo verification
+ * - Deep learning for tampering detection
  */
 async function calculateCounterfeitScore(
   product: { productId: string; name?: string; status?: string; manufacturerId?: string; orgId?: string } | null,
   qrPayload: QRPayload,
   imageUrl?: string
-): Promise<{ score: number; confidence: number; factors: string[] }> {
+): Promise<{ score: number; confidence: number; factors: string[]; riskLevel: "low" | "medium" | "high" | "critical" }> {
   const factors: string[] = [];
   let score = 50; // Start with neutral score
   let confidence = 50;
+  let riskScore = 0; // Risk score (lower is better)
 
-  // Factor 1: QR code timestamp validity (check if timestamp is reasonable)
+  // ========== MVP Phase: Deterministic Metadata Checks ==========
+
+  // Factor 1: QR code timestamp validity
   const qrAge = Date.now() - qrPayload.ts;
   const maxAge = 365 * 24 * 60 * 60 * 1000; // 1 year
   if (qrAge < 0) {
     score -= 30; // Future timestamp is suspicious
-    factors.push("Future timestamp in QR code");
+    riskScore += 30;
+    factors.push("Future timestamp in QR code - HIGH RISK");
   } else if (qrAge > maxAge) {
     score -= 20; // Very old QR code
-    factors.push("QR code timestamp is very old");
+    riskScore += 20;
+    factors.push("QR code timestamp is very old - MEDIUM RISK");
   } else if (qrAge < 7 * 24 * 60 * 60 * 1000) {
     score += 10; // Recent QR code
-    factors.push("Recent QR code timestamp");
+    riskScore -= 5;
+    factors.push("Recent QR code timestamp - LOW RISK");
+  } else {
+    riskScore += 5;
+    factors.push("QR code age is normal");
   }
 
-  // Factor 2: Product exists and is active
+  // Factor 2: Product existence and status
   if (product && product.status === "active") {
     score += 20;
-    factors.push("Product is active in system");
+    riskScore -= 10;
+    factors.push("Product is active in system - LOW RISK");
   } else if (!product) {
     score -= 40; // Product doesn't exist
-    factors.push("Product not found in database");
+    riskScore += 40;
+    factors.push("Product not found in database - CRITICAL RISK");
   } else {
     score -= 20;
-    factors.push("Product status is not active");
+    riskScore += 20;
+    factors.push("Product status is not active - MEDIUM RISK");
   }
 
   // Factor 3: Product metadata consistency
   if (product) {
     if (product.manufacturerId === qrPayload.manufacturerId) {
       score += 15;
-      factors.push("Manufacturer ID matches");
+      riskScore -= 5;
+      factors.push("Manufacturer ID matches - LOW RISK");
     } else {
       score -= 30;
-      factors.push("Manufacturer ID mismatch");
+      riskScore += 30;
+      factors.push("Manufacturer ID mismatch - HIGH RISK");
     }
 
     if (product.orgId === qrPayload.orgId) {
       score += 10;
-      factors.push("Organization ID matches");
+      riskScore -= 5;
+      factors.push("Organization ID matches - LOW RISK");
     } else {
       score -= 20;
-      factors.push("Organization ID mismatch");
+      riskScore += 20;
+      factors.push("Organization ID mismatch - MEDIUM RISK");
     }
   }
 
-  // Factor 4: Image analysis (stubbed - in production, use ML model)
+  // Factor 4: Image presence (basic check in MVP)
   if (imageUrl) {
-    score += 5; // Having an image increases confidence
-    factors.push("Verification image provided");
-    // In production: analyze image with ML model for counterfeit detection
-    // - Check packaging authenticity
-    // - Verify product features match database
-    // - Detect signs of tampering or duplication
+    score += 5;
+    riskScore -= 2;
+    factors.push("Verification image provided - LOW RISK");
+    
+    // ========== Phase 2: ML Model Integration Point ==========
+    // TODO: Phase 2 - Integrate ML models here
+    // 
+    // Example integration:
+    // try {
+    //   const mlResult = await analyzeImageWithML(imageUrl, {
+    //     model: "counterfeit-detection-v1",
+    //     features: ["hologram", "logo", "packaging", "tampering"],
+    //   });
+    //   
+    //   if (mlResult.hologramConfidence < 0.7) {
+    //     score -= 25;
+    //     riskScore += 25;
+    //     factors.push(`Hologram verification failed (${(mlResult.hologramConfidence * 100).toFixed(0)}% confidence) - HIGH RISK`);
+    //   }
+    //   
+    //   if (mlResult.logoMatch < 0.8) {
+    //     score -= 20;
+    //     riskScore += 20;
+    //     factors.push(`Logo mismatch detected (${(mlResult.logoMatch * 100).toFixed(0)}% match) - MEDIUM RISK`);
+    //   }
+    //   
+    //   if (mlResult.tamperingDetected) {
+    //     score -= 35;
+    //     riskScore += 35;
+    //     factors.push("Tampering detected via ML analysis - CRITICAL RISK");
+    //   }
+    //   
+    //   // OCR for hologram text verification
+    //   const ocrResult = await extractTextFromHologram(imageUrl);
+    //   if (ocrResult && !ocrResult.includes(productId)) {
+    //     score -= 15;
+    //     riskScore += 15;
+    //     factors.push("Hologram text mismatch - MEDIUM RISK");
+    //   }
+    // } catch (mlError) {
+    //   console.error("ML analysis failed, using deterministic scoring only:", mlError);
+    //   factors.push("ML analysis unavailable - using metadata checks only");
+    // }
+    //
+    // End of Phase 2 integration point
+  } else {
+    riskScore += 5;
+    factors.push("No verification image provided - MEDIUM RISK");
   }
 
-  // Factor 5: Verification frequency (stubbed - would check historical data)
-  // In production: Check if this product has been verified unusually frequently
+  // Factor 5: Historical verification patterns (stubbed for MVP)
+  // In Phase 2: Check if this product has been verified unusually frequently
   // which could indicate counterfeiting attempts
+  // Example:
+  // const verificationCount = await getVerificationCount(productId, { days: 7 });
+  // if (verificationCount > 10) {
+  //   score -= 10;
+  //   riskScore += 10;
+  //   factors.push(`Unusual verification frequency (${verificationCount} in 7 days) - MEDIUM RISK`);
+  // }
+
+  // Factor 6: Location-based anomalies (stubbed for MVP)
+  // In Phase 2: Check if verification location matches expected product location
+  // Example:
+  // const expectedLocation = await getExpectedProductLocation(productId);
+  // const verificationLocation = await getVerificationLocation();
+  // if (expectedLocation && verificationLocation && 
+  //     !areLocationsCompatible(expectedLocation, verificationLocation)) {
+  //   score -= 15;
+  //   riskScore += 15;
+  //   factors.push(`Location anomaly detected - MEDIUM RISK`);
+  // }
 
   // Normalize score to 0-100 range
   score = Math.max(0, Math.min(100, score));
 
-  // Calculate confidence based on factors
-  confidence = Math.min(100, 50 + (factors.filter(f => f.includes("matches") || f.includes("Recent")).length * 10));
+  // Calculate confidence based on factors and data available
+  const positiveFactors = factors.filter(f => f.includes("matches") || f.includes("Recent") || f.includes("active")).length;
+  const negativeFactors = factors.filter(f => f.includes("mismatch") || f.includes("not found") || f.includes("CRITICAL")).length;
+  confidence = Math.min(100, 50 + (positiveFactors * 10) - (negativeFactors * 5));
 
-  return { score, confidence, factors };
+  // Determine risk level
+  let riskLevel: "low" | "medium" | "high" | "critical";
+  if (riskScore < 20) {
+    riskLevel = "low";
+  } else if (riskScore < 40) {
+    riskLevel = "medium";
+  } else if (riskScore < 60) {
+    riskLevel = "high";
+  } else {
+    riskLevel = "critical";
+  }
+
+  return { score, confidence, factors, riskLevel };
 }
 
 /**
@@ -280,6 +379,7 @@ export async function POST(request: NextRequest) {
       verdict,
       aiScore: aiResult.score,
       confidence: aiResult.confidence,
+      riskLevel: aiResult.riskLevel,
       imageUrl,
       channel: "web",
       metadata: {
@@ -309,6 +409,7 @@ export async function POST(request: NextRequest) {
       verdict,
       aiScore: aiResult.score,
       confidence: aiResult.confidence,
+      riskLevel: aiResult.riskLevel,
       factors: aiResult.factors,
       product: product
         ? {

@@ -21,6 +21,7 @@ import {
   Download,
 } from "lucide-react";
 import DashboardChart from "@/components/charts/DashboardChart";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 
 interface QCLog {
   id: string;
@@ -99,16 +100,56 @@ export default function QCLogsPage() {
     }
 
     fetchLogs();
-  }, [authState.status, router]);
+  }, [authState.status, router, currentPage, resultFilter]);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLogs([]);
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        pageSize: itemsPerPage.toString(),
+      });
+
+      if (resultFilter !== "all") {
+        params.append("qcResult", resultFilter);
+      }
+
+      const response = await fetch(`/api/qc-logs?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch QC logs");
+      }
+
+      const data = await response.json();
+      const logsData = (data.items || []).map((item: Record<string, unknown>) => ({
+        id: item.id,
+        productName: (item.productName as string) || "Unknown Product",
+        batchNumber: (item.trackingNumber as string) || "",
+        inspector: (item.qcInspector as string) || "Unknown",
+        result: (item.qcResult === "passed" ? "pass" : item.qcResult === "failed" ? "fail" : "conditional") as "pass" | "fail" | "conditional",
+        date: new Date((item.createdAt as number) || Date.now()),
+        defectsFound: Array.isArray(item.defects) ? (item.defects as unknown[]).length : 0,
+        notes: (item.qcNotes as string) || "",
+      }));
+      setLogs(logsData);
     } catch (error) {
       console.error("Failed to fetch QC logs:", error);
+      setLogs([]);
     } finally {
       setLoading(false);
     }

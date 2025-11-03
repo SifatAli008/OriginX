@@ -11,6 +11,9 @@ This guide provides step-by-step instructions for manually testing all features 
 3. [3.2 Product Registration & Management](#32-product-registration--management)
 4. [3.3 QR Verification](#33-qr-verification)
 5. [3.4 Blockchain (Simulated Ledger)](#34-blockchain-simulated-ledger)
+6. [3.5 Movement & Logistics](#35-movement--logistics)
+7. [3.6 AI Counterfeit Detection](#36-ai-counterfeit-detection)
+8. [3.7 Analytics & Reports](#37-analytics--reports)
 
 ---
 
@@ -709,6 +712,304 @@ MacBook Pro 16,MBP-16,Electronics,Professional laptop,Apple,MacBook Pro 16,SN-MB
 - Valid QR: Use encrypted string from registered product
 - Invalid QR: `0xINVALID1234567890ABCDEF`
 - Old QR: Create product, modify timestamp in QR payload
+
+---
+
+## 3.5 Movement & Logistics
+
+### Test 5.1: Create Movement/Shipment
+
+#### Steps:
+1. Login as **Admin** or **Warehouse** user
+2. Navigate to **Shipments** (`/movements`) or from sidebar
+3. Click **"New Shipment"** button
+4. Fill in movement form:
+   - **Product ID**: Select from dropdown or enter manually
+   - **Product Name**: Enter product name
+   - **Type**: Select `inbound`, `outbound`, or `transfer`
+   - **From**: Enter source location (e.g., "Supplier Warehouse")
+   - **To**: Enter destination location (e.g., "Main Warehouse")
+   - **Quantity**: Enter quantity (default: 1)
+   - **Tracking Number**: Auto-generated or enter manually
+   - **Estimated Delivery**: Select date (optional)
+   - **Notes**: Add any notes (optional)
+5. Click **"Create Movement"**
+
+#### Expected Results:
+- ✅ Movement created successfully
+- ✅ Movement ID returned
+- ✅ Status set to "pending" by default
+- ✅ Automatic MOVEMENT transaction created
+- ✅ Transaction hash displayed
+- ✅ Movement appears in movements list
+
+#### Verify in Blockchain:
+- Navigate to **Blockchain** (`/blockchain`)
+- Filter by type: `MOVEMENT`
+- Find the transaction with the movement details
+- Verify transaction hash matches
+
+---
+
+### Test 5.2: Record Digital Handover
+
+#### Prerequisites:
+- A movement must exist (create one via Test 5.1 or API)
+
+#### Steps:
+1. Login as **Warehouse** or **Admin** user
+2. Navigate to **Shipments** (`/movements`)
+3. Find a movement in the list
+4. Click **"Handover"** button (visible to warehouse/admin)
+5. Fill in handover form:
+   - **Handed Over By**: Name of sender (auto-filled with current user)
+   - **Received By**: Name of receiver
+   - **Handover Location**: Location where handover occurs
+   - **Condition**: Condition of items (e.g., "Good", "Damaged")
+   - **Handover Notes**: Additional notes
+   - **Update Status to Delivered**: Check if movement should be marked as delivered
+6. Click **"Record Handover"**
+
+#### Expected Results:
+- ✅ Handover record created
+- ✅ Handover ID returned
+- ✅ Movement status updated (if `updateStatus` was true)
+- ✅ Automatic MOVEMENT transaction created (with handover metadata)
+- ✅ Handover appears in `handovers` collection
+- ✅ Transaction visible in blockchain
+
+#### Verify in Blockchain:
+- Check blockchain for MOVEMENT transaction
+- Verify payload contains handover details
+- Verify transaction is immutable
+
+---
+
+### Test 5.3: Quality Control (QC) Check
+
+#### Prerequisites:
+- A movement must exist
+- Must be logged in as **Warehouse** or **Admin** user
+
+#### Steps:
+1. Navigate to **Shipments** (`/movements`)
+2. Find a movement in the list
+3. Click **"QC Check"** button (visible to warehouse/admin)
+4. Fill in QC form:
+   - **QC Result**: Select `passed`, `failed`, or `pending`
+   - **QC Notes**: Enter inspection notes
+   - **Defects**: List any defects found (optional)
+   - **Images**: Upload QC inspection images (optional)
+   - **Approved By**: Name of approver (optional)
+   - **Update Movement Status**: Check to auto-update movement status
+5. Click **"Submit QC Check"**
+
+#### Expected Results:
+- ✅ QC log created
+- ✅ QC Log ID returned
+- ✅ Movement status updated based on QC result:
+  - `passed` → status: `qc_passed`
+  - `failed` → status: `qc_failed`
+- ✅ Automatic QC_LOG transaction created
+- ✅ QC log appears in `qc_logs` collection
+- ✅ Transaction visible in blockchain
+
+#### Test Cases:
+- ✅ QC passed (movement status updates)
+- ✅ QC failed (movement status updates)
+- ✅ QC pending (movement status unchanged)
+- ✅ Multiple QC logs for same movement (all immutable)
+
+---
+
+## 3.6 AI Counterfeit Detection
+
+### Test 6.1: Verification with Risk Level
+
+#### Steps:
+1. Navigate to **Verify Product** (`/verify`)
+2. Enter or scan a QR code (see Test 3.1)
+3. Optionally upload a product image
+4. Click **"Verify Product"**
+
+#### Expected Results:
+- ✅ Verification result displayed
+- ✅ **Risk Level** shown:
+  - `LOW` - Green indicator (safe)
+  - `MEDIUM` - Yellow indicator (caution)
+  - `HIGH` - Orange indicator (warning)
+  - `CRITICAL` - Red indicator (critical)
+- ✅ AI Score displayed (0-100)
+- ✅ Confidence level displayed (0-100)
+- ✅ Detailed factors listed with risk levels
+- ✅ Risk level stored in `verifications` collection
+
+#### Verify Risk Levels:
+- **Low Risk**: Valid product, matching IDs, recent QR code
+- **Medium Risk**: Missing image, some metadata mismatches
+- **High Risk**: Metadata mismatches, suspicious patterns
+- **Critical Risk**: Product not found, major inconsistencies
+
+---
+
+### Test 6.2: Verify Risk Scoring Factors
+
+#### Test Different Scenarios:
+
+1. **Genuine Product (Low Risk)**:
+   - Product exists and is active
+   - Manufacturer ID matches
+   - Organization ID matches
+   - Recent QR code timestamp
+   - Verification image provided
+   - **Expected**: Risk Level = LOW, Score ≥ 80
+
+2. **Suspicious Product (Medium Risk)**:
+   - Product exists but some mismatches
+   - Missing verification image
+   - Older QR code
+   - **Expected**: Risk Level = MEDIUM, Score 60-79
+
+3. **Counterfeit Product (High/Critical Risk)**:
+   - Product not found
+   - Manufacturer ID mismatch
+   - Organization ID mismatch
+   - Future timestamp in QR
+   - **Expected**: Risk Level = HIGH/CRITICAL, Score < 60
+
+---
+
+## 3.7 Analytics & Reports
+
+### Test 7.1: View Analytics Dashboard
+
+#### Steps:
+1. Login to the system
+2. Navigate to **Analytics** (`/analytics`) from sidebar
+3. View the analytics dashboard
+
+#### Expected Results:
+- ✅ **KPIs Section**:
+  - Total Products count
+  - Total Verifications count
+  - Counterfeit Detected count
+  - Loss Prevented (estimated $)
+  - Verification breakdown (Genuine, Suspicious, Fake, Invalid)
+- ✅ **Trend Charts**:
+  - Daily Movements chart (bar chart)
+  - Verification Success Rate chart (line chart)
+  - Counterfeit Detection Rate chart (area chart)
+- ✅ **Recent Activity**:
+  - Verifications (last 24h)
+  - Movements (last 24h)
+  - Registrations (last 24h)
+
+#### Verify Data:
+- Check KPIs match actual counts
+- Verify charts display correctly
+- Check date ranges are correct
+
+---
+
+### Test 7.2: Export CSV Report
+
+#### Steps:
+1. Navigate to **Analytics** (`/analytics`)
+2. Click **"Export CSV"** button
+3. Report should download automatically
+
+#### Expected Results:
+- ✅ CSV file downloaded
+- ✅ Filename: `verifications_report_YYYY-MM-DD.csv`
+- ✅ File contains verification data:
+  - ID, Product ID, Verdict, AI Score, Confidence, Verifier Name, Created At
+- ✅ Data is properly formatted (CSV with headers)
+
+#### Alternative via API:
+```bash
+curl -X GET "http://localhost:3000/api/reports?type=verifications&format=csv" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  --output verifications.csv
+```
+
+---
+
+### Test 7.3: Export Excel Report
+
+#### Steps:
+1. Navigate to **Analytics** (`/analytics`) or use API
+2. Export report with format: `excel`
+
+#### Expected Results:
+- ✅ Excel file downloaded (CSV format in MVP)
+- ✅ Filename: `verifications_report_YYYY-MM-DD.xlsx`
+- ✅ Data is properly formatted
+
+#### Note:
+- In MVP, Excel format returns CSV
+- In Phase 2, will use proper Excel format with xlsx library
+
+---
+
+### Test 7.4: Export PDF Report
+
+#### Steps:
+1. Use API to export PDF:
+```bash
+curl -X GET "http://localhost:3000/api/reports?type=verifications&format=pdf" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  --output report.pdf
+```
+
+#### Expected Results:
+- ✅ PDF file downloaded
+- ✅ Filename: `verifications_report_YYYY-MM-DD.pdf`
+- ✅ Contains report data
+
+#### Note:
+- In MVP, PDF format returns JSON
+- In Phase 2, will use proper PDF format with PDF library
+
+---
+
+### Test 7.5: Export Different Report Types
+
+#### Test Each Type:
+
+1. **Products Report**:
+   ```bash
+   curl -X GET "http://localhost:3000/api/reports?type=products&format=csv"
+   ```
+   - ✅ Contains: ID, Name, SKU, Category, Status, Org ID, Created At
+
+2. **Movements Report**:
+   ```bash
+   curl -X GET "http://localhost:3000/api/reports?type=movements&format=csv"
+   ```
+   - ✅ Contains: ID, Product ID, Product Name, Type, From, To, Status, Tracking Number, Created At
+
+3. **Verifications Report**:
+   ```bash
+   curl -X GET "http://localhost:3000/api/reports?type=verifications&format=csv"
+   ```
+   - ✅ Contains: ID, Product ID, Verdict, AI Score, Confidence, Verifier Name, Created At
+
+---
+
+### Test 7.6: Analytics Date Range Filtering
+
+#### Steps:
+1. Navigate to **Analytics** (`/analytics`)
+2. Use API with date range:
+   ```bash
+   curl -X GET "http://localhost:3000/api/analytics?startDate=1704067200000&endDate=1735689600000"
+   ```
+3. Verify data matches date range
+
+#### Expected Results:
+- ✅ Only data within date range is included
+- ✅ KPIs calculated for date range
+- ✅ Trends filtered by date range
 
 ---
 

@@ -85,6 +85,24 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Handovers collection (digital handover logs)
+    match /handovers/{handoverId} {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      allow create: if isAuthenticated(); // Created via API route with permission checks
+      allow update: if false; // Handovers are immutable
+      allow delete: if false; // Handovers cannot be deleted
+    }
+
+    // QC Logs collection (quality control logs)
+    match /qc_logs/{qcLogId} {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      allow create: if isAuthenticated(); // Created via API route with permission checks (warehouse/admin only)
+      allow update: if false; // QC logs are immutable
+      allow delete: if false; // QC logs cannot be deleted
+    }
+
     // Verifications collection
     match /verifications/{verificationId} {
       allow get: if isAuthenticated();

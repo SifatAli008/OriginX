@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Testing Console</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 100px;
+            font-family: monospace;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f1f3f5;
+            border-radius: 5px;
+            border-left: 3px solid #28a745;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        .token-section {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 API Testing Console</h1>
+        <p class="subtitle">Test all Movement and Transaction APIs</p>
+
+        <!-- Token Setup -->
+        <div class="section token-section">
+            <h2>1. Setup Authentication Token</h2>
+            <div class="input-group">
+                <label>Base URL:</label>
+                <input type="text" id="baseUrl" value="http://localhost:3000" placeholder="http://localhost:3000">
+            </div>
+            <div class="input-group">
+                <label>Firebase Auth Token:</label>
+                <textarea id="authToken" placeholder="Get token from browser console: firebase.auth().currentUser.getIdToken().then(t => console.log(t))">test-token-originx-12345-hardcoded-for-testing</textarea>
+            </div>
+            <button onclick="useHardcodedToken()">Use Hardcoded Test Token</button>
+            <button onclick="getTokenFromFirebase()">Get Token from Firebase (if available)</button>
+        </div>
+
+        <!-- Test 1: POST /api/movements -->
+        <div class="section">
+            <h2>2. POST /api/movements - Create Movement</h2>
+            <div class="input-group">
+                <label>Product ID:</label>
+                <input type="text" id="createProductId" value="test-product-123" placeholder="product-id">
+            </div>
+            <div class="input-group">
+                <label>Product Name:</label>
+                <input type="text" id="createProductName" value="Test Brake Pad" placeholder="Product name">
+            </div>
+            <div class="input-group">
+                <label>Type:</label>
+                <select id="createType">
+                    <option value="inbound">inbound</option>
+                    <option value="outbound">outbound</option>
+                    <option value="transfer">transfer</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>From:</label>
+                <input type="text" id="createFrom" value="Supplier Warehouse" placeholder="From location">
+            </div>
+            <div class="input-group">
+                <label>To:</label>
+                <input type="text" id="createTo" value="Main Warehouse" placeholder="To location">
+            </div>
+            <div class="input-group">
+                <label>Quantity:</label>
+                <input type="number" id="createQuantity" value="10" placeholder="Quantity">
+            </div>
+            <button onclick="testCreateMovement()">Create Movement</button>
+            <div id="createResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 2: GET /api/movements -->
+        <div class="section">
+            <h2>3. GET /api/movements - List Movements</h2>
+            <div class="input-group">
+                <label>Type Filter:</label>
+                <select id="listType">
+                    <option value="">All</option>
+                    <option value="inbound">inbound</option>
+                    <option value="outbound">outbound</option>
+                    <option value="transfer">transfer</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Status Filter:</label>
+                <select id="listStatus">
+                    <option value="">All</option>
+                    <option value="pending">pending</option>
+                    <option value="in_transit">in_transit</option>
+                    <option value="delivered">delivered</option>
+                    <option value="cancelled">cancelled</option>
+                </select>
+            </div>
+            <button onclick="testGetMovements()">Get Movements</button>
+            <div id="listResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 3: POST /api/movements/:id/handover -->
+        <div class="section">
+            <h2>4. POST /api/movements/:id/handover - Record Handover</h2>
+            <div class="input-group">
+                <label>Movement ID:</label>
+                <input type="text" id="handoverMovementId" placeholder="Movement ID from Test 2">
+            </div>
+            <div class="input-group">
+                <label>Handed Over By:</label>
+                <input type="text" id="handoverBy" value="John Doe" placeholder="Sender name">
+            </div>
+            <div class="input-group">
+                <label>Received By:</label>
+                <input type="text" id="handoverReceivedBy" value="Jane Smith" placeholder="Receiver name">
+            </div>
+            <div class="input-group">
+                <label>Handover Location:</label>
+                <input type="text" id="handoverLocation" value="Main Warehouse Dock A" placeholder="Location">
+            </div>
+            <div class="input-group">
+                <label>Update Status to Delivered:</label>
+                <select id="handoverUpdateStatus">
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+            <button onclick="testHandover()">Record Handover</button>
+            <div id="handoverResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 4: GET /api/transactions -->
+        <div class="section">
+            <h2>5. GET /api/transactions - List Transactions</h2>
+            <div class="input-group">
+                <label>Type Filter:</label>
+                <select id="txType">
+                    <option value="">All</option>
+                    <option value="PRODUCT_REGISTER">PRODUCT_REGISTER</option>
+                    <option value="VERIFY">VERIFY</option>
+                    <option value="MOVEMENT" selected>MOVEMENT</option>
+                    <option value="TRANSFER">TRANSFER</option>
+                    <option value="QC_LOG">QC_LOG</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Status Filter:</label>
+                <select id="txStatus">
+                    <option value="">All</option>
+                    <option value="pending">pending</option>
+                    <option value="confirmed" selected>confirmed</option>
+                    <option value="failed">failed</option>
+                </select>
+            </div>
+            <button onclick="testGetTransactions()">Get Transactions</button>
+            <div id="txListResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 5: POST /api/movements/:id/qc -->
+        <div class="section">
+            <h2>6. POST /api/movements/:id/qc - Create QC Log</h2>
+            <div class="input-group">
+                <label>Movement ID:</label>
+                <input type="text" id="qcMovementId" placeholder="Movement ID from Test 2">
+            </div>
+            <div class="input-group">
+                <label>QC Result:</label>
+                <select id="qcResult">
+                    <option value="passed">passed</option>
+                    <option value="failed">failed</option>
+                    <option value="pending">pending</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>QC Notes:</label>
+                <textarea id="qcNotes" placeholder="QC inspection notes">All items passed quality control inspection</textarea>
+            </div>
+            <div class="input-group">
+                <label>Update Movement Status:</label>
+                <select id="qcUpdateStatus">
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+            <button onclick="testCreateQC()">Create QC Log</button>
+            <div id="qcResultDiv" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 6: GET /api/analytics -->
+        <div class="section">
+            <h2>7. GET /api/analytics - Get Analytics & KPIs</h2>
+            <div class="input-group">
+                <label>Start Date (optional, Unix timestamp in ms):</label>
+                <input type="number" id="analyticsStartDate" placeholder="Leave empty for last 30 days">
+            </div>
+            <div class="input-group">
+                <label>End Date (optional, Unix timestamp in ms):</label>
+                <input type="number" id="analyticsEndDate" placeholder="Leave empty for current date">
+            </div>
+            <button onclick="testGetAnalytics()">Get Analytics</button>
+            <div id="analyticsResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 7: GET /api/reports -->
+        <div class="section">
+            <h2>8. GET /api/reports - Export Report</h2>
+            <div class="input-group">
+                <label>Report Type:</label>
+                <select id="reportType">
+                    <option value="verifications" selected>verifications</option>
+                    <option value="products">products</option>
+                    <option value="movements">movements</option>
+                    <option value="analytics">analytics</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Format:</label>
+                <select id="reportFormat">
+                    <option value="csv" selected>CSV</option>
+                    <option value="excel">Excel</option>
+                    <option value="pdf">PDF</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Start Date (optional, Unix timestamp in ms):</label>
+                <input type="number" id="reportStartDate" placeholder="Optional">
+            </div>
+            <div class="input-group">
+                <label>End Date (optional, Unix timestamp in ms):</label>
+                <input type="number" id="reportEndDate" placeholder="Optional">
+            </div>
+            <button onclick="testExportReport()">Export Report</button>
+            <div id="reportResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 8: GET /api/transactions/:txHash -->
+        <div class="section">
+            <h2>9. GET /api/transactions/:txHash - Get Transaction by Hash</h2>
+            <div class="input-group">
+                <label>Transaction Hash:</label>
+                <input type="text" id="txHash" placeholder="0x1f3a5b2c8d9e4f6a7b8c9d0e1f2a3b4c5d6e7f8a9">
+            </div>
+            <button onclick="testGetTransactionByHash()">Get Transaction</button>
+            <div id="txHashResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Run All Tests -->
+        <div class="section" style="background: #e7f3ff; border-left-color: #0066cc;">
+            <h2>🚀 Run All Tests</h2>
+            <p style="margin-bottom: 15px; color: #666;">This will run all tests in sequence (creates movement → lists → handover → QC log → analytics → report → gets transaction)</p>
+            <button onclick="runAllTests()" style="background: #0066cc;">Run All Tests</button>
+            <div id="allTestsResult" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        function getBaseUrl() {
+            return document.getElementById('baseUrl').value || 'http://localhost:3000';
+        }
+
+        function getAuthToken() {
+            return document.getElementById('authToken').value.trim();
+        }
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result ' + (isError ? 'error' : 'success');
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testCreateMovement() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const data = {
+                productId: document.getElementById('createProductId').value,
+                productName: document.getElementById('createProductName').value,
+                type: document.getElementById('createType').value,
+                from: document.getElementById('createFrom').value,
+                to: document.getElementById('createTo').value,
+                quantity: parseInt(document.getElementById('createQuantity').value) || 1,
+                status: 'pending',
+                trackingNumber: `TRACK-${Date.now()}`,
+                notes: 'Test movement from API console',
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/movements`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await response.json();
+                showResult('createResult', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: result,
+                }, !response.ok);
+
+                // Store movement ID for handover test
+                if (result.movementId) {
+                    document.getElementById('handoverMovementId').value = result.movementId;
+                }
+            } catch (error) {
+                showResult('createResult', { error: error.message }, true);
+            }
+        }
+
+        async function testGetMovements() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const params = new URLSearchParams();
+            const type = document.getElementById('listType').value;
+            const status = document.getElementById('listStatus').value;
+            if (type) params.append('type', type);
+            if (status) params.append('status', status);
+            params.append('page', '1');
+            params.append('pageSize', '25');
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/movements?${params}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                const result = await response.json();
+                showResult('listResult', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: result,
+                }, !response.ok);
+            } catch (error) {
+                showResult('listResult', { error: error.message }, true);
+            }
+        }
+
+        async function testHandover() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const movementId = document.getElementById('handoverMovementId').value;
+            if (!movementId) {
+                alert('Please enter a Movement ID!');
+                return;
+            }
+
+            const data = {
+                handedOverBy: document.getElementById('handoverBy').value,
+                receivedBy: document.getElementById('handoverReceivedBy').value,
+                handoverLocation: document.getElementById('handoverLocation').value,
+                handoverNotes: 'Handover recorded via API console',
+                condition: 'Good',
+                updateStatus: document.getElementById('handoverUpdateStatus').value === 'true',
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/movements/${movementId}/handover`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await response.json();
+                showResult('handoverResult', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: result,
+                }, !response.ok);
+
+                // Store transaction hash for Test 5
+                if (result.transaction?.txHash) {
+                    document.getElementById('txHash').value = result.transaction.txHash;
+                }
+            } catch (error) {
+                showResult('handoverResult', { error: error.message }, true);
+            }
+        }
+
+        async function testGetTransactions() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const params = new URLSearchParams();
+            const type = document.getElementById('txType').value;
+            const status = document.getElementById('txStatus').value;
+            if (type) params.append('type', type);
+            if (status) params.append('status', status);
+            params.append('page', '1');
+            params.append('pageSize', '25');
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/transactions?${params}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                const result = await response.json();
+                showResult('txListResult', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: result,
+                }, !response.ok);
+
+                // Store first transaction hash for Test 5
+                if (result.items?.[0]?.txHash) {
+                    document.getElementById('txHash').value = result.items[0].txHash;
+                }
+            } catch (error) {
+                showResult('txListResult', { error: error.message }, true);
+            }
+        }
+
+        async function testCreateQC() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const movementId = document.getElementById('qcMovementId').value;
+            if (!movementId) {
+                alert('Please enter a Movement ID!');
+                return;
+            }
+
+            const data = {
+                qcResult: document.getElementById('qcResult').value,
+                qcNotes: document.getElementById('qcNotes').value,
+                defects: [],
+                images: [],
+                updateStatus: document.getElementById('qcUpdateStatus').value === 'true',
+            };
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/movements/${movementId}/qc`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await response.json();
+                showResult('qcResultDiv', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: result,
+                }, !response.ok);
+            } catch (error) {
+                showResult('qcResultDiv', { error: error.message }, true);
+            }
+        }
+
+        async function testGetAnalytics() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const params = new URLSearchParams();
+            const startDate = document.getElementById('analyticsStartDate').value;
+            const endDate = document.getElementById('analyticsEndDate').value;
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+
+            try {
+                const url = `${getBaseUrl()}/api/analytics${params.toString() ? '?' + params.toString() : ''}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                const result = await response.json();
+                showResult('analyticsResult', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: result,
+                }, !response.ok);
+            } catch (error) {
+                showResult('analyticsResult', { error: error.message }, true);
+            }
+        }
+
+        async function testExportReport() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const params = new URLSearchParams({
+                type: document.getElementById('reportType').value,
+                format: document.getElementById('reportFormat').value,
+            });
+            const startDate = document.getElementById('reportStartDate').value;
+            const endDate = document.getElementById('reportEndDate').value;
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+
+            try {
+                const url = `${getBaseUrl()}/api/reports?${params.toString()}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const text = await blob.text();
+                    
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const format = document.getElementById('reportFormat').value;
+                    const type = document.getElementById('reportType').value;
+                    a.download = `${type}_report_${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+
+                    showResult('reportResult', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        message: 'Report downloaded successfully',
+                        size: blob.size,
+                        contentType: response.headers.get('content-type'),
+                        preview: text.substring(0, 200),
+                    }, false);
+                } else {
+                    const result = await response.json();
+                    showResult('reportResult', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        data: result,
+                    }, true);
+                }
+            } catch (error) {
+                showResult('reportResult', { error: error.message }, true);
+            }
+        }
+
+        async function testGetTransactionByHash() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const txHash = document.getElementById('txHash').value;
+            if (!txHash) {
+                alert('Please enter a Transaction Hash!');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/transactions/${txHash}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                const result = await response.json();
+                showResult('txHashResult', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: result,
+                }, !response.ok);
+            } catch (error) {
+                showResult('txHashResult', { error: error.message }, true);
+            }
+        }
+
+        async function runAllTests() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Please set your Firebase Auth Token first!');
+                return;
+            }
+
+            const resultElement = document.getElementById('allTestsResult');
+            resultElement.style.display = 'block';
+            resultElement.className = 'result';
+            resultElement.textContent = '🚀 Starting test suite...\n\n';
+
+            const results = [];
+
+            try {
+                // Test 1: Create Movement
+                resultElement.textContent += '🧪 Test 1: Creating movement...\n';
+                await testCreateMovement();
+                await new Promise(r => setTimeout(r, 1000));
+                const createData = JSON.parse(document.getElementById('createResult').textContent);
+                results.push({ test: 'Create Movement', ...createData });
+                resultElement.textContent += '✅ Movement created\n\n';
+
+                const movementId = createData.data?.movementId;
+                const txHash1 = createData.data?.transaction?.txHash;
+
+                // Test 2: List Movements
+                resultElement.textContent += '🧪 Test 2: Listing movements...\n';
+                await testGetMovements();
+                await new Promise(r => setTimeout(r, 1000));
+                const listData = JSON.parse(document.getElementById('listResult').textContent);
+                results.push({ test: 'List Movements', ...listData });
+                resultElement.textContent += '✅ Movements listed\n\n';
+
+                // Test 3: Handover
+                if (movementId) {
+                    document.getElementById('handoverMovementId').value = movementId;
+                    resultElement.textContent += '🧪 Test 3: Recording handover...\n';
+                    await testHandover();
+                    await new Promise(r => setTimeout(r, 1000));
+                    const handoverData = JSON.parse(document.getElementById('handoverResult').textContent);
+                    results.push({ test: 'Handover', ...handoverData });
+                    resultElement.textContent += '✅ Handover recorded\n\n';
+                }
+
+                // Test 4: List Transactions
+                resultElement.textContent += '🧪 Test 4: Listing transactions...\n';
+                await testGetTransactions();
+                await new Promise(r => setTimeout(r, 1000));
+                const txListData = JSON.parse(document.getElementById('txListResult').textContent);
+                results.push({ test: 'List Transactions', ...txListData });
+                resultElement.textContent += '✅ Transactions listed\n\n';
+
+                // Test 5: Create QC Log
+                if (movementId) {
+                    document.getElementById('qcMovementId').value = movementId;
+                    resultElement.textContent += '🧪 Test 5: Creating QC log...\n';
+                    await testCreateQC();
+                    await new Promise(r => setTimeout(r, 1000));
+                    const qcData = JSON.parse(document.getElementById('qcResultDiv').textContent);
+                    results.push({ test: 'Create QC Log', ...qcData });
+                    resultElement.textContent += '✅ QC log created\n\n';
+                }
+
+                // Test 6: Get Analytics
+                resultElement.textContent += '🧪 Test 6: Getting analytics...\n';
+                await testGetAnalytics();
+                await new Promise(r => setTimeout(r, 1000));
+                const analyticsData = JSON.parse(document.getElementById('analyticsResult').textContent);
+                results.push({ test: 'Get Analytics', ...analyticsData });
+                resultElement.textContent += '✅ Analytics retrieved\n\n';
+
+                // Test 7: Export Report
+                resultElement.textContent += '🧪 Test 7: Exporting report...\n';
+                await testExportReport();
+                await new Promise(r => setTimeout(r, 1000));
+                const reportData = JSON.parse(document.getElementById('reportResult').textContent);
+                results.push({ test: 'Export Report', ...reportData });
+                resultElement.textContent += '✅ Report exported\n\n';
+
+                // Test 8: Get Transaction by Hash
+                const txHash = document.getElementById('txHash').value || txHash1;
+                if (txHash) {
+                    resultElement.textContent += '🧪 Test 8: Getting transaction by hash...\n';
+                    await testGetTransactionByHash();
+                    await new Promise(r => setTimeout(r, 1000));
+                    const txHashData = JSON.parse(document.getElementById('txHashResult').textContent);
+                    results.push({ test: 'Get Transaction by Hash', ...txHashData });
+                    resultElement.textContent += '✅ Transaction retrieved\n\n';
+                }
+
+                resultElement.textContent += '\n✅ All tests completed!\n\n';
+                resultElement.textContent += JSON.stringify(results, null, 2);
+                resultElement.className = 'result success';
+            } catch (error) {
+                resultElement.textContent += `\n❌ Error: ${error.message}\n`;
+                resultElement.className = 'result error';
+            }
+        }
+
+        function useHardcodedToken() {
+            document.getElementById('authToken').value = 'test-token-originx-12345-hardcoded-for-testing';
+            alert('✅ Hardcoded test token loaded!\n\nThis token works in development mode only.');
+        }
+
+        async function getTokenFromFirebase() {
+            // Try to get token from Firebase if available
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                try {
+                    const user = firebase.auth().currentUser;
+                    if (user) {
+                        const token = await user.getIdToken();
+                        document.getElementById('authToken').value = token;
+                        alert('Token retrieved successfully!');
+                    } else {
+                        alert('No user logged in. Please log in first.');
+                    }
+                } catch (error) {
+                    alert('Error getting token: ' + error.message);
+                }
+            } else {
+                alert('Firebase not available. Using hardcoded test token instead.');
+                useHardcodedToken();
+            }
+        }
+    </script>
+</body>
+</html>
+

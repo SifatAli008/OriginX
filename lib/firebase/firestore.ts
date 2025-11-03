@@ -54,6 +54,24 @@ export async function createOrUpdateUserDocument(
  * Get user document from Firestore
  */
 export async function getUserDocument(uid: string): Promise<UserDocument | null> {
+  // Handle hardcoded test user (ONLY IN DEVELOPMENT)
+  if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
+    console.warn('⚠️ Using hardcoded test user - NOT FOR PRODUCTION');
+    return {
+      uid: 'test-user-123',
+      email: 'test@originx.com',
+      displayName: 'Test User',
+      photoURL: null,
+      role: 'admin',
+      orgId: 'test-org-123',
+      orgName: 'Test Organization',
+      mfaEnabled: false,
+      status: 'active',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+  }
+
   const db = getFirestore();
   if (!db) {
     return null;

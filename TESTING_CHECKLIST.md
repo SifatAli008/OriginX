@@ -211,6 +211,17 @@ _______________________________________________
    - Verify MOVEMENT transaction created
    - Check sequential block number
 
+6. **Handover → QC → Verify Transactions**
+   - Create movement
+   - Record handover
+   - Perform QC check
+   - Verify all transactions in blockchain
+
+7. **Analytics → Reports → Verify Data**
+   - View analytics dashboard
+   - Export CSV report
+   - Verify data accuracy
+
 ---
 
 ## Known Issues / Limitations
