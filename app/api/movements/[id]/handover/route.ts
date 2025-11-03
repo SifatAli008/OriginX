@@ -52,8 +52,8 @@ async function getFirestoreUtils() {
     } else {
       app = initializeApp(firebaseConfig);
     }
-  } catch (initError: any) {
-    console.error("Failed to initialize Firebase:", initError?.message || initError);
+  } catch (initError: unknown) {
+    console.error("Failed to initialize Firebase:", initError instanceof Error ? initError.message : String(initError));
     return {
       collection,
       doc,
@@ -240,7 +240,7 @@ export async function POST(
     let db;
     try {
       db = getFirestore(app);
-    } catch (dbError: any) {
+    } catch (dbError: unknown) {
       console.error("Error getting Firestore instance:", dbError);
       // If Firestore fails but we're in dev with test token, return mock
       if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
@@ -380,13 +380,13 @@ export async function POST(
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Create handover error:", error);
+    const errorObj = error instanceof Error ? error : { message: String(error) };
     console.error("Error details:", {
-      message: error?.message,
-      name: error?.name,
-      code: error?.code,
-      stack: error?.stack,
+      message: errorObj.message,
+      name: errorObj instanceof Error ? errorObj.name : undefined,
+      stack: errorObj instanceof Error ? errorObj.stack : undefined,
     });
     
     // In development with test token, return mock data even on error
@@ -399,7 +399,7 @@ export async function POST(
           {
             handoverId: mockHandoverId,
             warning: "Error occurred but returning mock data for testing",
-            originalError: error?.message,
+            originalError: errorObj.message,
             transaction: {
               txHash: mockTxHash,
               blockNumber: 1001,
@@ -415,10 +415,9 @@ export async function POST(
     
     return NextResponse.json(
       { 
-        error: error instanceof Error ? error.message : String(error),
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
-        code: error?.code,
-        name: error?.name,
+        error: errorObj instanceof Error ? errorObj.message : String(errorObj),
+        details: process.env.NODE_ENV === 'development' ? (errorObj instanceof Error ? errorObj.stack : undefined) : undefined,
+        name: errorObj instanceof Error ? errorObj.name : undefined,
       },
       { status: 500 }
     );

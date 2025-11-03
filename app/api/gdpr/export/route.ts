@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const uid = decodedToken.uid;
 
     // Get user document
-    let userDoc: UserDocument | null = null;
+    const userDoc: UserDocument | null = null;
     // ... (same user doc fetching as before)
 
     const body = await request.json();
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Create export error:", error);
     return NextResponse.json(
       {
@@ -150,7 +150,7 @@ async function processExportAsync(
   userId: string,
   format: string,
   dataCategories: string[],
-  orgId?: string
+  _orgId?: string
 ): Promise<void> {
   try {
     const { doc, updateDoc, getFirestore, collection, query, where, getDocs } = await import("firebase/firestore");

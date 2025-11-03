@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
 import type { UserDocument } from "@/lib/types/user";
-import type { SupportTicket, TicketFilters, TicketReply } from "@/lib/types/support";
+import type { SupportTicket, TicketFilters } from "@/lib/types/support";
 
 // Dynamic imports for Firestore
 async function getFirestoreUtils() {

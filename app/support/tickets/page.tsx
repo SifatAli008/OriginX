@@ -5,23 +5,23 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   MessageSquare,
   Plus,
   Search,
-  Filter,
   CheckCircle,
   Clock,
   AlertCircle,
   XCircle,
   ChevronRight,
   Home,
+  Circle,
 } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import type { SupportTicket } from "@/lib/types/support";
@@ -29,7 +29,6 @@ import type { SupportTicket } from "@/lib/types/support";
 export default function SupportTicketsPage() {
   const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
-  const user = authState.user;
 
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,16 +36,7 @@ export default function SupportTicketsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
-  useEffect(() => {
-    if (authState.status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-
-    fetchTickets();
-  }, [authState.status, router, statusFilter, priorityFilter]);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
@@ -86,7 +76,16 @@ export default function SupportTicketsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, priorityFilter]);
+
+  useEffect(() => {
+    if (authState.status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    fetchTickets();
+  }, [authState.status, router, fetchTickets]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

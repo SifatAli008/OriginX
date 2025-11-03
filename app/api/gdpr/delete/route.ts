@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     const uid = decodedToken.uid;
 
     // Get user document
-    let userDoc: UserDocument | null = null;
+    const userDoc: UserDocument | null = null;
     // ... (user doc fetching logic)
 
     const body = await request.json();
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Create deletion request error:", error);
     return NextResponse.json(
       {
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
 async function processDeletionAsync(
   requestId: string,
   userId: string,
-  orgId?: string
+  _orgId?: string
 ): Promise<void> {
   try {
     const { doc, updateDoc, getFirestore, collection, query, where, getDocs, writeBatch } = await import("firebase/firestore");

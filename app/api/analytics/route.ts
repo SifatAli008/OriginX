@@ -357,13 +357,13 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(analyticsData, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get analytics error:", error);
+    const errorObj = error instanceof Error ? error : { message: String(error) };
     console.error("Error details:", {
-      message: error?.message,
-      name: error?.name,
-      code: error?.code,
-      stack: error?.stack,
+      message: errorObj.message,
+      name: errorObj instanceof Error ? errorObj.name : undefined,
+      stack: errorObj instanceof Error ? errorObj.stack : undefined,
     });
     
     // In development with test token, return mock data even on error

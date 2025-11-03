@@ -23,7 +23,6 @@ import { getFirebaseAuth } from "@/lib/firebase/client";
 
 export default function NewTicketPage() {
   const router = useRouter();
-  const authState = useAppSelector((state) => state.auth);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
