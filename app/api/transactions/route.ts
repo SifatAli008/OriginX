@@ -254,16 +254,15 @@ export async function GET(request: NextRequest) {
           pageSize: 25,
           hasMore: false,
           warning: "Error occurred but returning mock data for testing",
-          originalError: error?.message,
+          originalError: errorObj.message,
         }, { status: 200 });
       }
     } catch {}
     
     return NextResponse.json(
       { 
-        error: error instanceof Error ? error.message : String(error),
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
-        code: error?.code,
+        error: errorObj instanceof Error ? errorObj.message : String(errorObj),
+        details: process.env.NODE_ENV === 'development' ? (errorObj instanceof Error ? errorObj.stack : undefined) : undefined,
       },
       { status: 500 }
     );

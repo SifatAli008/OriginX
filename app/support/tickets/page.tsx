@@ -8,6 +8,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
+import type { UserRole } from "@/lib/types/user";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -29,6 +30,7 @@ import type { SupportTicket } from "@/lib/types/support";
 export default function SupportTicketsPage() {
   const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
+  const userRole = (authState.user?.role || "sme") as UserRole;
 
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +129,7 @@ export default function SupportTicketsPage() {
   });
 
   return (
-    <DashboardLayout>
+    <DashboardLayout userRole={userRole}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

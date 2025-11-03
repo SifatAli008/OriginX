@@ -388,9 +388,8 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(
       { 
-        error: error instanceof Error ? error.message : String(error),
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
-        code: error?.code,
+        error: errorObj instanceof Error ? errorObj.message : String(errorObj),
+        details: process.env.NODE_ENV === 'development' ? (errorObj instanceof Error ? errorObj.stack : undefined) : undefined,
       },
       { status: 500 }
     );

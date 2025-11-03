@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
               timestamp: Date.now(),
             },
             warning: "Firestore initialization failed - returning mock data",
-            firestoreError: dbError?.message,
+            firestoreError: dbError instanceof Error ? dbError.message : String(dbError),
           },
           { status: 201 }
         );
@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
               timestamp: Date.now(),
             },
             warning: "Firestore operation failed - returning mock data",
-            firestoreError: firestoreError?.message,
+            firestoreError: firestoreError instanceof Error ? firestoreError.message : String(firestoreError),
           },
           { status: 201 }
         );

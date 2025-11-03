@@ -267,7 +267,7 @@ export async function POST(
               timestamp: Date.now(),
             },
             warning: "Firestore initialization failed - returning mock data",
-            firestoreError: dbError?.message,
+            firestoreError: dbError instanceof Error ? dbError.message : String(dbError),
           },
           { status: 201 }
         );

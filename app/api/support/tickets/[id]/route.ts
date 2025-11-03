@@ -70,59 +70,10 @@ export async function GET(
       );
     }
 
-    // Get user document
-    let userDoc: UserDocument | null = null;
     const uid = decodedToken.uid;
-
-    if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
-      userDoc = {
-        uid: 'test-user-123',
-        email: 'test@originx.com',
-        displayName: 'Test User',
-        photoURL: null,
-        role: 'admin',
-        orgId: 'test-org-123',
-        orgName: 'Test Organization',
-        mfaEnabled: false,
-        status: 'active',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-    } else {
-      try {
-        const { doc: getDocRef, getDoc, getFirestore } = await import("firebase/firestore");
-        const { initializeApp, getApps } = await import("firebase/app");
-        const { firebaseConfig } = await import("@/lib/firebase/config");
-
-        let app;
-        const apps = getApps();
-        if (apps.length > 0) {
-          app = apps[0];
-        } else {
-          app = initializeApp(firebaseConfig);
-        }
-
-        const db = getFirestore(app);
-        const userRef = getDocRef(db, "users", uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          userDoc = userSnap.data() as UserDocument;
-        }
-      } catch (error) {
-        console.error("Error fetching user document:", error);
-      }
-    }
-
-    if (!userDoc) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
     const { id: ticketId } = await params;
 
-    // Get ticket
+    // Get ticket and user document
     const { doc: getDocRef, getDoc, getFirestore, app } = await getFirestoreUtils();
 
     if (!app) {
@@ -133,6 +84,35 @@ export async function GET(
     }
 
     const db = getFirestore(app);
+    
+    // Get user document for permission check
+    let userRole: string | undefined = undefined;
+    let userOrgId: string | undefined = undefined;
+    
+    if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
+      userRole = 'admin';
+      userOrgId = 'test-org-123';
+    } else {
+      try {
+        const userRef = getDocRef(db, "users", uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data() as UserDocument;
+          userRole = userData.role || undefined;
+          userOrgId = userData.orgId != null ? userData.orgId : undefined;
+        }
+      } catch (err) {
+        console.error("Error fetching user document:", err);
+      }
+    }
+
+    if (!userRole) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     const ticketRef = getDocRef(db, "support_tickets", ticketId);
     const ticketSnap = await getDoc(ticketRef);
 
@@ -146,8 +126,8 @@ export async function GET(
     const ticket = { ticketId, ...ticketSnap.data() } as SupportTicket;
 
     // Check permissions
-    if (userDoc.role !== "admin" && ticket.userId !== uid) {
-      if (userDoc.orgId !== ticket.orgId) {
+    if (userRole !== "admin" && ticket.userId !== uid) {
+      if (userOrgId !== ticket.orgId) {
         return NextResponse.json(
           { error: "Access denied" },
           { status: 403 }
@@ -194,11 +174,7 @@ export async function PUT(
       );
     }
 
-    // Get user document (same as GET)
-    const userDoc: UserDocument | null = null;
     const uid = decodedToken.uid;
-
-    // ... (same user doc fetching logic as GET)
 
     const { id: ticketId } = await params;
     const body = await request.json();
@@ -214,6 +190,20 @@ export async function PUT(
     }
 
     const db = getFirestore(app);
+    
+    // Get user document for role check
+    let userRole: string | undefined = undefined;
+    try {
+      const userRef = getDocRef(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data() as UserDocument;
+        userRole = userData.role || undefined;
+      }
+    } catch (err) {
+      console.error("Error fetching user document:", err);
+    }
+
     const ticketRef = getDocRef(db, "support_tickets", ticketId);
     const ticketSnap = await getDoc(ticketRef);
 
@@ -227,7 +217,7 @@ export async function PUT(
     const ticket = ticketSnap.data() as SupportTicket;
 
     // Only admin or ticket owner can update
-    if (userDoc?.role !== "admin" && ticket.userId !== uid) {
+    if (userRole !== "admin" && ticket.userId !== uid) {
       return NextResponse.json(
         { error: "Access denied" },
         { status: 403 }
@@ -250,7 +240,7 @@ export async function PUT(
     }
 
     if (priority) updates.priority = priority;
-    if (assignedTo && userDoc?.role === "admin") {
+    if (assignedTo && userRole === "admin") {
       updates.assignedTo = assignedTo;
     }
     if (tags) updates.tags = tags;

@@ -102,9 +102,9 @@ export async function POST(request: NextRequest) {
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const userData = userSnap.data() as UserDocument;
-        orgId = userData.orgId;
-        userEmail = userData.email;
-        userName = userData.displayName;
+        orgId = userData.orgId || undefined;
+        userEmail = userData.email || undefined;
+        userName = userData.displayName || undefined;
       }
     } catch (err) {
       console.error("Error fetching user document:", err);

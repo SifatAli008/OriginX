@@ -270,7 +270,7 @@ export async function POST(
               timestamp: Date.now(),
             },
             warning: "Firestore initialization failed - returning mock data",
-            firestoreError: dbError?.message,
+            firestoreError: dbError instanceof Error ? dbError.message : String(dbError),
           },
           { status: 201 }
         );
@@ -418,7 +418,7 @@ export async function POST(
           {
             qcId: mockQcId,
             warning: "Error occurred but returning mock data for testing",
-            originalError: error?.message,
+            originalError: errorObj instanceof Error ? errorObj.message : String(errorObj),
             transaction: {
               txHash: mockTxHash,
               blockNumber: 1001,
@@ -434,10 +434,9 @@ export async function POST(
     
     return NextResponse.json(
       { 
-        error: error instanceof Error ? error.message : String(error),
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
-        code: error?.code,
-        name: error?.name,
+        error: errorObj instanceof Error ? errorObj.message : String(errorObj),
+        details: process.env.NODE_ENV === 'development' ? (errorObj instanceof Error ? errorObj.stack : undefined) : undefined,
+        name: errorObj instanceof Error ? errorObj.name : undefined,
       },
       { status: 500 }
     );

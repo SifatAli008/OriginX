@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const userData = userSnap.data() as UserDocument;
-        orgId = userData.orgId;
+        orgId = userData.orgId || undefined;
       }
     } catch (err) {
       console.error("Error fetching user document:", err);

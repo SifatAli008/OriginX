@@ -7,6 +7,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAppSelector } from "@/lib/store";
+import type { UserRole } from "@/lib/types/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -22,6 +24,8 @@ import { getFirebaseAuth } from "@/lib/firebase/client";
 
 export default function NewTicketPage() {
   const router = useRouter();
+  const authState = useAppSelector((state) => state.auth);
+  const userRole = (authState.user?.role || "sme") as UserRole;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +77,7 @@ export default function NewTicketPage() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout userRole={userRole}>
       <div className="space-y-6 max-w-4xl">
         {/* Header */}
         <div>
