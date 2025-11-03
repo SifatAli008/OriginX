@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +45,7 @@ interface VerificationResult {
   error?: string;
 }
 
-export default function VerifyPage() {
+function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const authState = useAppSelector((state) => state.auth);
@@ -472,3 +472,16 @@ export default function VerifyPage() {
   );
 }
 
+export default function VerifyPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen bg-black">
+          <div className="w-16 h-16 border-4 border-gray-800 border-t-white rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <VerifyContent />
+    </Suspense>
+  );
+}

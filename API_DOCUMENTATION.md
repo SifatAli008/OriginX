@@ -22,6 +22,7 @@
    - [Transactions (Blockchain)](#transactions-blockchain)
    - [Analytics](#analytics)
    - [Reports](#reports)
+   - [AI Services](#ai-services)
    - [User Feedback & Support](#user-feedback--support)
    - [Security & Compliance](#security--compliance)
 5. [Error Handling](#error-handling)
@@ -553,6 +554,56 @@ Authorization: Bearer <firebase_id_token>
 
 ---
 
+#### GET /api/movements/:productId
+
+Fetch movements for a specific product using an API key (no user token required).
+
+**Headers:**
+```
+x-api-key: <INTERNAL_API_KEY>
+```
+
+**URL Parameters:**
+- `productId` - Product ID to filter movements
+
+**Query Parameters:**
+- `pageSize` (optional, default: 50) - Max items to return
+
+**Response (200 OK):**
+```json
+{
+  "items": [
+    {
+      "id": "movement_abc123",
+      "productId": "prod_9s8df7",
+      "productName": "Brake Pad X1",
+      "type": "outbound",
+      "from": "Warehouse A",
+      "to": "Warehouse B",
+      "status": "pending",
+      "quantity": 10,
+      "trackingNumber": "TRACK123",
+      "createdAt": 1730385600
+    }
+  ],
+  "total": 1,
+  "pageSize": 50
+}
+```
+
+**Example:**
+```
+GET /api/movements/prod_9s8df7?pageSize=25
+Header: x-api-key: <INTERNAL_API_KEY>
+```
+
+**Error Responses:**
+- `401` - Missing/invalid API key
+- `400` - Missing productId
+- `500` - Internal server error
+
+---
+
 ### Handovers
 
 #### POST /api/movements/:id/handover
@@ -1019,6 +1070,188 @@ Content-Disposition: attachment; filename="verifications_report_2025-01-01.csv"
 ```
 
 **Note:** Excel and PDF formats are currently stubbed (CSV/JSON) in MVP phase. Full implementation coming in Phase 2.
+
+---
+
+### AI Services
+
+#### GET /api/ai/user-behavior
+
+Analyze a user's scanning behavior for anomalies.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**Query Parameters:**
+- `userId` (optional) - Target user ID (admin only). Defaults to current user
+
+**Response (200 OK):**
+```json
+{
+  "userId": "uid_abc",
+  "analysis": {
+    "isAnomalous": false,
+    "anomalyScore": 18,
+    "riskLevel": "low",
+    "anomalies": ["Normal scan frequency (5 scans today)"],
+    "confidence": 82,
+    "recommendations": []
+  },
+  "scanCount": 145
+}
+```
+
+**Error Responses:** `401`, `403`, `404`, `500`
+
+---
+
+#### GET /api/ai/supply-chain-alerts
+
+List supply chain monitoring alerts (admin only).
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "alerts": [
+    {
+      "alertId": "alert_...",
+      "type": "fraud_detected",
+      "severity": "critical",
+      "supplierId": "uid_supplier",
+      "description": "Supplier has critical fraud risk score of 82/100...",
+      "riskScore": 82,
+      "timestamp": 1730385600
+    }
+  ],
+  "summary": {
+    "totalAlerts": 3,
+    "criticalAlerts": 1,
+    "highAlerts": 1,
+    "mediumAlerts": 1,
+    "lowAlerts": 0,
+    "byType": {"fraud_detected": 1}
+  },
+  "timestamp": 1730385600
+}
+```
+
+**Error Responses:** `401`, `403`, `500`
+
+---
+
+#### POST /api/ai/chatbot
+
+Process customer support queries with AI and suggest actions.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "message": "How do I verify a product?",
+  "conversationHistory": [
+    {"role": "user", "content": "Hi", "timestamp": 1730385600}
+  ]
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "response": "To verify a product, scan the QR code using the verification page...",
+  "confidence": 0.9,
+  "suggestedActions": [
+    {"label": "Go to Verification Page", "action": "navigate", "url": "/verify"}
+  ],
+  "flagged": false,
+  "incidentType": "verification_issue",
+  "escalate": false
+}
+```
+
+**Error Responses:** `401`, `400`, `404`, `500`
+
+---
+
+#### GET /api/ai/recommendations/suppliers
+
+Get supplier recommendations based on risk, quality, and certifications.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**Query Parameters:**
+- `category` (optional) - Product category
+- `location` (optional) - Supplier location
+- `minQuality` (optional) - Minimum average quality score (0-100)
+- `certifications` (optional) - Comma-separated required certifications
+
+**Response (200 OK):**
+```json
+{
+  "recommendations": [
+    {
+      "supplierId": "uid_supplier",
+      "supplierName": "Acme Ltd",
+      "matchScore": 92,
+      "confidence": 88,
+      "reasons": ["Very low fraud risk", "High quality products (80%+)"]
+    }
+  ]
+}
+```
+
+**Error Responses:** `401`, `404`, `500`
+
+---
+
+#### GET /api/ai/compliance
+
+Generate compliance advisory for suppliers/products.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**Query Parameters:**
+- `supplierId` (optional)
+- `productId` (optional)
+- `category` (optional) - Product category
+
+**Response (200 OK):**
+```json
+{
+  "advisory": {
+    "overallRiskLevel": "high",
+    "risks": [
+      {
+        "riskLevel": "high",
+        "category": "bsti",
+        "description": "Product category requires BSTI certification",
+        "actionRequired": true
+      }
+    ],
+    "recommendations": ["Apply for BSTI certification"],
+    "applicableRegulations": ["BSTI Act 2018"]
+  }
+}
+```
+
+**Error Responses:** `401`, `404`, `500`
 
 ---
 

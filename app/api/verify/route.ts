@@ -10,11 +10,33 @@ import { getProduct } from "@/lib/firebase/products";
 import { getUserDocument } from "@/lib/firebase/firestore";
 import { createTransaction } from "@/lib/utils/transactions";
 import { uploadImageToCloudinarySigned } from "@/lib/utils/cloudinary";
+import { verifyImage } from "@/lib/services/ml/image-verification";
+import { detectQRAnomalies } from "@/lib/services/ml/qr-anomaly-detection";
+import { calculateFraudRisk } from "@/lib/services/ml/predictive-analytics";
 // Dynamic imports for Firestore
 async function getFirestoreUtils() {
-  const { collection, addDoc, getFirestore } = await import("firebase/firestore");
+  const { 
+    collection, 
+    addDoc, 
+    getFirestore, 
+    query, 
+    where, 
+    orderBy, 
+    limit, 
+    getDocs 
+  } = await import("firebase/firestore");
   const { getFirebaseApp } = await import("@/lib/firebase/client");
-  return { collection, addDoc, getFirestore, getFirebaseApp };
+  return { 
+    collection, 
+    addDoc, 
+    getFirestore, 
+    getFirebaseApp,
+    query,
+    where,
+    orderBy,
+    limit,
+    getDocs
+  };
 }
 
 const QR_AES_SECRET = process.env.QR_AES_SECRET || "default-secret-key-change-in-production";
@@ -63,7 +85,8 @@ export interface VerificationDocument {
 async function calculateCounterfeitScore(
   product: { productId: string; name?: string; status?: string; manufacturerId?: string; orgId?: string } | null,
   qrPayload: QRPayload,
-  imageUrl?: string
+  imageUrl?: string,
+  imageVerificationResult?: { logoMatch: number; tamperingScore: number; textExtracted: boolean; serialNumberMatch: boolean; overallScore: number; factors: string[] } | null
 ): Promise<{ score: number; confidence: number; factors: string[]; riskLevel: "low" | "medium" | "high" | "critical" }> {
   const factors: string[] = [];
   let score = 50; // Start with neutral score
@@ -130,53 +153,56 @@ async function calculateCounterfeitScore(
     }
   }
 
-  // Factor 4: Image presence (basic check in MVP)
+  // Factor 4: Image verification with ML models
   if (imageUrl) {
     score += 5;
     riskScore -= 2;
     factors.push("Verification image provided - LOW RISK");
     
-    // ========== Phase 2: ML Model Integration Point ==========
-    // TODO: Phase 2 - Integrate ML models here
-    // 
-    // Example integration:
-    // try {
-    //   const mlResult = await analyzeImageWithML(imageUrl, {
-    //     model: "counterfeit-detection-v1",
-    //     features: ["hologram", "logo", "packaging", "tampering"],
-    //   });
-    //   
-    //   if (mlResult.hologramConfidence < 0.7) {
-    //     score -= 25;
-    //     riskScore += 25;
-    //     factors.push(`Hologram verification failed (${(mlResult.hologramConfidence * 100).toFixed(0)}% confidence) - HIGH RISK`);
-    //   }
-    //   
-    //   if (mlResult.logoMatch < 0.8) {
-    //     score -= 20;
-    //     riskScore += 20;
-    //     factors.push(`Logo mismatch detected (${(mlResult.logoMatch * 100).toFixed(0)}% match) - MEDIUM RISK`);
-    //   }
-    //   
-    //   if (mlResult.tamperingDetected) {
-    //     score -= 35;
-    //     riskScore += 35;
-    //     factors.push("Tampering detected via ML analysis - CRITICAL RISK");
-    //   }
-    //   
-    //   // OCR for hologram text verification
-    //   const ocrResult = await extractTextFromHologram(imageUrl);
-    //   if (ocrResult && !ocrResult.includes(productId)) {
-    //     score -= 15;
-    //     riskScore += 15;
-    //     factors.push("Hologram text mismatch - MEDIUM RISK");
-    //   }
-    // } catch (mlError) {
-    //   console.error("ML analysis failed, using deterministic scoring only:", mlError);
-    //   factors.push("ML analysis unavailable - using metadata checks only");
-    // }
-    //
-    // End of Phase 2 integration point
+    // ========== ML Model Integration ==========
+    try {
+      // Image verification works best in browser, but has server-side fallback
+      const imageVerification = await verifyImage(imageUrl, product?.productId);
+      
+      // Logo/packaging analysis
+      if (imageVerification.logoMatch < 0.7) {
+        score -= 20;
+        riskScore += 20;
+        factors.push(`Logo/packaging match low (${(imageVerification.logoMatch * 100).toFixed(0)}% match) - MEDIUM RISK`);
+      } else {
+        score += 10;
+        riskScore -= 5;
+        factors.push(`Logo/packaging verified (${(imageVerification.logoMatch * 100).toFixed(0)}% match) - LOW RISK`);
+      }
+      
+      // Tampering detection
+      if (imageVerification.tamperingScore > 0.4) {
+        score -= 30;
+        riskScore += 30;
+        factors.push(`Tampering detected (${(imageVerification.tamperingScore * 100).toFixed(0)}% confidence) - HIGH RISK`);
+      } else {
+        score += 5;
+        riskScore -= 2;
+        factors.push("No tampering detected - LOW RISK");
+      }
+      
+      // Serial number verification
+      if (imageVerification.serialNumberMatch) {
+        score += 15;
+        riskScore -= 5;
+        factors.push("Serial number matches product ID - LOW RISK");
+      } else if (imageVerification.textExtracted) {
+        riskScore += 5;
+        factors.push("Serial number mismatch or not found - MEDIUM RISK");
+      }
+      
+      // Add all image verification factors
+      factors.push(...imageVerification.factors);
+      
+    } catch (mlError) {
+      console.error("ML image analysis failed, using basic check:", mlError);
+      factors.push("ML image analysis unavailable - using basic checks only");
+    }
   } else {
     riskScore += 5;
     factors.push("No verification image provided - MEDIUM RISK");
@@ -356,19 +382,136 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate AI counterfeit score
-    const aiResult = await calculateCounterfeitScore(product, qrPayload, imageUrl);
+    // Get scan history for QR anomaly detection  
+    const { collection: getCollection, query: buildQuery, where: buildWhere, orderBy: buildOrderBy, limit: buildLimit, getDocs: fetchDocs, getFirestore, getFirebaseApp } = await getFirestoreUtils();
+    const app = getFirebaseApp();
+    const scanHistory: Array<{ productId: string; timestamp: number; location?: string; userId?: string }> = [];
+    
+    if (app) {
+      try {
+        const db = getFirestore(app);
+        const verificationsRef = getCollection(db, "verifications");
+        const historyQuery = buildQuery(
+          verificationsRef,
+          buildWhere("productId", "==", qrPayload.productId),
+          buildOrderBy("createdAt", "desc"),
+          buildLimit(50)
+        );
+        const historySnapshot = await fetchDocs(historyQuery);
+        scanHistory.push(...historySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            productId: data.productId,
+            timestamp: data.createdAt || Date.now(),
+            location: data.location?.address,
+            userId: data.verifierId,
+          };
+        }));
+      } catch (error) {
+        console.error("Failed to fetch scan history:", error);
+      }
+    }
+
+    // Image Verification (if image provided)
+    let imageVerificationResult = null;
+    if (imageUrl) {
+      try {
+        imageVerificationResult = await verifyImage(imageUrl, qrPayload.productId);
+      } catch (error) {
+        console.error("Image verification failed:", error);
+      }
+    }
+
+    // Calculate base AI counterfeit score first (with image verification results)
+    let aiResult = await calculateCounterfeitScore(product, qrPayload, imageUrl, imageVerificationResult);
+
+    // QR Anomaly Detection
+    let qrAnomalyResult = null;
+    try {
+      const firestoreUtils = {
+        collection: getCollection,
+        query: buildQuery,
+        where: buildWhere,
+        orderBy: buildOrderBy,
+        limit: buildLimit,
+        getDocs: fetchDocs,
+        getFirestore,
+        getFirebaseApp,
+      };
+      qrAnomalyResult = await detectQRAnomalies(
+        qrEncrypted,
+        qrPayload.productId,
+        scanHistory,
+        undefined, // location (can be added from request)
+        uid,
+        firestoreUtils
+      );
+      
+      // Adjust score based on QR anomalies
+      if (qrAnomalyResult.isAnomalous) {
+        aiResult.factors.push(...qrAnomalyResult.anomalies);
+        aiResult.score -= qrAnomalyResult.anomalyScore * 0.5; // Reduce score for anomalies
+        // Update risk level based on anomaly score
+        if (qrAnomalyResult.anomalyScore > 60) {
+          aiResult.riskLevel = "critical";
+        } else if (qrAnomalyResult.anomalyScore > 40) {
+          aiResult.riskLevel = "high";
+        } else if (qrAnomalyResult.anomalyScore > 20) {
+          aiResult.riskLevel = "medium";
+        }
+      }
+    } catch (error) {
+      console.error("QR anomaly detection failed:", error);
+    }
+
+    // Predictive Analytics - Fraud Risk Scoring
+    let fraudRiskResult = null;
+    try {
+      // Calculate fraud risk features
+      const fraudFeatures = {
+        productAge: product ? (Date.now() - (product.createdAt || Date.now())) / (24 * 60 * 60 * 1000) : 0,
+        verificationCount: scanHistory.length,
+        suspiciousVerificationRate: scanHistory.filter((s) => {
+          // Calculate suspicious rate (in real implementation, check verdicts)
+          return true; // Placeholder
+        }).length / Math.max(1, scanHistory.length),
+        verificationLocations: new Set(scanHistory.map((s) => s.location).filter(Boolean)).size,
+        verificationsLast7Days: scanHistory.filter((s) => Date.now() - s.timestamp < 7 * 24 * 60 * 60 * 1000).length,
+        verificationsLast30Days: scanHistory.filter((s) => Date.now() - s.timestamp < 30 * 24 * 60 * 60 * 1000).length,
+        multipleUsersSameProduct: new Set(scanHistory.map((s) => s.userId).filter(Boolean)).size,
+      };
+
+      fraudRiskResult = await calculateFraudRisk(fraudFeatures);
+      
+      // Adjust score based on fraud risk
+      if (fraudRiskResult.riskLevel === "critical" || fraudRiskResult.riskLevel === "high") {
+        aiResult.score -= fraudRiskResult.riskScore * 0.3;
+        // Update risk level
+        if (fraudRiskResult.riskLevel === "critical") {
+          aiResult.riskLevel = "critical";
+        } else if (fraudRiskResult.riskLevel === "high" && aiResult.riskLevel !== "critical") {
+          aiResult.riskLevel = "high";
+        }
+      }
+      
+      aiResult.factors.push(...fraudRiskResult.factors);
+    } catch (error) {
+      console.error("Fraud risk calculation failed:", error);
+    }
+
+    // Normalize final score
+    aiResult.score = Math.max(0, Math.min(100, aiResult.score));
     const verdict = determineVerdict(aiResult.score);
 
     // Create verification document
-    const { collection, addDoc, getFirestore, getFirebaseApp } = await getFirestoreUtils();
-    const app = getFirebaseApp();
-    if (!app) {
+    const { collection: getCollection2, addDoc, getFirestore: getFirestore2, getFirebaseApp: getFirebaseApp2 } = await getFirestoreUtils();
+    const app2 = getFirebaseApp2();
+    if (!app2) {
       throw new Error("Firebase app not initialized");
     }
 
-    const db = getFirestore(app);
-    const verificationRef = collection(db, "verifications");
+    const db = getFirestore2(app2);
+    const verificationRef = getCollection2(db, "verifications");
     const verificationDoc = await addDoc(verificationRef, {
       productId: qrPayload.productId,
       orgId: qrPayload.orgId,
