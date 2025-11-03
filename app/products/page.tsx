@@ -27,6 +27,7 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
+  Upload,
 } from "lucide-react";
 
 interface Product {
@@ -230,6 +231,15 @@ export default function ProductsPage() {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
+            <Link href="/products/batch-import">
+              <Button
+                variant="outline"
+                className="border-gray-800 text-white hover:bg-gray-800/50 backdrop-blur-sm transition-all"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Batch Import
+              </Button>
+            </Link>
             <Link href="/products/new">
               <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/20 transition-all duration-200">
                 <Plus className="h-4 w-4 mr-2" />

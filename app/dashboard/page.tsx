@@ -110,6 +110,7 @@ import {
   Filter,
   FileDown,
   ShieldCheck,
+  QrCode,
 } from "lucide-react";
 import LoadingScreen from "@/components/loading/LoadingScreen";
 import { getPendingRegistrationRequests } from "@/lib/firebase/company";
@@ -838,7 +839,7 @@ function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<t
           <h3 className="text-xl font-semibold text-white mb-1">Quick Actions</h3>
           <p className="text-gray-400 text-sm">Common tasks and operations</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/products/new")}>
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -848,6 +849,34 @@ function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<t
                 <div>
                   <CardTitle className="text-white">Register New Product</CardTitle>
                   <CardDescription>Add a new product to your catalog</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/products/batch-import")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <FileDown className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Batch Import</CardTitle>
+                  <CardDescription>Upload CSV/XLS to register multiple products</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/verify")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <QrCode className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Verify Product</CardTitle>
+                  <CardDescription>Scan QR code to verify authenticity</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -876,6 +905,20 @@ function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<t
                 <div>
                   <CardTitle className="text-white">View Verifications</CardTitle>
                   <CardDescription>Check product authenticity status</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/blockchain")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Activity className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Blockchain Ledger</CardTitle>
+                  <CardDescription>View immutable transaction records</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -1966,14 +2009,20 @@ function Sidebar({
       sme: [
         { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
         { label: "New Product", icon: <Boxes className="h-5 w-5" />, href: "/products/new" },
+        { label: "Batch Import", icon: <FileDown className="h-5 w-5" />, href: "/products/batch-import" },
+        { label: "Verify Product", icon: <QrCode className="h-5 w-5" />, href: "/verify" },
         { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
+        { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
       ],
       supplier: [
         { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
         { label: "New Product", icon: <Boxes className="h-5 w-5" />, href: "/products/new" },
+        { label: "Batch Import", icon: <FileDown className="h-5 w-5" />, href: "/products/batch-import" },
+        { label: "Verify Product", icon: <QrCode className="h-5 w-5" />, href: "/verify" },
         { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
+        { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
       ],
       warehouse: [
         { label: "Inbound", icon: <Truck className="h-5 w-5" />, href: "/movements?type=inbound" },

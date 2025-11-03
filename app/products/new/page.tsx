@@ -1,27 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ChevronRight, Home, Save, X } from "lucide-react";
+import { Package, ChevronRight, Home, Save, X, Upload, Image as ImageIcon } from "lucide-react";
+import { getFirebaseAuth } from "@/lib/firebase/client";
+import type { ProductCategory } from "@/lib/types/products";
 
 export default function NewProductPage() {
   const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [qrPreview, setQrPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
-    category: "",
-    supplier: "",
-    quantity: "",
-    price: "",
+    category: "" as ProductCategory | "",
     description: "",
+    brand: "",
+    model: "",
+    serialNumber: "",
+    manufacturingDate: "",
+    expiryDate: "",
   });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {
@@ -29,16 +38,99 @@ export default function NewProductPage() {
     }
   }, [authState.status, router]);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+
     try {
-      // TODO: API call to create product
-      console.log("Creating product:", formData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push("/products");
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      // Convert image to base64 if selected
+      let imageBase64: string | undefined;
+      if (selectedImage) {
+        imageBase64 = await convertFileToBase64(selectedImage);
+      }
+
+      // Prepare request body
+      const body: any = {
+        name: formData.name,
+        sku: formData.sku,
+        category: formData.category,
+        description: formData.description || undefined,
+      };
+
+      if (imageBase64) {
+        body.image = imageBase64;
+      }
+
+      if (formData.brand || formData.model || formData.serialNumber || formData.manufacturingDate || formData.expiryDate) {
+        body.metadata = {
+          brand: formData.brand || undefined,
+          model: formData.model || undefined,
+          serialNumber: formData.serialNumber || undefined,
+          manufacturingDate: formData.manufacturingDate || undefined,
+          expiryDate: formData.expiryDate || undefined,
+        };
+      }
+
+      // Call API
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create product");
+      }
+
+      // Show QR code preview
+      if (data.qr?.pngDataUrl) {
+        setQrPreview(data.qr.pngDataUrl);
+      }
+
+      // Success - redirect after 2 seconds
+      setTimeout(() => {
+        router.push("/products");
+      }, 2000);
     } catch (error) {
       console.error("Failed to create product:", error);
+      setError(error instanceof Error ? error.message : "Failed to create product");
     } finally {
       setLoading(false);
     }
@@ -107,53 +199,71 @@ export default function NewProductPage() {
                   <select
                     required
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value as ProductCategory })}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="">Select category</option>
                     <option value="electronics">Electronics</option>
-                    <option value="clothing">Clothing</option>
+                    <option value="automotive">Automotive</option>
+                    <option value="pharmaceuticals">Pharmaceuticals</option>
                     <option value="food">Food & Beverage</option>
+                    <option value="textiles">Textiles</option>
+                    <option value="machinery">Machinery</option>
+                    <option value="chemicals">Chemicals</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Supplier *</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Brand</label>
                   <input
                     type="text"
-                    required
-                    value={formData.supplier}
-                    onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                    value={formData.brand}
+                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    placeholder="Enter supplier name"
+                    placeholder="Enter brand name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Quantity *</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Model</label>
                   <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                    type="text"
+                    value={formData.model}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    placeholder="Enter quantity"
+                    placeholder="Enter model number"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Price (USD) *</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Serial Number</label>
                   <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    type="text"
+                    value={formData.serialNumber}
+                    onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    placeholder="Enter price"
+                    placeholder="Enter serial number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Manufacturing Date</label>
+                  <input
+                    type="date"
+                    value={formData.manufacturingDate}
+                    onChange={(e) => setFormData({ ...formData, manufacturingDate: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={formData.expiryDate}
+                    onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -168,6 +278,58 @@ export default function NewProductPage() {
                   placeholder="Enter product description"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Product Image</label>
+                <div className="flex flex-col gap-4">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors bg-gray-800/50"
+                  >
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center text-gray-400">
+                        <Upload className="h-10 w-10 mb-2" />
+                        <p className="text-sm">Click to upload image</p>
+                        <p className="text-xs mt-1">PNG, JPG, GIF up to 10MB</p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  {selectedImage && (
+                    <p className="text-sm text-gray-400">
+                      Selected: {selectedImage.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {qrPreview && (
+                <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg">
+                  <p className="text-green-400 text-sm mb-2">Product created successfully! QR Code:</p>
+                  <div className="flex justify-center">
+                    <img src={qrPreview} alt="QR Code" className="w-48 h-48" />
+                  </div>
+                  <p className="text-gray-400 text-xs mt-2 text-center">Redirecting to products page...</p>
+                </div>
+              )}
 
               <div className="flex gap-4 pt-4">
                 <Button
