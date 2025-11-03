@@ -98,7 +98,7 @@ export default function NewTicketPage() {
             Create Support Ticket
           </h1>
           <p className="text-gray-400 mt-1">
-            Describe your issue and we'll help you resolve it
+            Describe your issue and we&apos;ll help you resolve it
           </p>
         </div>
 
