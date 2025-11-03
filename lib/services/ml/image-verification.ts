@@ -57,7 +57,7 @@ async function preprocessImage(imageUrl: string): Promise<tf.Tensor3D | null> {
       throw new Error(`Failed to fetch image: ${response.statusText}`);
     }
     
-    const arrayBuffer = await response.arrayBuffer();
+    await response.arrayBuffer();
     
     // For server-side: Use a simplified preprocessing
     // In production, use sharp or jimp for image processing

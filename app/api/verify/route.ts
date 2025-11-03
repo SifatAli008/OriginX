@@ -471,7 +471,7 @@ export async function POST(request: NextRequest) {
       const fraudFeatures = {
         productAge: product ? (Date.now() - (product.createdAt || Date.now())) / (24 * 60 * 60 * 1000) : 0,
         verificationCount: scanHistory.length,
-        suspiciousVerificationRate: scanHistory.filter((s) => {
+        suspiciousVerificationRate: scanHistory.filter(() => {
           // Calculate suspicious rate (in real implementation, check verdicts)
           return true; // Placeholder
         }).length / Math.max(1, scanHistory.length),
