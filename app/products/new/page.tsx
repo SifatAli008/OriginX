@@ -83,7 +83,7 @@ export default function NewProductPage() {
       }
 
       // Validate required fields
-      if (!formData.category || formData.category === "") {
+      if (!formData.category || (typeof formData.category === "string" && formData.category.trim() === "")) {
         throw new Error("Category is required");
       }
 
