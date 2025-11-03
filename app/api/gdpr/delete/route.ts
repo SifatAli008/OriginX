@@ -73,10 +73,6 @@ export async function POST(request: NextRequest) {
 
     const uid = decodedToken.uid;
 
-    // Get user document
-    const userDoc: UserDocument | null = null;
-    // ... (user doc fetching logic)
-
     const body = await request.json();
     const { reason } = body;
 
@@ -95,12 +91,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user document for orgId and user details
+    let orgId: string | undefined = undefined;
+    let userEmail: string | undefined = undefined;
+    let userName: string | undefined = undefined;
+    try {
+      const { doc, getDoc } = await import("firebase/firestore");
+      const db = getFirestore(app);
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data() as UserDocument;
+        orgId = userData.orgId;
+        userEmail = userData.email;
+        userName = userData.displayName;
+      }
+    } catch (err) {
+      console.error("Error fetching user document:", err);
+    }
+
     const db = getFirestore(app);
     const requestsRef = getCollection(db, "gdpr_deletion_requests");
 
     const deletionRequest: Omit<DataDeletionRequest, "requestId"> = {
       userId: uid,
-      orgId: userDoc?.orgId || undefined,
+      orgId: orgId,
       status: "pending",
       reason,
       requestedAt: Date.now(),
@@ -114,9 +129,9 @@ export async function POST(request: NextRequest) {
       "user",
       {
         userId: uid,
-        userEmail: userDoc?.email,
-        userName: userDoc?.displayName || undefined,
-        orgId: userDoc?.orgId || undefined,
+        userEmail: userEmail,
+        userName: userName || undefined,
+        orgId: orgId,
         description: "GDPR data deletion request submitted",
         metadata: { reason, requestId: requestDoc.id },
         outcome: "success",
@@ -126,7 +141,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Process deletion asynchronously (in production, use a queue)
-    processDeletionAsync(requestDoc.id, uid, userDoc?.orgId).catch(
+    processDeletionAsync(requestDoc.id, uid, orgId).catch(
       (error) => {
         console.error("Deletion processing error:", error);
       }

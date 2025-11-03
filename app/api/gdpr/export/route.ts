@@ -71,10 +71,6 @@ export async function POST(request: NextRequest) {
 
     const uid = decodedToken.uid;
 
-    // Get user document
-    const userDoc: UserDocument | null = null;
-    // ... (same user doc fetching as before)
-
     const body = await request.json();
     const { format = "json", dataCategories = ["profile"] } = body;
 
@@ -102,12 +98,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user document for orgId
+    let orgId: string | undefined = undefined;
+    try {
+      const { doc, getDoc } = await import("firebase/firestore");
+      const db = getFirestore(app);
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data() as UserDocument;
+        orgId = userData.orgId;
+      }
+    } catch (err) {
+      console.error("Error fetching user document:", err);
+    }
+
     const db = getFirestore(app);
     const exportsRef = getCollection(db, "gdpr_exports");
 
     const exportData: Omit<DataExport, "exportId"> = {
       userId: uid,
-      orgId: userDoc?.orgId || undefined,
+      orgId: orgId,
       status: "pending",
       format,
       dataCategories,
@@ -118,7 +129,7 @@ export async function POST(request: NextRequest) {
     const exportDoc = await addDoc(exportsRef, exportData);
 
     // Process export asynchronously (in production, use a queue)
-    processExportAsync(exportDoc.id, uid, format, dataCategories, userDoc?.orgId).catch(
+    processExportAsync(exportDoc.id, uid, format, dataCategories, orgId).catch(
       (error) => {
         console.error("Export processing error:", error);
       }
