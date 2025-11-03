@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   BarChart3,
-  TrendingUp,
-  TrendingDown,
   Download,
   RefreshCw,
   Home,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,16 +93,7 @@ export default function QCLogsPage() {
     setShowDetailsModal(true);
   };
 
-  useEffect(() => {
-    if (authState.status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-
-    fetchLogs();
-  }, [authState.status, router, currentPage, resultFilter]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
@@ -153,7 +144,16 @@ export default function QCLogsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, resultFilter, itemsPerPage]);
+
+  useEffect(() => {
+    if (authState.status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    fetchLogs();
+  }, [authState.status, router, fetchLogs]);
 
   const filteredLogs = logs
     .filter(log => {

@@ -30,7 +30,7 @@
 const BASE_URL = 'http://localhost:3000'; // Change to your production URL if needed
 
 // Hardcoded test token (works in development mode only)
-let AUTH_TOKEN = 'test-token-originx-12345-hardcoded-for-testing'; // Hardcoded for testing
+const AUTH_TOKEN = 'test-token-originx-12345-hardcoded-for-testing'; // Hardcoded for testing
 
 // ============================================
 // TEST 1: POST /api/movements

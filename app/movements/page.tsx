@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,16 +51,7 @@ function MovementsContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  useEffect(() => {
-    if (authState.status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-
-    fetchMovements();
-  }, [authState.status, router, typeFilter]);
-
-  const fetchMovements = async () => {
+  const fetchMovements = useCallback(async () => {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
@@ -113,7 +104,16 @@ function MovementsContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [typeFilter]);
+
+  useEffect(() => {
+    if (authState.status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    fetchMovements();
+  }, [authState.status, router, fetchMovements]);
 
   const filteredMovements = movements.filter(movement => {
     const matchesSearch = movement.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
