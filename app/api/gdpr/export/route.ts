@@ -150,6 +150,7 @@ async function processExportAsync(
   userId: string,
   format: string,
   dataCategories: string[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _orgId?: string
 ): Promise<void> {
   try {

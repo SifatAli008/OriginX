@@ -55,8 +55,8 @@ async function getFirestoreUtils() {
       } else {
         app = initializeApp(firebaseConfig);
       }
-    } catch (initError: any) {
-      console.error("Failed to initialize Firebase:", initError?.message || initError);
+    } catch (initError: unknown) {
+      console.error("Failed to initialize Firebase:", initError instanceof Error ? initError.message : String(initError));
       return {
         collection,
         addDoc,
@@ -81,8 +81,8 @@ async function getFirestoreUtils() {
       getFirestore,
       app,
     };
-  } catch (error: any) {
-    console.error("Error in getFirestoreUtils:", error?.message || error);
+  } catch (error: unknown) {
+    console.error("Error in getFirestoreUtils:", error instanceof Error ? error.message : String(error));
     // Return a structure with null app so calling code can handle it
     try {
       const { collection, addDoc, query, where, orderBy, limit, getDocs, getFirestore } = await import("firebase/firestore");
@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
     let db;
     try {
       db = getFirestore(app);
-    } catch (dbError: any) {
+    } catch (dbError: unknown) {
       console.error("Error getting Firestore instance:", dbError);
       // If Firestore fails but we're in dev with test token, return mock
       if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
 
     const movementsRef = getCollection(db, "movements");
     
-    const movementData: Record<string, any> = {
+    const movementData: Record<string, unknown> = {
       productId,
       productName: productName || "Unknown Product",
       orgId: userDoc.orgId,
@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
     try {
       movementDoc = await addDoc(movementsRef, movementData);
       movementId = movementDoc.id;
-    } catch (firestoreError: any) {
+    } catch (firestoreError: unknown) {
       console.error("Error creating movement in Firestore:", firestoreError);
       // If Firestore fails but we're in dev with test token, return mock
       if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
@@ -378,7 +378,7 @@ export async function POST(request: NextRequest) {
         },
         app
       );
-    } catch (txError: any) {
+    } catch (txError: unknown) {
       console.error("Error creating transaction:", txError);
       // If transaction creation fails, still return the movement
       // but with a warning
@@ -405,13 +405,13 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Create movement error:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorObj = error instanceof Error ? error : { message: String(error) };
+    const errorMessage = errorObj instanceof Error ? errorObj.message : String(errorObj);
+    const errorStack = errorObj instanceof Error ? errorObj.stack : undefined;
     console.error("Error stack:", errorStack);
-    console.error("Error name:", error?.name);
-    console.error("Error code:", error?.code);
+    console.error("Error name:", errorObj instanceof Error ? errorObj.name : undefined);
     
     // In development with test token, try to return a mock response even on error
     try {
@@ -441,8 +441,7 @@ export async function POST(request: NextRequest) {
       { 
         error: errorMessage,
         details: process.env.NODE_ENV === 'development' ? errorStack : undefined,
-        code: error?.code,
-        name: error?.name,
+        name: errorObj instanceof Error ? errorObj.name : undefined,
       },
       { status: 500 }
     );
@@ -608,12 +607,12 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get movements error:", error);
+    const errorObj = error instanceof Error ? error : { message: String(error) };
     console.error("Error details:", {
-      message: error?.message,
-      name: error?.name,
-      code: error?.code,
+      message: errorObj.message,
+      name: errorObj instanceof Error ? errorObj.name : undefined,
     });
     
     // In development with test token, return mock data even on error
@@ -626,16 +625,15 @@ export async function GET(request: NextRequest) {
           page: 1,
           pageSize: 25,
           warning: "Error occurred but returning mock data for testing",
-          originalError: error?.message,
+          originalError: errorObj.message,
         }, { status: 200 });
       }
     } catch {}
     
     return NextResponse.json(
       { 
-        error: error instanceof Error ? error.message : String(error),
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
-        code: error?.code,
+        error: errorObj instanceof Error ? errorObj.message : String(errorObj),
+        details: process.env.NODE_ENV === 'development' ? (errorObj instanceof Error ? errorObj.stack : undefined) : undefined,
       },
       { status: 500 }
     );

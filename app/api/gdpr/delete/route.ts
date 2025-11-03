@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
 async function processDeletionAsync(
   requestId: string,
   userId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _orgId?: string
 ): Promise<void> {
   try {
