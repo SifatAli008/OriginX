@@ -42,7 +42,7 @@ export async function analyzeUserBehavior(
     aiScore?: number;
   }>,
   userRole?: string,
-  orgId?: string
+  _orgId?: string
 ): Promise<BehaviorAnomalyResult> {
   const anomalies: string[] = [];
   const recommendations: string[] = [];
@@ -68,7 +68,7 @@ export async function analyzeUserBehavior(
 
   const scansInLastHour = scanHistory.filter((s) => s.timestamp > oneHourAgo).length;
   const scansInLastDay = scanHistory.filter((s) => s.timestamp > oneDayAgo).length;
-  const scansInLastWeek = scanHistory.filter((s) => s.timestamp > oneWeekAgo).length;
+  // const scansInLastWeek = scanHistory.filter((s) => s.timestamp > oneWeekAgo).length;
 
   const scanFrequency = scansInLastHour; // Scans per hour
   const uniqueProducts = new Set(scanHistory.map((s) => s.productId)).size;

@@ -3,9 +3,9 @@
  * Supplier recommendation engine and compliance advisory
  */
 
-import { calculateFraudRisk } from "./predictive-analytics";
+// import { calculateFraudRisk } from "./predictive-analytics";
 
-interface SupplierProfile {
+export interface SupplierProfile {
   supplierId: string;
   orgId: string;
   name: string;

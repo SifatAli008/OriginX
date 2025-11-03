@@ -159,7 +159,7 @@ export async function trainAnomalyModel(
  */
 export async function predictAnomaly(
   features: FraudFeatures,
-  model?: tf.LayersModel
+  _model?: tf.LayersModel
 ): Promise<number> {
   // In production: Use actual trained model
   // For now, use rule-based prediction

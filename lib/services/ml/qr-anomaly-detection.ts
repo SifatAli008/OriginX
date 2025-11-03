@@ -189,14 +189,14 @@ export function analyzeCryptographicConsistency(
 export async function fetchScanHistory(
   productId: string,
   firestoreUtils?: {
-    collection: any;
-    query: any;
-    where: any;
-    orderBy: any;
-    limit: any;
-    getDocs: any;
-    getFirestore: any;
-    getFirebaseApp: any;
+    collection: Function;
+    query: Function;
+    where: Function;
+    orderBy: Function;
+    limit: Function;
+    getDocs: Function;
+    getFirestore: Function;
+    getFirebaseApp: Function;
   }
 ): Promise<QRScanRecord[]> {
   if (!firestoreUtils) {
@@ -222,13 +222,13 @@ export async function fetchScanHistory(
     const snapshot = await getDocs(q);
     const history: QRScanRecord[] = [];
 
-    snapshot.forEach((doc: any) => {
+    snapshot.forEach((doc: { data: () => Record<string, unknown> }) => {
       const data = doc.data();
       history.push({
-        productId: data.productId,
-        timestamp: data.createdAt,
-        location: data.metadata?.location,
-        userId: data.verifierId,
+        productId: String(data.productId),
+        timestamp: Number((data as { createdAt?: number }).createdAt) || Date.now(),
+        location: (data as { metadata?: { location?: string } }).metadata?.location,
+        userId: (data as { verifierId?: string }).verifierId,
       });
     });
 

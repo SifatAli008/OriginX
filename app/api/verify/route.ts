@@ -86,7 +86,7 @@ async function calculateCounterfeitScore(
   product: { productId: string; name?: string; status?: string; manufacturerId?: string; orgId?: string } | null,
   qrPayload: QRPayload,
   imageUrl?: string,
-  imageVerificationResult?: { logoMatch: number; tamperingScore: number; textExtracted: boolean; serialNumberMatch: boolean; overallScore: number; factors: string[] } | null
+  precomputedImageVerification?: { logoMatch: number; tamperingScore: number; textExtracted: boolean; serialNumberMatch: boolean; overallScore: number; factors: string[] } | null
 ): Promise<{ score: number; confidence: number; factors: string[]; riskLevel: "low" | "medium" | "high" | "critical" }> {
   const factors: string[] = [];
   let score = 50; // Start with neutral score
@@ -161,8 +161,8 @@ async function calculateCounterfeitScore(
     
     // ========== ML Model Integration ==========
     try {
-      // Image verification works best in browser, but has server-side fallback
-      const imageVerification = await verifyImage(imageUrl, product?.productId);
+      // Use precomputed image verification if provided; otherwise compute now
+      const imageVerification = precomputedImageVerification || await verifyImage(imageUrl, product?.productId);
       
       // Logo/packaging analysis
       if (imageVerification.logoMatch < 0.7) {
@@ -413,7 +413,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Image Verification (if image provided)
-    let imageVerificationResult = null;
+    let imageVerificationResult: { logoMatch: number; tamperingScore: number; textExtracted: boolean; serialNumberMatch: boolean; overallScore: number; factors: string[] } | null = null;
     if (imageUrl) {
       try {
         imageVerificationResult = await verifyImage(imageUrl, qrPayload.productId);
@@ -423,7 +423,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate base AI counterfeit score first (with image verification results)
-    let aiResult = await calculateCounterfeitScore(product, qrPayload, imageUrl, imageVerificationResult);
+    const aiResult = await calculateCounterfeitScore(product, qrPayload, imageUrl, imageVerificationResult);
 
     // QR Anomaly Detection
     let qrAnomalyResult = null;

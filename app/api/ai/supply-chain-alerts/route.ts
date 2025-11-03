@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
 import { getUserDocument } from "@/lib/firebase/firestore";
-import { monitorSupplyChain, aggregateAlerts } from "@/lib/services/ml/automated-agents";
+import { monitorSupplyChain, aggregateAlerts, type SupplyChainAlert } from "@/lib/services/ml/automated-agents";
 
 async function getFirestoreUtils() {
   const {
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch verifications for each supplier
     const verificationsRef = collection(db, "verifications");
-    const allAlerts: any[] = [];
+    const allAlerts: SupplyChainAlert[] = [];
 
     for (const supplierDoc of suppliersSnapshot.docs) {
       const supplierData = supplierDoc.data();

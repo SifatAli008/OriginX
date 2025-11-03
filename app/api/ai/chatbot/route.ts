@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     // Build context from user data
     const { collection, query, where, orderBy, limit, getDocs, getFirestore, getFirebaseApp } = await getFirestoreUtils();
     const app = getFirebaseApp();
-    let context: any = {
+    const context: { userId: string; userRole: string; orgId?: string; recentVerifications?: number } = {
       userId: uid,
       userRole: userDoc.role,
       orgId: userDoc.orgId,

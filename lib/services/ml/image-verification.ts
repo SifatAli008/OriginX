@@ -58,7 +58,6 @@ async function preprocessImage(imageUrl: string): Promise<tf.Tensor3D | null> {
     }
     
     const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     
     // For server-side: Use a simplified preprocessing
     // In production, use sharp or jimp for image processing
@@ -169,26 +168,8 @@ async function loadImageFromUrl(imageUrl: string): Promise<HTMLImageElement | tf
         img.src = imageUrl;
       });
     } else {
-      // For Node.js: Fetch image and preprocess
-      try {
-        const response = await fetch(imageUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch image: ${response.statusText}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        
-        // Decode image using tf.node.decodeImage (requires @tensorflow/tfjs-node)
-        // For now, return a placeholder that will trigger fallback
-        // In production, install @tensorflow/tfjs-node and use:
-        // const imageTensor = tf.node.decodeImage(buffer, 3);
-        // return imageTensor.resizeBilinear([224, 224]);
-        
-        return null; // Will use fallback heuristics
-      } catch (fetchError) {
-        console.warn("Image fetch failed in Node.js, using fallback:", fetchError);
-        return null;
-      }
+      // For Node.js: preprocess and return placeholder tensor
+      return await preprocessImage(imageUrl);
     }
   } catch (error) {
     console.error("Failed to load image:", error);

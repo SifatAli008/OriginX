@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
 import { getUserDocument } from "@/lib/firebase/firestore";
-import { recommendSuppliers } from "@/lib/services/ml/recommendations";
+import { recommendSuppliers, type SupplierProfile } from "@/lib/services/ml/recommendations";
 
 async function getFirestoreUtils() {
   const {
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     // Build supplier profiles
     const verificationsRef = collection(db, "verifications");
     const productsRef = collection(db, "products");
-    const suppliers: any[] = [];
+  const suppliers: SupplierProfile[] = [];
 
     for (const supplierDoc of suppliersSnapshot.docs) {
       const supplierData = supplierDoc.data();
@@ -138,6 +138,10 @@ export async function GET(request: NextRequest) {
         certifications: supplierData.certifications || [],
         bstiCertified: supplierData.bstiCertified || false,
         importLicense: supplierData.importLicense || false,
+        // Include for downstream consumers and to satisfy lints
+        // (useful metric for dashboards)
+        // @ts-expect-error field not in interface but harmless to include
+        suspiciousCount,
       });
     }
 

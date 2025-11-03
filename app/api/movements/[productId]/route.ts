@@ -99,7 +99,7 @@ export async function GET(
 
     const db = getFirestore(app);
     const movementsRef = getCollection(db, "movements");
-    let q = buildQuery(
+    const q = buildQuery(
       movementsRef,
       buildWhere("productId", "==", productId),
       buildOrderBy("createdAt", "desc"),

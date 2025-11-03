@@ -5,7 +5,7 @@
 
 import { calculateFraudRisk } from "./predictive-analytics";
 
-interface SupplyChainAlert {
+export interface SupplyChainAlert {
   alertId: string;
   type: "supplier_anomaly" | "product_flow_anomaly" | "fraud_detected" | "risk_threshold_exceeded";
   severity: "low" | "medium" | "high" | "critical";
