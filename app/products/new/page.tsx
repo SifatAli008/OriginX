@@ -82,6 +82,11 @@ export default function NewProductPage() {
         imageBase64 = await convertFileToBase64(selectedImage);
       }
 
+      // Validate required fields
+      if (!formData.category || formData.category === "") {
+        throw new Error("Category is required");
+      }
+
       // Prepare request body
       const body: {
         name: string;
@@ -99,7 +104,7 @@ export default function NewProductPage() {
       } = {
         name: formData.name,
         sku: formData.sku,
-        category: formData.category,
+        category: formData.category as ProductCategory,
         description: formData.description || undefined,
       };
 
