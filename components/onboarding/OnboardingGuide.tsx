@@ -132,8 +132,8 @@ export default function OnboardingGuide({ role, onComplete, onDismiss }: Onboard
               <Button
                 className="mt-4"
                 onClick={() => {
-                  window.location.href = currentStepData.action!.url;
                   handleStepComplete(currentStepData.id);
+                  window.location.assign(currentStepData.action!.url);
                 }}
               >
                 {currentStepData.action.label}
