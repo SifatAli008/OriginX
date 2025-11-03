@@ -10,7 +10,7 @@ import { createProduct } from "@/lib/firebase/products";
 import { uploadImageToCloudinarySigned } from "@/lib/utils/cloudinary";
 import { generateProductQRCode } from "@/lib/utils/qr/generator";
 import { createProductRegisterTransaction } from "@/lib/utils/transactions";
-import type { ProductCategory, ProductStatus } from "@/lib/types/products";
+import type { ProductCategory, ProductStatus, ProductFilters } from "@/lib/types/products";
 import { getUserDocument } from "@/lib/firebase/firestore";
 
 const QR_AES_SECRET = process.env.QR_AES_SECRET || "default-secret-key-change-in-production";
@@ -227,29 +227,32 @@ export async function GET(request: NextRequest) {
     const batchId = searchParams.get("batchId");
 
     // Build filters (non-admin users can only see their org's products)
-    const filters: {
-      orgId: string;
-      page: number;
-      pageSize: number;
-      category?: ProductCategory;
-      status?: ProductStatus;
-      search?: string;
-      batchId?: string;
-    } = {
-      orgId: userDoc.orgId,
+    const filters: ProductFilters = {
+      orgId: userDoc.orgId || undefined,
       page,
       pageSize,
     };
 
-    if (category) filters.category = category;
-    if (status) filters.status = status;
-    if (search) filters.search = search;
-    if (batchId) filters.batchId = batchId;
+    if (category) {
+      filters.category = category as ProductCategory;
+    }
+    if (status) {
+      filters.status = status as ProductStatus;
+    }
+    if (search) {
+      filters.search = search;
+    }
+    if (batchId) {
+      filters.batchId = batchId;
+    }
     if (userDoc.role === "admin") {
       // Admin can see all products
       const manufacturerId = searchParams.get("manufacturerId");
-      if (manufacturerId) filters.manufacturerId = manufacturerId;
-      delete filters.orgId; // Admin can see cross-org
+      if (manufacturerId) {
+        filters.manufacturerId = manufacturerId;
+      }
+      // Admin can see cross-org, so remove orgId filter
+      delete filters.orgId;
     }
 
     // Get products

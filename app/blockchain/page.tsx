@@ -44,6 +44,8 @@ export default function BlockchainPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [selectedTransaction, setSelectedTransaction] = useState<BlockchainTransaction | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {

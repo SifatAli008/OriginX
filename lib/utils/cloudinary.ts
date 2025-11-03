@@ -143,7 +143,7 @@ export async function uploadImageToCloudinarySigned(
  * Get Cloudinary upload URL for client-side direct upload
  * This returns the URL that can be used in the frontend
  */
-export function getCloudinaryUploadUrl(_preset?: string): string {
+export function getCloudinaryUploadUrl(): string {
   if (!CLOUDINARY_CLOUD_NAME) {
     throw new Error("Cloudinary cloud name is not configured");
   }

@@ -10,7 +10,7 @@ import { getUserDocument } from "@/lib/firebase/firestore";
 import { createProduct } from "@/lib/firebase/products";
 import { generateProductQRCode } from "@/lib/utils/qr/generator";
 import { createProductRegisterTransaction } from "@/lib/utils/transactions";
-import type { ProductCategory } from "@/lib/types/products";
+import type { ProductCategory, ProductStatus } from "@/lib/types/products";
 // Dynamic import for xlsx (optional dependency)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let XLSX: any = null;
