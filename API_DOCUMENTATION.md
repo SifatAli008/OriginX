@@ -22,6 +22,8 @@
    - [Transactions (Blockchain)](#transactions-blockchain)
    - [Analytics](#analytics)
    - [Reports](#reports)
+   - [User Feedback & Support](#user-feedback--support)
+   - [Security & Compliance](#security--compliance)
 5. [Error Handling](#error-handling)
 6. [Rate Limiting](#rate-limiting)
 7. [Examples](#examples)
@@ -42,6 +44,8 @@ OriginX is a blockchain-powered anti-counterfeiting platform that enables produc
 - **Blockchain Transactions**: Immutable transaction ledger
 - **Analytics**: KPIs, trends, and reporting
 - **Multi-Factor Authentication**: Email, SMS, and TOTP support
+- **User Feedback & Support**: Ticket-based support system with in-app alerts and notifications
+- **Security & Compliance**: AES-256 encryption, GDPR-compliant data management, audit logging
 
 ---
 
@@ -1015,6 +1019,374 @@ Content-Disposition: attachment; filename="verifications_report_2025-01-01.csv"
 ```
 
 **Note:** Excel and PDF formats are currently stubbed (CSV/JSON) in MVP phase. Full implementation coming in Phase 2.
+
+---
+
+### User Feedback & Support
+
+#### POST /api/support/tickets
+
+Create a new support ticket.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "subject": "Issue with product verification",
+  "description": "I'm experiencing problems when verifying products via QR code",
+  "category": "technical",
+  "priority": "high"
+}
+```
+
+**Fields:**
+- `subject` (required) - Ticket subject/title
+- `description` (required) - Detailed description of the issue
+- `category` (optional) - Ticket category (`technical`, `billing`, `feature`, `bug`, `other`)
+- `priority` (optional) - Priority level (`low`, `medium`, `high`, `urgent`)
+
+**Response (201 Created):**
+```json
+{
+  "ticketId": "ticket_abc123",
+  "userId": "uid_xyz",
+  "subject": "Issue with product verification",
+  "description": "I'm experiencing problems when verifying products via QR code",
+  "category": "technical",
+  "priority": "high",
+  "status": "open",
+  "createdAt": 1730385600,
+  "updatedAt": 1730385600
+}
+```
+
+**Error Responses:**
+- `401` - Unauthorized
+- `400` - Missing required fields (subject, description)
+- `500` - Internal server error
+
+---
+
+#### GET /api/support/tickets
+
+List support tickets for the authenticated user.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**Query Parameters:**
+- `page` (optional, default: 1) - Page number
+- `pageSize` (optional, default: 20) - Items per page
+- `status` (optional) - Filter by status (`open`, `in_progress`, `resolved`, `closed`)
+- `priority` (optional) - Filter by priority (`low`, `medium`, `high`, `urgent`)
+- `category` (optional) - Filter by category
+
+**Response (200 OK):**
+```json
+{
+  "items": [
+    {
+      "ticketId": "ticket_abc123",
+      "subject": "Issue with product verification",
+      "category": "technical",
+      "priority": "high",
+      "status": "open",
+      "createdAt": 1730385600,
+      "updatedAt": 1730385600,
+      "repliesCount": 2
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "pageSize": 20,
+  "hasMore": false
+}
+```
+
+**Error Responses:**
+- `401` - Unauthorized
+- `500` - Internal server error
+
+---
+
+#### GET /api/support/tickets/:id
+
+Get detailed information about a specific support ticket.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**URL Parameters:**
+- `id` - Ticket ID
+
+**Response (200 OK):**
+```json
+{
+  "ticketId": "ticket_abc123",
+  "userId": "uid_xyz",
+  "subject": "Issue with product verification",
+  "description": "I'm experiencing problems when verifying products via QR code",
+  "category": "technical",
+  "priority": "high",
+  "status": "in_progress",
+  "createdAt": 1730385600,
+  "updatedAt": 1730385700,
+  "replies": [
+    {
+      "replyId": "reply_xyz789",
+      "message": "Thank you for reporting this. We're looking into it.",
+      "authorId": "support_team",
+      "authorName": "Support Team",
+      "createdAt": 1730385650
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- `401` - Unauthorized
+- `403` - Access denied (not your ticket)
+- `404` - Ticket not found
+- `500` - Internal server error
+
+---
+
+#### POST /api/support/tickets/:id/reply
+
+Add a reply to a support ticket.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+Content-Type: application/json
+```
+
+**URL Parameters:**
+- `id` - Ticket ID
+
+**Request Body:**
+```json
+{
+  "message": "Thank you for the update. I'll try that solution."
+}
+```
+
+**Fields:**
+- `message` (required) - Reply message content
+
+**Response (201 Created):**
+```json
+{
+  "replyId": "reply_xyz789",
+  "ticketId": "ticket_abc123",
+  "message": "Thank you for the update. I'll try that solution.",
+  "authorId": "uid_xyz",
+  "createdAt": 1730385800
+}
+```
+
+**Error Responses:**
+- `401` - Unauthorized
+- `400` - Missing message field
+- `403` - Access denied (not your ticket)
+- `404` - Ticket not found
+- `500` - Internal server error
+
+---
+
+#### PUT /api/support/tickets/:id
+
+Update ticket status or other fields (admin/support only).
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+Content-Type: application/json
+```
+
+**URL Parameters:**
+- `id` - Ticket ID
+
+**Request Body:**
+```json
+{
+  "status": "resolved",
+  "priority": "medium"
+}
+```
+
+**Fields (all optional):**
+- `status` - New status (`open`, `in_progress`, `resolved`, `closed`)
+- `priority` - New priority level
+- `assignedTo` - User ID to assign ticket to
+
+**Response (200 OK):**
+```json
+{
+  "ticketId": "ticket_abc123",
+  "status": "resolved",
+  "updatedAt": 1730385900
+}
+```
+
+**Error Responses:**
+- `401` - Unauthorized
+- `403` - Access denied (admin/support role required)
+- `404` - Ticket not found
+- `500` - Internal server error
+
+---
+
+#### GET /api/alerts
+
+Get in-app alerts and notifications for the authenticated user.
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**Query Parameters:**
+- `page` (optional, default: 1) - Page number
+- `pageSize` (optional, default: 20) - Items per page
+- `severity` (optional) - Filter by severity (`info`, `warning`, `error`, `critical`)
+- `read` (optional) - Filter by read status (`true`, `false`)
+
+**Response (200 OK):**
+```json
+{
+  "items": [
+    {
+      "alertId": "alert_abc123",
+      "title": "New Support Ticket Reply",
+      "message": "You have a new reply on ticket #ticket_abc123",
+      "severity": "info",
+      "read": false,
+      "createdAt": 1730385600,
+      "actionUrl": "/support/tickets/ticket_abc123"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "pageSize": 20,
+  "hasMore": false,
+  "unreadCount": 1
+}
+```
+
+**Error Responses:**
+- `401` - Unauthorized
+- `500` - Internal server error
+
+---
+
+### Security & Compliance
+
+#### GET /api/gdpr/export
+
+Export all personal data for the authenticated user in compliance with GDPR Article 15 (Right of Access).
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**Query Parameters:**
+- `format` (optional, default: `json`) - Export format (`json`, `csv`, `pdf`)
+
+**Response (200 OK):**
+
+For JSON format:
+```json
+{
+  "userId": "uid_xyz",
+  "exportedAt": 1730385600,
+  "format": "json",
+  "data": {
+    "profile": {
+      "email": "user@example.com",
+      "displayName": "John Doe",
+      "createdAt": 1727788800
+    },
+    "products": [...],
+    "verifications": [...],
+    "movements": [...],
+    "tickets": [...]
+  },
+  "downloadUrl": "https://storage.example.com/exports/user_uid_xyz_2025-01-01.json",
+  "expiresAt": 1730472000
+}
+```
+
+For CSV/PDF formats, returns file download with appropriate headers.
+
+**Note:** Export files are stored temporarily and expire after 7 days.
+
+**Error Responses:**
+- `401` - Unauthorized
+- `500` - Internal server error
+
+---
+
+#### DELETE /api/gdpr/delete
+
+Delete all personal data for the authenticated user in compliance with GDPR Article 17 (Right to Erasure).
+
+**Headers:**
+```
+Authorization: Bearer <firebase_id_token>
+```
+
+**Request Body:**
+```json
+{
+  "confirm": true,
+  "reason": "User requested data deletion"
+}
+```
+
+**Fields:**
+- `confirm` (required) - Must be `true` to proceed
+- `reason` (optional) - Reason for deletion
+
+**Response (200 OK):**
+```json
+{
+  "message": "All personal data has been deleted successfully",
+  "deletedAt": 1730385600,
+  "deletedItems": {
+    "profile": true,
+    "products": 125,
+    "verifications": 342,
+    "movements": 45,
+    "tickets": 3
+  },
+  "anonymizedData": {
+    "transactions": 500
+  }
+}
+```
+
+**Important Notes:**
+- This action is **permanent and irreversible**
+- All personal data is deleted
+- Transaction data is anonymized (removes personal identifiers) but retained for audit/compliance purposes
+- Some data may be retained for legal compliance (e.g., financial records)
+- The user account will be deactivated
+
+**Error Responses:**
+- `401` - Unauthorized
+- `400` - Missing confirmation or invalid request
+- `500` - Internal server error
 
 ---
 

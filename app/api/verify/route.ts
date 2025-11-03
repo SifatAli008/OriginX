@@ -284,7 +284,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Decrypt QR payload
+    // Decrypt QR payload (synchronous function)
     const qrPayload = decryptQRPayload(qrEncrypted, QR_AES_SECRET);
     if (!qrPayload) {
       // Invalid QR code - return INVALID verdict

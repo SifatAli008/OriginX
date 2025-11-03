@@ -3,20 +3,47 @@
  */
 
 import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
-import { getFirebaseApp } from "@/lib/firebase/client";
+import type { FirebaseApp } from "firebase/app";
+
+/**
+ * Get Firebase app - server-side compatible
+ */
+async function getFirebaseAppServer(): Promise<FirebaseApp | null> {
+  try {
+    // Try to get existing app first
+    const { getApps } = await import("firebase/app");
+    const apps = getApps();
+    if (apps.length > 0) {
+      return apps[0];
+    }
+    
+    // Initialize new app
+    const { initializeApp } = await import("firebase/app");
+    const { firebaseConfig } = await import("@/lib/firebase/config");
+    
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+      return null;
+    }
+    
+    return initializeApp(firebaseConfig);
+  } catch (error) {
+    console.error("Error getting Firebase app:", error);
+    return null;
+  }
+}
 
 /**
  * Get the latest block number from transactions
  * Falls back to timestamp-based ordering if blockNumber index is not available
  */
-async function getLatestBlockNumber(): Promise<number> {
-  const app = getFirebaseApp();
-  if (!app) {
+async function getLatestBlockNumber(app?: FirebaseApp): Promise<number> {
+  const firebaseApp = app || await getFirebaseAppServer();
+  if (!firebaseApp) {
     return 1000; // Starting block number
   }
 
   try {
-    const db = getFirestore(app);
+    const db = getFirestore(firebaseApp);
     const transactionsRef = collection(db, "transactions");
     
     // Try to get latest by blockNumber first
@@ -100,21 +127,22 @@ export async function createProductRegisterTransaction(
   productId: string,
   orgId: string,
   createdBy: string,
-  payload?: Record<string, unknown>
+  payload?: Record<string, unknown>,
+  app?: FirebaseApp
 ): Promise<TransactionDocument> {
-  const app = getFirebaseApp();
-  if (!app) {
+  const firebaseApp = app || await getFirebaseAppServer();
+  if (!firebaseApp) {
     throw new Error("Firebase app not initialized");
   }
 
-  const db = getFirestore(app);
+  const db = getFirestore(firebaseApp);
   const timestamp = Date.now();
 
   // Generate transaction hash
   const txHash = await generateTransactionHash("PRODUCT_REGISTER", productId, timestamp, orgId);
 
   // Get latest block number and increment (sequential block numbers)
-  const latestBlock = await getLatestBlockNumber();
+  const latestBlock = await getLatestBlockNumber(firebaseApp);
   const blockNumber = latestBlock + 1;
 
   const transaction: Omit<TransactionDocument, "txHash"> = {
@@ -156,21 +184,22 @@ export async function createTransaction(
   refId: string,
   orgId: string,
   createdBy: string,
-  payload?: Record<string, unknown>
+  payload?: Record<string, unknown>,
+  app?: FirebaseApp
 ): Promise<TransactionDocument> {
-  const app = getFirebaseApp();
-  if (!app) {
+  const firebaseApp = app || await getFirebaseAppServer();
+  if (!firebaseApp) {
     throw new Error("Firebase app not initialized");
   }
 
-  const db = getFirestore(app);
+  const db = getFirestore(firebaseApp);
   const timestamp = Date.now();
 
   // Generate transaction hash
   const txHash = await generateTransactionHash(type, refId, timestamp, orgId);
 
   // Get latest block number and increment (sequential block numbers)
-  const latestBlock = await getLatestBlockNumber();
+  const latestBlock = await getLatestBlockNumber(firebaseApp);
   const blockNumber = latestBlock + 1;
 
   const transaction: Omit<TransactionDocument, "txHash"> = {
@@ -209,7 +238,8 @@ export async function createMovementTransaction(
   movementId: string,
   orgId: string,
   createdBy: string,
-  payload?: Record<string, unknown>
+  payload?: Record<string, unknown>,
+  app?: FirebaseApp
 ): Promise<TransactionDocument> {
   return createTransaction(
     "MOVEMENT",
@@ -217,20 +247,21 @@ export async function createMovementTransaction(
     movementId,
     orgId,
     createdBy,
-    payload
+    payload,
+    app
   );
 }
 
 /**
  * Get transaction by hash
  */
-export async function getTransaction(txHash: string): Promise<TransactionDocument | null> {
-  const app = getFirebaseApp();
-  if (!app) {
+export async function getTransaction(txHash: string, app?: FirebaseApp): Promise<TransactionDocument | null> {
+  const firebaseApp = app || await getFirebaseAppServer();
+  if (!firebaseApp) {
     return null;
   }
 
-  const db = getFirestore(app);
+  const db = getFirestore(firebaseApp);
   const { collection: getCollection, query, where, getDocs } = await import("firebase/firestore");
   
   try {

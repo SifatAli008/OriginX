@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
-import { getUserDocument } from "@/lib/firebase/firestore";
+import type { UserDocument } from "@/lib/types/user";
 
 // Dynamic imports for Firestore
 async function getFirestoreUtils() {
@@ -18,7 +18,18 @@ async function getFirestoreUtils() {
     getDocs,
     getFirestore,
   } = await import("firebase/firestore");
-  const { getFirebaseApp } = await import("@/lib/firebase/client");
+  const { initializeApp, getApps } = await import("firebase/app");
+  const { firebaseConfig } = await import("@/lib/firebase/config");
+  
+  // Initialize Firebase app on server (avoid client module)
+  let app;
+  const apps = getApps();
+  if (apps.length > 0) {
+    app = apps[0];
+  } else {
+    app = initializeApp(firebaseConfig);
+  }
+  
   return {
     collection,
     query,
@@ -27,7 +38,7 @@ async function getFirestoreUtils() {
     limit,
     getDocs,
     getFirestore,
-    getFirebaseApp,
+    app,
   };
 }
 
@@ -51,8 +62,51 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user document
-    const userDoc = await getUserDocument(decodedToken.uid);
+    // Get user document (server-side)
+    let userDoc: UserDocument | null = null;
+    const uid = decodedToken.uid;
+    
+    // Handle hardcoded test user
+    if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
+      userDoc = {
+        uid: 'test-user-123',
+        email: 'test@originx.com',
+        displayName: 'Test User',
+        photoURL: null,
+        role: 'admin',
+        orgId: 'test-org-123',
+        orgName: 'Test Organization',
+        mfaEnabled: false,
+        status: 'active',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+    } else {
+      // Get from Firestore (server-side initialization)
+      try {
+        const { doc, getDoc, getFirestore } = await import("firebase/firestore");
+        const { initializeApp, getApps } = await import("firebase/app");
+        const { firebaseConfig } = await import("@/lib/firebase/config");
+        
+        let app;
+        const apps = getApps();
+        if (apps.length > 0) {
+          app = apps[0];
+        } else {
+          app = initializeApp(firebaseConfig);
+        }
+        
+        const db = getFirestore(app);
+        const userRef = doc(db, "users", uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          userDoc = userSnap.data() as UserDocument;
+        }
+      } catch (error) {
+        console.error("Error fetching user document:", error);
+      }
+    }
+    
     if (!userDoc) {
       return NextResponse.json(
         { error: "User not found" },
@@ -75,10 +129,9 @@ export async function GET(request: NextRequest) {
       limit: buildLimit,
       getDocs,
       getFirestore,
-      getFirebaseApp,
+      app,
     } = await getFirestoreUtils();
 
-    const app = getFirebaseApp();
     if (!app) {
       throw new Error("Firebase app not initialized");
     }

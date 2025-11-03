@@ -353,8 +353,6 @@
             <div class="tab" onclick="switchTab('blockchain', event)">⛓️ Blockchain</div>
             <div class="tab" onclick="switchTab('analytics', event)">📊 Analytics</div>
             <div class="tab" onclick="switchTab('quality', event)">✅ Quality Control</div>
-            <div class="tab" onclick="switchTab('support', event)">🎫 Support</div>
-            <div class="tab" onclick="switchTab('security', event)">🔒 Security & GDPR</div>
         </div>
 
         <!-- Movements Tab -->
@@ -702,219 +700,6 @@
             </div>
         </div>
 
-        <!-- Support Tab -->
-        <div id="tab-support" class="tab-content">
-            <!-- Test: POST /api/support/tickets -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h2>12. 🎫 Create Support Ticket</h2>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="section-content">
-                    <div class="grid">
-                        <div class="input-group">
-                            <label>Subject:</label>
-                            <input type="text" id="ticketSubject" placeholder="Issue subject" value="Test Support Ticket">
-                        </div>
-                        <div class="input-group">
-                            <label>Category:</label>
-                            <select id="ticketCategory">
-                                <option value="technical">Technical</option>
-                                <option value="billing">Billing</option>
-                                <option value="feature">Feature Request</option>
-                                <option value="bug">Bug Report</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Priority:</label>
-                            <select id="ticketPriority">
-                                <option value="low">Low</option>
-                                <option value="medium" selected>Medium</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label>Description:</label>
-                        <textarea id="ticketDescription" placeholder="Describe your issue" rows="4">This is a test support ticket created from the API testing console.</textarea>
-                    </div>
-                    <button onclick="testCreateTicket()" id="btnCreateTicket">
-                        <span id="spinnerCreateTicket" style="display: none;" class="loading-spinner"></span>
-                        Create Ticket
-                    </button>
-                    <div id="ticketCreateResult" class="result" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Test: GET /api/support/tickets -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h2>13. 📋 List Support Tickets</h2>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="section-content">
-                    <div class="grid">
-                        <div class="input-group">
-                            <label>Status Filter:</label>
-                            <select id="ticketsStatus">
-                                <option value="">All</option>
-                                <option value="open">Open</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="resolved">Resolved</option>
-                                <option value="closed">Closed</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Priority Filter:</label>
-                            <select id="ticketsPriority">
-                                <option value="">All</option>
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button onclick="testGetTickets()" id="btnGetTickets">
-                        <span id="spinnerGetTickets" style="display: none;" class="loading-spinner"></span>
-                        Get Tickets
-                    </button>
-                    <div id="ticketsResult" class="result" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Test: GET /api/support/tickets/:id -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h2>14. 🔍 Get Ticket Details</h2>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="section-content">
-                    <div class="input-group">
-                        <label>Ticket ID:</label>
-                        <input type="text" id="ticketId" placeholder="Ticket ID from Test 12">
-                    </div>
-                    <button onclick="testGetTicket()" id="btnGetTicket">
-                        <span id="spinnerGetTicket" style="display: none;" class="loading-spinner"></span>
-                        Get Ticket
-                    </button>
-                    <div id="ticketResult" class="result" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Test: POST /api/support/tickets/:id/reply -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h2>15. 💬 Reply to Ticket</h2>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="section-content">
-                    <div class="grid">
-                        <div class="input-group">
-                            <label>Ticket ID:</label>
-                            <input type="text" id="replyTicketId" placeholder="Ticket ID">
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label>Reply Message:</label>
-                        <textarea id="replyMessage" placeholder="Your reply message" rows="3">This is a test reply to the support ticket.</textarea>
-                    </div>
-                    <button onclick="testReplyTicket()" id="btnReplyTicket">
-                        <span id="spinnerReplyTicket" style="display: none;" class="loading-spinner"></span>
-                        Send Reply
-                    </button>
-                    <div id="replyResult" class="result" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Test: GET /api/alerts -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h2>16. 🔔 Get Alerts</h2>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="section-content">
-                    <div class="grid">
-                        <div class="input-group">
-                            <label>Severity Filter:</label>
-                            <select id="alertsSeverity">
-                                <option value="">All</option>
-                                <option value="info">Info</option>
-                                <option value="warning">Warning</option>
-                                <option value="error">Error</option>
-                                <option value="critical">Critical</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Read Status:</label>
-                            <select id="alertsRead">
-                                <option value="">All</option>
-                                <option value="true">Read</option>
-                                <option value="false">Unread</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button onclick="testGetAlerts()" id="btnGetAlerts">
-                        <span id="spinnerGetAlerts" style="display: none;" class="loading-spinner"></span>
-                        Get Alerts
-                    </button>
-                    <div id="alertsResult" class="result" style="display:none;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Security & GDPR Tab -->
-        <div id="tab-security" class="tab-content">
-            <!-- Test: GET /api/gdpr/export -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h2>17. 📥 Export User Data (GDPR)</h2>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="section-content">
-                    <div class="grid">
-                        <div class="input-group">
-                            <label>Format:</label>
-                            <select id="gdprExportFormat">
-                                <option value="json" selected>JSON</option>
-                                <option value="csv">CSV</option>
-                                <option value="pdf">PDF</option>
-                            </select>
-                        </div>
-                    </div>
-                    <p style="color: #666; margin-bottom: 15px;">This will export all your personal data in compliance with GDPR.</p>
-                    <button onclick="testExportGDPR()" id="btnExportGDPR">
-                        <span id="spinnerExportGDPR" style="display: none;" class="loading-spinner"></span>
-                        Export My Data
-                    </button>
-                    <div id="gdprExportResult" class="result" style="display:none;"></div>
-                </div>
-            </div>
-
-            <!-- Test: DELETE /api/gdpr/delete -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <h2>18. 🗑️ Delete User Data (GDPR)</h2>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="section-content">
-                    <div class="input-group">
-                        <label>Confirm Deletion:</label>
-                        <input type="checkbox" id="gdprDeleteConfirm" style="width: auto; margin-right: 8px;">
-                        <label for="gdprDeleteConfirm" style="display: inline;">I understand this will permanently delete my data</label>
-                    </div>
-                    <p style="color: #dc3545; margin-bottom: 15px; font-weight: 600;">⚠️ WARNING: This action cannot be undone. All your data will be permanently deleted.</p>
-                    <button onclick="testDeleteGDPR()" id="btnDeleteGDPR" style="background: #dc3545;">
-                        <span id="spinnerDeleteGDPR" style="display: none;" class="loading-spinner"></span>
-                        Delete My Data
-                    </button>
-                    <div id="gdprDeleteResult" class="result" style="display:none;"></div>
-                </div>
-            </div>
-        </div>
-
         <!-- Run All Tests -->
         <div class="section" style="background: #e7f3ff; border-left-color: #0066cc;">
             <div class="section-header" onclick="toggleSection(this)">
@@ -1238,7 +1023,7 @@
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
             if (event && event.target) {
-            event.target.classList.add('active');
+                event.target.classList.add('active');
             } else {
                 // Fallback: find tab by text content
                 document.querySelectorAll('.tab').forEach(tab => {
@@ -1558,13 +1343,8 @@
             );
 
             if (ok && response) {
-                // Clone the response so we can read it multiple times
-                const clonedResponse = response.clone();
                 const blob = await response.blob();
-                
-                // Read text from cloned response for preview
-                const textBlob = await clonedResponse.blob();
-                const text = await textBlob.text();
+                const text = await blob.text();
                 
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -1615,183 +1395,6 @@
             }, !ok, timing);
         };
 
-        // Support Ticket Functions
-        window.testCreateTicket = async function() {
-            const data = {
-                subject: document.getElementById('ticketSubject').value,
-                description: document.getElementById('ticketDescription').value,
-                category: document.getElementById('ticketCategory').value,
-                priority: document.getElementById('ticketPriority').value,
-            };
-
-            const { response, result, timing, ok } = await makeRequest(
-                'POST',
-                `${getBaseUrl()}/api/support/tickets`,
-                data,
-                'spinnerCreateTicket'
-            );
-
-            showResult('ticketCreateResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
-
-            if (result?.ticketId) {
-                document.getElementById('ticketId').value = result.ticketId;
-                document.getElementById('replyTicketId').value = result.ticketId;
-            }
-        };
-
-        window.testGetTickets = async function() {
-            const params = new URLSearchParams();
-            const status = document.getElementById('ticketsStatus').value;
-            const priority = document.getElementById('ticketsPriority').value;
-            if (status) params.append('status', status);
-            if (priority) params.append('priority', priority);
-            params.append('page', '1');
-            params.append('pageSize', '25');
-
-            const { response, result, timing, ok } = await makeRequest(
-                'GET',
-                `${getBaseUrl()}/api/support/tickets?${params}`,
-                null,
-                'spinnerGetTickets'
-            );
-
-            showResult('ticketsResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
-
-            if (result?.items?.[0]?.ticketId) {
-                document.getElementById('ticketId').value = result.items[0].ticketId;
-                document.getElementById('replyTicketId').value = result.items[0].ticketId;
-            }
-        };
-
-        window.testGetTicket = async function() {
-            const ticketId = document.getElementById('ticketId').value;
-            if (!ticketId) {
-                alert('Please enter a Ticket ID!');
-                return;
-            }
-
-            const { response, result, timing, ok } = await makeRequest(
-                'GET',
-                `${getBaseUrl()}/api/support/tickets/${ticketId}`,
-                null,
-                'spinnerGetTicket'
-            );
-
-            showResult('ticketResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
-        };
-
-        window.testReplyTicket = async function() {
-            const ticketId = document.getElementById('replyTicketId').value;
-            if (!ticketId) {
-                alert('Please enter a Ticket ID!');
-                return;
-            }
-
-            const data = {
-                message: document.getElementById('replyMessage').value,
-            };
-
-            const { response, result, timing, ok } = await makeRequest(
-                'POST',
-                `${getBaseUrl()}/api/support/tickets/${ticketId}/reply`,
-                data,
-                'spinnerReplyTicket'
-            );
-
-            showResult('replyResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
-        };
-
-        window.testGetAlerts = async function() {
-            const params = new URLSearchParams();
-            const severity = document.getElementById('alertsSeverity').value;
-            const read = document.getElementById('alertsRead').value;
-            if (severity) params.append('severity', severity);
-            if (read) params.append('read', read);
-            params.append('page', '1');
-            params.append('pageSize', '25');
-
-            const { response, result, timing, ok } = await makeRequest(
-                'GET',
-                `${getBaseUrl()}/api/alerts?${params}`,
-                null,
-                'spinnerGetAlerts'
-            );
-
-            showResult('alertsResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
-        };
-
-        // GDPR Functions
-        window.testExportGDPR = async function() {
-            const format = document.getElementById('gdprExportFormat').value;
-            const params = new URLSearchParams();
-            params.append('format', format);
-
-            const { response, result, timing, ok } = await makeRequest(
-                'GET',
-                `${getBaseUrl()}/api/gdpr/export?${params}`,
-                null,
-                'spinnerExportGDPR'
-            );
-
-            showResult('gdprExportResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
-
-            // If successful and result has download URL, offer to download
-            if (ok && result?.downloadUrl) {
-                if (confirm('Export successful! Would you like to download the file?')) {
-                    window.open(result.downloadUrl, '_blank');
-                }
-            }
-        };
-
-        window.testDeleteGDPR = async function() {
-            const confirmed = document.getElementById('gdprDeleteConfirm').checked;
-            if (!confirmed) {
-                alert('Please confirm deletion by checking the checkbox!');
-                return;
-            }
-
-            if (!confirm('⚠️ WARNING: This will permanently delete ALL your data. This action CANNOT be undone. Are you absolutely sure?')) {
-                return;
-            }
-
-            const { response, result, timing, ok } = await makeRequest(
-                'DELETE',
-                `${getBaseUrl()}/api/gdpr/delete`,
-                null,
-                'spinnerDeleteGDPR'
-            );
-
-            showResult('gdprDeleteResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
-        };
-
         window.runAllTests = async function() {
             const token = getAuthToken();
             if (!token) {
@@ -1816,7 +1419,7 @@
                 const createData = createPre ? JSON.parse(createPre.textContent) : { status: null };
                 results.push({ test: 'Create Movement', status: createData.status, statusText: createData.statusText });
                 if (createData.status >= 200 && createData.status < 300) {
-                resultElement.textContent += '✅ Movement created\n\n';
+                    resultElement.textContent += '✅ Movement created\n\n';
                 } else {
                     resultElement.textContent += `⚠️ Movement creation returned status ${createData.status}\n\n`;
                 }
