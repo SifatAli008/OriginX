@@ -36,9 +36,10 @@ export async function uploadImageToCloudinary(
   if (file instanceof File) {
     blob = file;
   } else {
-    // Convert Buffer to Uint8Array for Blob compatibility
-    const uint8Array = new Uint8Array(file);
-    blob = new Blob([uint8Array], { type: "image/jpeg" });
+    // Convert Buffer to ArrayBuffer then to Blob for compatibility
+    // Buffer extends Uint8Array, use ArrayBuffer for Blob constructor
+    const arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
+    blob = new Blob([arrayBuffer], { type: "image/jpeg" });
   }
 
   formData.append("file", blob);
@@ -97,9 +98,10 @@ export async function uploadImageToCloudinarySigned(
   if (file instanceof File) {
     blob = file;
   } else {
-    // Convert Buffer to Uint8Array for Blob compatibility
-    const uint8Array = new Uint8Array(file);
-    blob = new Blob([uint8Array], { type: "image/jpeg" });
+    // Convert Buffer to ArrayBuffer then to Blob for compatibility
+    // Buffer extends Uint8Array, use ArrayBuffer for Blob constructor
+    const arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
+    blob = new Blob([arrayBuffer], { type: "image/jpeg" });
   }
 
   formData.append("file", blob);

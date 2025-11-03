@@ -87,6 +87,9 @@ export default function NewProductPage() {
         throw new Error("Category is required");
       }
 
+      // Type-safe category after validation
+      const category: ProductCategory = formData.category as ProductCategory;
+
       // Prepare request body
       const body: {
         name: string;
@@ -104,7 +107,7 @@ export default function NewProductPage() {
       } = {
         name: formData.name,
         sku: formData.sku,
-        category: formData.category as ProductCategory,
+        category,
         description: formData.description || undefined,
       };
 
