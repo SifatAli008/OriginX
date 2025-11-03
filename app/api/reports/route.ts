@@ -363,12 +363,12 @@ export async function GET(request: NextRequest) {
         "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Generate report error:", error);
+    const errorObj = error instanceof Error ? error : { message: String(error) };
     console.error("Error details:", {
-      message: error?.message,
-      name: error?.name,
-      code: error?.code,
+      message: errorObj.message,
+      name: errorObj instanceof Error ? errorObj.name : undefined,
     });
     
     // In development with test token, return mock CSV even on error

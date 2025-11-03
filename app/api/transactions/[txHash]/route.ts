@@ -161,7 +161,7 @@ export async function GET(
     let db;
     try {
       db = getFirestore(app);
-    } catch (dbError: any) {
+    } catch (dbError: unknown) {
       console.error("Error getting Firestore instance:", dbError);
       // If Firestore fails but we're in dev with test token, return mock
       if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
@@ -207,12 +207,12 @@ export async function GET(
     }
 
     return NextResponse.json(transaction, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get transaction error:", error);
+    const errorObj = error instanceof Error ? error : { message: String(error) };
     console.error("Error details:", {
-      message: error?.message,
-      name: error?.name,
-      code: error?.code,
+      message: errorObj.message,
+      name: errorObj instanceof Error ? errorObj.name : undefined,
     });
     
     // In development with test token, return mock data even on error

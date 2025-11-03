@@ -235,12 +235,12 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get transactions error:", error);
+    const errorObj = error instanceof Error ? error : { message: String(error) };
     console.error("Error details:", {
-      message: error?.message,
-      name: error?.name,
-      code: error?.code,
+      message: errorObj.message,
+      name: errorObj instanceof Error ? errorObj.name : undefined,
     });
     
     // In development with test token, return mock data even on error

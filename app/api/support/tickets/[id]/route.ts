@@ -156,7 +156,7 @@ export async function GET(
     }
 
     return NextResponse.json(ticket, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get ticket error:", error);
     return NextResponse.json(
       {
@@ -195,7 +195,7 @@ export async function PUT(
     }
 
     // Get user document (same as GET)
-    let userDoc: UserDocument | null = null;
+    const userDoc: UserDocument | null = null;
     const uid = decodedToken.uid;
 
     // ... (same user doc fetching logic as GET)
@@ -273,7 +273,7 @@ export async function PUT(
       { ticketId, ...updates },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Update ticket error:", error);
     return NextResponse.json(
       {
@@ -386,7 +386,7 @@ export async function POST(
     }
 
     return NextResponse.json(reply, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Add reply error:", error);
     return NextResponse.json(
       {

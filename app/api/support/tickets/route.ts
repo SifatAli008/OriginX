@@ -222,12 +222,13 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Create ticket error:", error);
+    const errorObj = error instanceof Error ? error : { message: String(error) };
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Internal server error",
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+        error: errorObj instanceof Error ? errorObj.message : "Internal server error",
+        details: process.env.NODE_ENV === 'development' ? (errorObj instanceof Error ? errorObj.stack : undefined) : undefined,
       },
       { status: 500 }
     );
@@ -399,12 +400,13 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get tickets error:", error);
+    const errorObj = error instanceof Error ? error : { message: String(error) };
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Internal server error",
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+        error: errorObj instanceof Error ? errorObj.message : "Internal server error",
+        details: process.env.NODE_ENV === 'development' ? (errorObj instanceof Error ? errorObj.stack : undefined) : undefined,
       },
       { status: 500 }
     );
