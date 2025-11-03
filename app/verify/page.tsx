@@ -17,6 +17,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import Image from "next/image";
 
 type VerificationVerdict = "GENUINE" | "FAKE" | "SUSPICIOUS" | "INVALID";
 
@@ -55,8 +56,6 @@ export default function VerifyPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [cameraActive, setCameraActive] = useState(false);
 
   // Check if QR code is provided in URL
   useEffect(() => {
@@ -237,10 +236,13 @@ export default function VerifyPage() {
                     className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors bg-gray-800/50"
                   >
                     {imagePreview ? (
-                      <img
+                      <Image
                         src={imagePreview}
                         alt="Preview"
+                        width={400}
+                        height={128}
                         className="w-full h-full object-contain rounded-lg"
+                        unoptimized
                       />
                     ) : (
                       <div className="flex flex-col items-center text-gray-400">

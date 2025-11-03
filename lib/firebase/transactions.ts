@@ -11,8 +11,6 @@ import {
   orderBy,
   limit,
   getDocs,
-  getDoc,
-  doc,
 } from "firebase/firestore";
 import { getFirestore } from "./client";
 import type { TransactionDocument, TransactionType } from "@/lib/utils/transactions";
@@ -108,7 +106,10 @@ export async function getTransactions(
     // Filter by productId in payload if provided (client-side since payload is nested)
     if (filters.productId) {
       items = items.filter(
-        (tx) => (tx.payload as any)?.productId === filters.productId
+        (tx) => {
+          const payload = tx.payload as Record<string, unknown> | undefined;
+          return payload?.productId === filters.productId;
+        }
       );
     }
 

@@ -83,7 +83,20 @@ export default function NewProductPage() {
       }
 
       // Prepare request body
-      const body: any = {
+      const body: {
+        name: string;
+        sku: string;
+        category: ProductCategory;
+        description?: string;
+        image?: string;
+        metadata?: {
+          brand?: string;
+          model?: string;
+          serialNumber?: string;
+          manufacturingDate?: string;
+          expiryDate?: string;
+        };
+      } = {
         name: formData.name,
         sku: formData.sku,
         category: formData.category,

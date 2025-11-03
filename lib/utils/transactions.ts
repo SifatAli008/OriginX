@@ -31,7 +31,7 @@ async function getLatestBlockNumber(): Promise<number> {
           return blockNum;
         }
       }
-    } catch (blockOrderError) {
+    } catch {
       // If blockNumber index doesn't exist, try by createdAt and find max blockNumber
       console.warn("BlockNumber index may not exist, falling back to createdAt ordering");
       const q = query(transactionsRef, orderBy("createdAt", "desc"), limit(100));

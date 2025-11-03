@@ -5,14 +5,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
-import { createBatch, getBatch } from "@/lib/firebase/products";
+import { createBatch } from "@/lib/firebase/products";
 import { getUserDocument } from "@/lib/firebase/firestore";
 import { createProduct } from "@/lib/firebase/products";
-import { uploadImageToCloudinarySigned } from "@/lib/utils/cloudinary";
 import { generateProductQRCode } from "@/lib/utils/qr/generator";
 import { createProductRegisterTransaction } from "@/lib/utils/transactions";
-import type { ProductCategory, ProductStatus } from "@/lib/types/products";
+import type { ProductCategory } from "@/lib/types/products";
 // Dynamic import for xlsx (optional dependency)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let XLSX: any = null;
 async function getXLSX() {
   if (!XLSX) {

@@ -212,7 +212,7 @@ export default function BatchImportPage() {
               </div>
 
               <div className="flex items-center gap-2 text-sm text-gray-400">
-                <p>Don't have a template?</p>
+                <p>Don&apos;t have a template?</p>
                 <button
                   type="button"
                   onClick={downloadTemplate}
