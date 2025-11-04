@@ -65,7 +65,7 @@ export async function getUserDocumentServer(uid: string, email?: string): Promis
         displayName: null,
         photoURL: null,
         role: isAdmin ? "admin" : "sme",
-        orgId: isAdmin ? undefined : undefined, // Will be set during company registration
+        orgId: null, // Will be set during company registration
         orgName: undefined,
         mfaEnabled: false,
         status: isAdmin ? "active" : "pending",

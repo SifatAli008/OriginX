@@ -49,44 +49,6 @@ export default function BlockchainPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<BlockchainTransaction | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  useEffect(() => {
-    // Wait for auth to finish loading
-    if (authState.status === "loading" || authState.status === "idle") {
-      return;
-    }
-    
-    if (authState.status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-
-    // If authenticated but no user, wait for AuthListener
-    if (authState.status === "authenticated" && !user) {
-      const timeout = setTimeout(() => {
-        router.push("/login");
-      }, 2000);
-      return () => clearTimeout(timeout);
-    }
-
-    if (authState.status === "authenticated" && user) {
-      // Non-admin users must have orgId
-      if (user.role !== "admin" && !user.orgId) {
-        router.push("/register-company");
-        return;
-      }
-      fetchTransactions();
-    }
-  }, [authState.status, router, user, fetchTransactions]);
-
-  // Check if there's a transaction hash in URL params
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const txHash = searchParams.get("tx");
-    if (txHash) {
-      setSearchTerm(txHash);
-    }
-  }, []);
-
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
@@ -144,6 +106,44 @@ export default function BlockchainPage() {
       setLoading(false);
     }
   }, [typeFilter, addToast]);
+
+  useEffect(() => {
+    // Wait for auth to finish loading
+    if (authState.status === "loading" || authState.status === "idle") {
+      return;
+    }
+    
+    if (authState.status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    // If authenticated but no user, wait for AuthListener
+    if (authState.status === "authenticated" && !user) {
+      const timeout = setTimeout(() => {
+        router.push("/login");
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+
+    if (authState.status === "authenticated" && user) {
+      // Non-admin users must have orgId
+      if (user.role !== "admin" && !user.orgId) {
+        router.push("/register-company");
+        return;
+      }
+      fetchTransactions();
+    }
+  }, [authState.status, router, user, fetchTransactions]);
+
+  // Check if there's a transaction hash in URL params
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const txHash = searchParams.get("tx");
+    if (txHash) {
+      setSearchTerm(txHash);
+    }
+  }, []);
 
   const filteredTransactions = transactions.filter(tx => {
     const payload = tx.payload as Record<string, unknown> | undefined;
