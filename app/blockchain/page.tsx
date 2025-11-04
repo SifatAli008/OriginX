@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import { useToast } from "@/components/ui/toast";
 
 interface BlockchainTransaction {
   txHash: string;
@@ -39,6 +40,7 @@ export default function BlockchainPage() {
   const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
+  const { addToast } = useToast();
 
   const [transactions, setTransactions] = useState<BlockchainTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,16 +50,33 @@ export default function BlockchainPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authState.status === "loading" || authState.status === "idle") {
+      return;
+    }
+    
     if (authState.status === "unauthenticated") {
       router.push("/login");
       return;
     }
 
+    // If authenticated but no user, wait for AuthListener
+    if (authState.status === "authenticated" && !user) {
+      const timeout = setTimeout(() => {
+        router.push("/login");
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+
     if (authState.status === "authenticated" && user) {
+      // Non-admin users must have orgId
+      if (user.role !== "admin" && !user.orgId) {
+        router.push("/register-company");
+        return;
+      }
       fetchTransactions();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authState.status, router, typeFilter]);
+  }, [authState.status, router, user, fetchTransactions]);
 
   // Check if there's a transaction hash in URL params
   useEffect(() => {
@@ -68,7 +87,7 @@ export default function BlockchainPage() {
     }
   }, []);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
@@ -106,7 +125,9 @@ export default function BlockchainPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch transactions");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to fetch transactions";
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -114,10 +135,15 @@ export default function BlockchainPage() {
     } catch (error) {
       console.error("Failed to fetch blockchain transactions:", error);
       setTransactions([]);
+      addToast({
+        variant: "error",
+        title: "Failed to fetch transactions",
+        description: error instanceof Error ? error.message : "An error occurred while loading blockchain transactions",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [typeFilter, addToast]);
 
   const filteredTransactions = transactions.filter(tx => {
     const payload = tx.payload as Record<string, unknown> | undefined;

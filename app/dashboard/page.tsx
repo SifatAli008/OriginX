@@ -74,6 +74,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import { useToast } from "@/components/ui/toast";
 import DashboardChart from "@/components/charts/DashboardChart";
 import {
   Users,
@@ -132,6 +133,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
+  const { addToast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     stats: { users: 0, products: 0, transactions: 0, revenue: 0 },
@@ -163,22 +165,75 @@ export default function DashboardPage() {
   }, [dashboardData.stats, user?.email]);
 
   // Fetch dashboard data
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setRefreshing(true);
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/dashboard/stats');
-      // const data = await response.json();
       
-      // Simulated data fetch
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      // Fetch analytics data (contains products, verifications, movements, transactions)
+      const analyticsResponse = await fetch('/api/analytics', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+            if (!analyticsResponse.ok) {
+              const errorData = await analyticsResponse.json().catch(() => ({}));
+              const errorMessage = errorData.error || "Failed to fetch analytics data";
+              const details = errorData.details ? ` (${errorData.details})` : '';
+              
+              // Handle specific error cases
+              if (analyticsResponse.status === 404 && errorMessage.includes("User profile not found")) {
+                const profileError = "Your user profile is not set up. Please complete your registration or contact support.";
+                addToast({
+                  variant: "error",
+                  title: "Profile Setup Required",
+                  description: profileError,
+                  duration: 10000, // Show for 10 seconds for important message
+                });
+                throw new Error(profileError);
+              }
+              
+              throw new Error(errorMessage + details);
+            }
+
+      const analyticsData = await analyticsResponse.json();
       
+      // Fetch transactions count for transactions stat
+      const transactionsResponse = await fetch('/api/transactions?pageSize=1', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      let transactionsCount = 0;
+      if (transactionsResponse.ok) {
+        const transactionsData = await transactionsResponse.json();
+        transactionsCount = transactionsData.total || 0;
+      }
+
+      // Fetch users count (simplified - using analytics recentActivity or setting to 0 if not available)
+      // Note: User count would require admin access, so we'll use a placeholder or fetch from analytics
+      const usersCount = 0; // TODO: Add user count endpoint or admin check
+
+      // Map analytics data to dashboard stats format
       setDashboardData({
         stats: {
-          users: 0,
-          products: 0,
-          transactions: 0,
-          revenue: 0,
+          users: usersCount,
+          products: analyticsData.kpis?.totalProducts || 0,
+          transactions: transactionsCount,
+          revenue: analyticsData.kpis?.lossPrevented || 0, // Using lossPrevented as revenue proxy
         },
         loading: false,
         lastUpdated: new Date(),
@@ -186,50 +241,36 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
       setDashboardData(prev => ({ ...prev, loading: false }));
+      addToast({
+        variant: "error",
+        title: "Failed to load dashboard",
+        description: error instanceof Error ? error.message : "An error occurred while loading dashboard data",
+      });
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [addToast]);
 
-  useEffect(() => {
-    if (user && authState.status === "authenticated") {
-      fetchDashboardData();
-    }
-  }, [user, authState.status]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + R to refresh
-      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-        e.preventDefault();
-        fetchDashboardData();
-      }
-      // Ctrl/Cmd + E to export
-      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-        e.preventDefault();
-        handleExportData();
-      }
-      // Ctrl/Cmd + F to toggle filter
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        setShowFilterModal(prev => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleExportData]);
-
+  // Combined useEffect for auth and data fetching
   useEffect(() => {
     if (authState.status === "unauthenticated") {
       router.push("/login");
       return;
     }
     
-    if (authState.status === "loading") {
+    if (authState.status === "loading" || authState.status === "idle") {
       // Wait for auth to finish loading
       return;
+    }
+    
+    // If user is authenticated but user object is null, wait a bit for AuthListener to create it
+    if (authState.status === "authenticated" && !user) {
+      // Wait 2 seconds for AuthListener to potentially create user document
+      const timeout = setTimeout(() => {
+        // If still no user after waiting, redirect to login
+        router.push("/login");
+      }, 2000);
+      return () => clearTimeout(timeout);
     }
     
     if (user) {
@@ -240,11 +281,51 @@ export default function DashboardPage() {
         email: user.email
       });
       
-      // Admin users skip all checks and go directly to admin dashboard
-      if (user.role === "admin") {
-        // Admin has direct access, no redirects needed
-        return;
-      }
+      // Verify user document exists in Firestore before making API calls
+      // This ensures the document was created by AuthListener
+      const verifyUserDocument = async () => {
+        try {
+          const { getUserDocument } = await import("@/lib/firebase/firestore");
+          const userDoc = await getUserDocument(user.uid);
+          
+          if (!userDoc) {
+            console.warn("Dashboard - User document not found in Firestore, waiting for AuthListener...");
+            // Wait a bit more for AuthListener to create it
+            setTimeout(() => {
+              const checkAgain = async () => {
+                const retryDoc = await getUserDocument(user.uid);
+                if (!retryDoc) {
+                  addToast({
+                    variant: "error",
+                    title: "Profile Setup Required",
+                    description: "Your user profile is not set up. Please refresh the page or contact support.",
+                    duration: 10000,
+                  });
+                  return;
+                }
+                // Document exists now, proceed
+                proceedWithDashboard();
+              };
+              checkAgain();
+            }, 2000);
+            return;
+          }
+          
+          // User document exists, proceed
+          proceedWithDashboard();
+        } catch (error) {
+          console.error("Dashboard - Error verifying user document:", error);
+          // On error, still try to proceed (better UX than blocking)
+          proceedWithDashboard();
+        }
+      };
+      
+      const proceedWithDashboard = () => {
+        // Admin users skip all checks and go directly to admin dashboard
+        if (user.role === "admin") {
+          fetchDashboardData();
+          return;
+        }
       
       // CRITICAL: Non-admin users MUST have an orgId to access dashboard
       // If they don't have orgId, redirect to register-company regardless of status
@@ -269,30 +350,61 @@ export default function DashboardPage() {
         return;
       }
       
-      // Check if user needs to select role (approved but hasn't explicitly selected a role yet)
-      // Fetch user document to check if roleSelectedAt exists
-      // If roleSelectedAt doesn't exist, they need to select their role first
-      const checkRoleSelection = async () => {
-        try {
-          const userDoc = await getUserDocument(user.uid);
-          if (userDoc && !userDoc.roleSelectedAt) {
-            // User has orgId and is active, but hasn't explicitly selected a role yet
-            console.log("Dashboard - User needs to select role, redirecting to select-role");
-            router.push("/select-role");
-            return;
+        // Check if user needs to select role (approved but hasn't explicitly selected a role yet)
+        // Fetch user document to check if roleSelectedAt exists
+        // If roleSelectedAt doesn't exist, they need to select their role first
+        const checkRoleSelection = async () => {
+          try {
+            const { getUserDocument } = await import("@/lib/firebase/firestore");
+            const userDoc = await getUserDocument(user.uid);
+            if (userDoc && !userDoc.roleSelectedAt) {
+              // User has orgId and is active, but hasn't explicitly selected a role yet
+              console.log("Dashboard - User needs to select role, redirecting to select-role");
+              router.push("/select-role");
+              return;
+            }
+            // User has already selected a role (roleSelectedAt exists) - allow dashboard access
+            console.log("Dashboard - User has access with role:", user.role);
+            fetchDashboardData();
+          } catch (error) {
+            console.error("Dashboard - Error checking user document:", error);
+            // Continue to dashboard on error - better to show dashboard than block user
+            console.log("Dashboard - User has access with role:", user.role);
+            fetchDashboardData();
           }
-          // User has already selected a role (roleSelectedAt exists) - allow dashboard access
-          console.log("Dashboard - User has access with role:", user.role);
-        } catch (error) {
-          console.error("Dashboard - Error checking user document:", error);
-          // Continue to dashboard on error - better to show dashboard than block user
-          console.log("Dashboard - User has access with role:", user.role);
-        }
+        };
+        
+        checkRoleSelection();
       };
       
-      checkRoleSelection();
+      // Start verification process
+      verifyUserDocument();
     }
-  }, [authState.status, user, router]);
+  }, [authState.status, user, router, fetchDashboardData, addToast]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + R to refresh
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault();
+        fetchDashboardData();
+      }
+      // Ctrl/Cmd + E to export
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        handleExportData();
+      }
+      // Ctrl/Cmd + F to toggle filter
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowFilterModal(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [handleExportData]);
 
   if (authState.status === "loading" || !user) {
     return <LoadingScreen message="Loading your dashboard..." />;

@@ -58,11 +58,12 @@ service cloud.firestore {
 
     // Products collection
     match /products/{productId} {
-      // In development, allow access when authenticated OR when no auth (for test tokens)
-      allow get: if isAuthenticated() || request.auth == null;
-      allow list: if isAuthenticated() || request.auth == null;
-      allow create: if isAuthenticated() || request.auth == null;
-      allow update: if false;
+      // Allow authenticated users to read products
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      // Allow authenticated users to create products (API route verifies org membership)
+      allow create: if isAuthenticated();
+      allow update: if false; // Products are immutable after creation
       allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
@@ -79,53 +80,57 @@ service cloud.firestore {
 
     // Movements collection
     match /movements/{moveId} {
-      // In development, allow access when authenticated OR when no auth (for test tokens)
-      allow get: if isAuthenticated() || request.auth == null;
-      allow list: if isAuthenticated() || request.auth == null;
-      allow create: if isAuthenticated() || request.auth == null;
+      // Allow authenticated users to read movements
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      // Allow authenticated users to create movements (API route verifies permissions)
+      allow create: if isAuthenticated();
+      // Only warehouse and admin can update movements
       allow update: if isAuthenticated() && userDocExists() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'warehouse' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow delete: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Handovers collection (digital handover logs)
     match /handovers/{handoverId} {
-      // In development, allow access when authenticated OR when no auth (for test tokens)
-      allow get: if isAuthenticated() || request.auth == null;
-      allow list: if isAuthenticated() || request.auth == null;
-      allow create: if isAuthenticated() || request.auth == null; // Created via API route with permission checks
+      // Allow authenticated users to read handovers
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      // Allow authenticated users to create handovers (API route verifies permissions)
+      allow create: if isAuthenticated();
       allow update: if false; // Handovers are immutable
       allow delete: if false; // Handovers cannot be deleted
     }
 
     // QC Logs collection (quality control logs)
     match /qc_logs/{qcLogId} {
-      // In development, allow access when authenticated OR when no auth (for test tokens)
-      allow get: if isAuthenticated() || request.auth == null;
-      allow list: if isAuthenticated() || request.auth == null;
-      allow create: if isAuthenticated() || request.auth == null; // Created via API route with permission checks (warehouse/admin only)
+      // Allow authenticated users to read QC logs
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      // Allow authenticated users to create QC logs (API route verifies warehouse/admin permissions)
+      allow create: if isAuthenticated();
       allow update: if false; // QC logs are immutable
       allow delete: if false; // QC logs cannot be deleted
     }
 
     // Verifications collection
     match /verifications/{verificationId} {
-      // In development, allow access when authenticated OR when no auth (for test tokens)
-      allow get: if isAuthenticated() || request.auth == null;
-      allow list: if isAuthenticated() || request.auth == null;
-      // Allow authenticated users to create verifications via API (authentication verified in API route)
-      allow create: if isAuthenticated() || request.auth == null;
-      allow update: if false;
-      allow delete: if false;
+      // Allow authenticated users to read verifications
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      // Allow authenticated users to create verifications (API route verifies authentication)
+      allow create: if isAuthenticated();
+      allow update: if false; // Verifications are immutable
+      allow delete: if false; // Verifications cannot be deleted
     }
 
     // Transactions collection (append-only ledger)
     match /transactions/{transactionId} {
-      // In development, allow access when authenticated OR when no auth (for test tokens)
-      allow get: if isAuthenticated() || request.auth == null;
-      allow list: if isAuthenticated() || request.auth == null;
-      // Allow authenticated users to create transactions via API (authentication verified in API route)
+      // Allow authenticated users to read transactions
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      // Allow authenticated users to create transactions (API route verifies authentication)
       // Transactions are immutable once created
-      allow create: if isAuthenticated() || request.auth == null;
+      allow create: if isAuthenticated();
       allow update: if false; // Transactions are immutable
       allow delete: if false; // Transactions cannot be deleted
     }

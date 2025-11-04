@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAppSelector } from "@/lib/store";
+import { getFirebaseAuth } from "@/lib/firebase/client";
+import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -49,6 +51,7 @@ export default function ProductsPage() {
   const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
+  const { addToast } = useToast();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,11 +64,80 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [showBulkActions, setShowBulkActions] = useState(false);
   const itemsPerPage = 10;
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        pageSize: itemsPerPage.toString(),
+      });
+
+      if (categoryFilter !== "all") {
+        params.append("category", categoryFilter);
+      }
+
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+
+      if (searchTerm) {
+        params.append("search", searchTerm);
+      }
+
+      const response = await fetch(`/api/products?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch products");
+      }
+
+      const data = await response.json();
+      const productsData = (data.items || []).map((item: Record<string, unknown>) => ({
+        id: (item.productId as string) || (item.id as string),
+        name: (item.name as string) || "Unknown Product",
+        sku: (item.sku as string) || "",
+        category: (item.category as string) || "other",
+        supplier: (item.manufacturerName as string) || "Unknown",
+        quantity: 1, // Products don't have quantity in API response
+        price: 0, // Products don't have price in API response
+        status: (item.status as "active" | "inactive" | "out_of_stock") || "active",
+        description: (item.description as string) || "",
+        image: (item.imgUrl as string) || "",
+        createdAt: new Date((item.createdAt as number) || Date.now()),
+        lastUpdated: item.updatedAt ? new Date(item.updatedAt as number) : undefined,
+      }));
+
+      setProducts(productsData);
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+      setProducts([]);
+      addToast({
+        variant: "error",
+        title: "Failed to fetch products",
+        description: error instanceof Error ? error.message : "An error occurred while loading products",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, categoryFilter, statusFilter, searchTerm, itemsPerPage, addToast]);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {
@@ -73,21 +145,10 @@ export default function ProductsPage() {
       return;
     }
 
+    if (authState.status === "authenticated") {
     fetchProducts();
-  }, [authState.status, router]);
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setProducts([]);
-    } catch (error) {
-      console.error("Failed to fetch products:", error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [authState.status, router, fetchProducts]);
 
   const handleSort = (field: "name" | "price" | "quantity") => {
     if (sortBy === field) {

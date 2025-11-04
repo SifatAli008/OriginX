@@ -93,54 +93,54 @@ export async function GET(request: NextRequest) {
     // Get user document (server-side)
     let userDoc: UserDocument | null = null;
     const uid = decodedToken.uid;
+    const userEmail = decodedToken.email || 'unknown';
     
-    // Handle hardcoded test user
-    if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
-      userDoc = {
-        uid: 'test-user-123',
-        email: 'test@originx.com',
-        displayName: 'Test User',
-        photoURL: null,
-        role: 'admin',
-        orgId: 'test-org-123',
-        orgName: 'Test Organization',
-        mfaEnabled: false,
-        status: 'active',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-    } else {
-      // Get from Firestore (server-side initialization)
-      try {
-        const { doc, getDoc, getFirestore } = await import("firebase/firestore");
-        const { initializeApp, getApps } = await import("firebase/app");
-        const { firebaseConfig } = await import("@/lib/firebase/config");
-        
-        // Initialize Firebase app on server (avoid client module)
-        let app;
-        const apps = getApps();
-        if (apps.length > 0) {
-          app = apps[0];
-        } else {
-          app = initializeApp(firebaseConfig);
-        }
-        
-        const db = getFirestore(app);
-        const userRef = doc(db, "users", uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          userDoc = userSnap.data() as UserDocument;
-        }
-      } catch (error) {
-        console.error("Error fetching user document:", error);
-      }
+    // Use the server-side helper which can auto-create user documents if needed
+    try {
+      const { getUserDocumentServer } = await import("@/lib/firebase/firestore-server");
+      userDoc = await getUserDocumentServer(uid, userEmail);
+    } catch (error) {
+      console.error("[Analytics] Error fetching user document:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return NextResponse.json(
+        { 
+          error: "Failed to fetch user information",
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        },
+        { status: 500 }
+      );
     }
     
+    // If user document doesn't exist, check if this is an admin user
+    // Admin users can proceed even without a Firestore document (for development/testing)
     if (!userDoc) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      const isAdminEmail = userEmail.toLowerCase() === "admin@originx.com";
+      
+      if (isAdminEmail && process.env.NODE_ENV !== 'production') {
+        // For admin users in development, create a temporary user doc
+        console.warn(`[Analytics] Admin user document not found, using temporary admin profile for ${uid}`);
+        userDoc = {
+          uid,
+          email: userEmail,
+          displayName: "Admin",
+          photoURL: null,
+          role: "admin",
+          orgId: undefined, // Admin doesn't need orgId
+          orgName: undefined,
+          mfaEnabled: false,
+          status: "active",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+      } else {
+        return NextResponse.json(
+          { 
+            error: "User profile not found. Please complete your registration or contact support.",
+            details: process.env.NODE_ENV === 'development' ? `UID: ${uid}, Email: ${userEmail}` : undefined
+          },
+          { status: 404 }
+        );
+      }
     }
 
     // Parse query parameters
@@ -365,37 +365,6 @@ export async function GET(request: NextRequest) {
       name: errorObj instanceof Error ? errorObj.name : undefined,
       stack: errorObj instanceof Error ? errorObj.stack : undefined,
     });
-    
-    // In development with test token, return mock data even on error
-    try {
-      const authHeader = request.headers.get("authorization");
-      if (authHeader?.includes("test-token") && process.env.NODE_ENV === 'development') {
-        return NextResponse.json({
-          kpis: {
-            totalProducts: 0,
-            totalVerifications: 0,
-            counterfeitCount: 0,
-            lossPrevented: 0,
-            genuineCount: 0,
-            suspiciousCount: 0,
-            fakeCount: 0,
-            invalidCount: 0,
-          },
-          trends: {
-            dailyMovements: [],
-            verificationSuccessRate: [],
-            counterfeitRate: [],
-          },
-          recentActivity: {
-            verifications: 0,
-            movements: 0,
-            registrations: 0,
-          },
-          warning: "Error occurred but returning mock data for testing",
-          originalError: errorObj.message,
-        }, { status: 200 });
-      }
-    } catch {}
     
     return NextResponse.json(
       { 

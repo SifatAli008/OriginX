@@ -215,31 +215,6 @@ export async function GET(
       name: errorObj instanceof Error ? errorObj.name : undefined,
     });
     
-    // In development with test token, return mock data even on error
-    try {
-      const authHeader = request.headers.get("authorization");
-      if (authHeader?.includes("test-token") && process.env.NODE_ENV === 'development') {
-        const { txHash } = await params;
-        return NextResponse.json(
-          {
-            txHash: txHash || "mock-hash",
-            type: "MOVEMENT",
-            status: "confirmed",
-            blockNumber: 1001,
-            refType: "movement",
-            refId: "mock-movement-id",
-            orgId: "test-org-123",
-            createdBy: "test-user-123",
-            createdAt: Date.now(),
-            confirmedAt: Date.now(),
-            warning: "Error occurred but returning mock data for testing",
-            originalError: errorObj.message,
-          },
-          { status: 200 }
-        );
-      }
-    } catch {}
-    
     return NextResponse.json(
       { 
         error: errorObj instanceof Error ? errorObj.message : String(errorObj),

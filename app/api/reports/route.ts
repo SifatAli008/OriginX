@@ -371,21 +371,6 @@ export async function GET(request: NextRequest) {
       name: errorObj instanceof Error ? errorObj.name : undefined,
     });
     
-    // In development with test token, return mock CSV even on error
-    try {
-      const authHeader = request.headers.get("authorization");
-      if (authHeader?.includes("test-token") && process.env.NODE_ENV === 'development') {
-        const mockCsv = "Report Type,Date,Status\nTest Report," + new Date().toISOString() + ",Success";
-        return new NextResponse(mockCsv, {
-          status: 200,
-          headers: {
-            "Content-Type": "text/csv",
-            "Content-Disposition": `attachment; filename="test_report_${new Date().toISOString().split("T")[0]}.csv"`,
-          },
-        });
-      }
-    } catch {}
-    
     return NextResponse.json(
       { 
         error: errorObj instanceof Error ? errorObj.message : String(errorObj),

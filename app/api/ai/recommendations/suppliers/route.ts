@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
         importLicense: supplierData.importLicense || false,
         // Include for downstream consumers and to satisfy lints
         // (useful metric for dashboards)
-        // @ts-expect-error field not in interface but harmless to include
+        // Note: matchScore is calculated field, not in Supplier interface but included for recommendations
         suspiciousCount,
       });
     }

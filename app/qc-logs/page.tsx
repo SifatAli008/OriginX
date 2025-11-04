@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import DashboardChart from "@/components/charts/DashboardChart";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import { useToast } from "@/components/ui/toast";
 
 interface QCLog {
   id: string;
@@ -38,6 +39,7 @@ export default function QCLogsPage() {
   const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
+  const { addToast } = useToast();
 
   const [logs, setLogs] = useState<QCLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +125,9 @@ export default function QCLogsPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch QC logs");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to fetch QC logs";
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -141,10 +145,15 @@ export default function QCLogsPage() {
     } catch (error) {
       console.error("Failed to fetch QC logs:", error);
       setLogs([]);
+      addToast({
+        variant: "error",
+        title: "Failed to fetch QC logs",
+        description: error instanceof Error ? error.message : "An error occurred while loading QC logs",
+      });
     } finally {
       setLoading(false);
     }
-  }, [currentPage, resultFilter, itemsPerPage]);
+  }, [currentPage, resultFilter, itemsPerPage, addToast]);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {

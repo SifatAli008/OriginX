@@ -389,30 +389,6 @@ export async function POST(
       stack: errorObj instanceof Error ? errorObj.stack : undefined,
     });
     
-    // In development with test token, return mock data even on error
-    try {
-      const authHeader = request.headers.get("authorization");
-      if (authHeader?.includes("test-token") && process.env.NODE_ENV === 'development') {
-        const mockHandoverId = `mock-handover-${Date.now()}`;
-        const mockTxHash = `0x${Date.now().toString(16)}`;
-        return NextResponse.json(
-          {
-            handoverId: mockHandoverId,
-            warning: "Error occurred but returning mock data for testing",
-            originalError: errorObj.message,
-            transaction: {
-              txHash: mockTxHash,
-              blockNumber: 1001,
-              status: "confirmed",
-              type: "MOVEMENT",
-              timestamp: Date.now(),
-            },
-          },
-          { status: 201 }
-        );
-      }
-    } catch {}
-    
     return NextResponse.json(
       { 
         error: errorObj instanceof Error ? errorObj.message : String(errorObj),

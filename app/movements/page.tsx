@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Truck,
@@ -25,6 +26,24 @@ import {
   UserCheck,
 } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import { useToast } from "@/components/ui/toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Movement {
   id: string;
@@ -45,12 +64,30 @@ function MovementsContent() {
   const searchParams = useSearchParams();
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
+  const { addToast } = useToast();
 
   const typeFilter = searchParams.get("type") || "all";
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  
+  // QC Modal state
+  const [qcModalOpen, setQcModalOpen] = useState(false);
+  const [selectedMovementForQc, setSelectedMovementForQc] = useState<Movement | null>(null);
+  const [qcResult, setQcResult] = useState<"passed" | "failed" | "pending">("passed");
+  const [qcNotes, setQcNotes] = useState("");
+  const [qcSubmitting, setQcSubmitting] = useState(false);
+  
+  // Handover Modal state
+  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [selectedMovementForHandover, setSelectedMovementForHandover] = useState<Movement | null>(null);
+  const [handedOverBy, setHandedOverBy] = useState("");
+  const [receivedBy, setReceivedBy] = useState("");
+  const [handoverLocation, setHandoverLocation] = useState("");
+  const [handoverNotes, setHandoverNotes] = useState("");
+  const [handoverCondition, setHandoverCondition] = useState<"excellent" | "good" | "fair" | "poor">("excellent");
+  const [handoverSubmitting, setHandoverSubmitting] = useState(false);
 
   const fetchMovements = useCallback(async () => {
     setLoading(true);
@@ -102,10 +139,15 @@ function MovementsContent() {
     } catch (error) {
       console.error("Failed to fetch movements:", error);
       setMovements([]);
+      addToast({
+        variant: "error",
+        title: "Failed to fetch movements",
+        description: error instanceof Error ? error.message : "An error occurred while loading movements",
+      });
     } finally {
       setLoading(false);
     }
-  }, [typeFilter]);
+  }, [typeFilter, addToast]);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {
@@ -135,6 +177,124 @@ function MovementsContent() {
       case "delivered": return "text-green-400 bg-green-500/10 border-green-500/20";
       case "cancelled": return "text-red-400 bg-red-500/10 border-red-500/20";
       default: return "text-gray-400 bg-gray-500/10 border-gray-500/20";
+    }
+  };
+
+  const handleQcSubmit = async () => {
+    if (!selectedMovementForQc) return;
+
+    setQcSubmitting(true);
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      const response = await fetch(`/api/movements/${selectedMovementForQc.id}/qc`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          qcResult,
+          qcNotes: qcNotes || undefined,
+          updateStatus: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to submit QC check");
+      }
+
+      // Success - close modal and refresh movements
+      setQcModalOpen(false);
+      setSelectedMovementForQc(null);
+      setQcNotes("");
+      setQcResult("passed");
+      await fetchMovements();
+      addToast({
+        variant: "success",
+        title: "QC Check Submitted",
+        description: "Quality control check has been recorded successfully",
+      });
+    } catch (error) {
+      console.error("Failed to submit QC check:", error);
+      addToast({
+        variant: "error",
+        title: "Failed to Submit QC Check",
+        description: error instanceof Error ? error.message : "An error occurred while submitting QC check",
+      });
+    } finally {
+      setQcSubmitting(false);
+    }
+  };
+
+  const handleHandoverSubmit = async () => {
+    if (!selectedMovementForHandover) return;
+
+    setHandoverSubmitting(true);
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      const response = await fetch(`/api/movements/${selectedMovementForHandover.id}/handover`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          handedOverBy: handedOverBy || undefined,
+          receivedBy: receivedBy || undefined,
+          handoverLocation: handoverLocation || undefined,
+          handoverNotes: handoverNotes || undefined,
+          condition: handoverCondition,
+          updateStatus: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to submit handover");
+      }
+
+      // Success - close modal and refresh movements
+      setHandoverModalOpen(false);
+      setSelectedMovementForHandover(null);
+      setHandedOverBy("");
+      setReceivedBy("");
+      setHandoverLocation("");
+      setHandoverNotes("");
+      setHandoverCondition("excellent");
+      await fetchMovements();
+      addToast({
+        variant: "success",
+        title: "Handover Recorded",
+        description: "Handover has been recorded successfully",
+      });
+    } catch (error) {
+      console.error("Failed to submit handover:", error);
+      addToast({
+        variant: "error",
+        title: "Failed to Submit Handover",
+        description: error instanceof Error ? error.message : "An error occurred while submitting handover",
+      });
+    } finally {
+      setHandoverSubmitting(false);
     }
   };
 
@@ -358,8 +518,8 @@ function MovementsContent() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                // TODO: Open QC modal
-                                console.log("QC check for movement:", movement.id);
+                                setSelectedMovementForQc(movement);
+                                setQcModalOpen(true);
                               }}
                               className="border-gray-700 text-white hover:bg-gray-800"
                             >
@@ -370,8 +530,8 @@ function MovementsContent() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                // TODO: Open handover modal
-                                console.log("Handover for movement:", movement.id);
+                                setSelectedMovementForHandover(movement);
+                                setHandoverModalOpen(true);
                               }}
                               className="border-gray-700 text-white hover:bg-gray-800"
                             >
@@ -399,6 +559,178 @@ function MovementsContent() {
             )}
           </CardContent>
         </Card>
+
+        {/* QC Modal */}
+        <Dialog open={qcModalOpen} onOpenChange={setQcModalOpen}>
+          <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle>Quality Control Check</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Record QC results for {selectedMovementForQc?.product}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="qcResult" className="text-white">QC Result</Label>
+                <Select value={qcResult} onValueChange={(value: "passed" | "failed" | "pending") => setQcResult(value)}>
+                  <SelectTrigger id="qcResult" className="bg-gray-800 border-gray-700 text-white">
+                    <SelectValue placeholder="Select QC result" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                    <SelectItem value="passed">Passed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="qcNotes" className="text-white">QC Notes</Label>
+                <Textarea
+                  id="qcNotes"
+                  value={qcNotes}
+                  onChange={(e) => setQcNotes(e.target.value)}
+                  placeholder="Enter QC inspection notes..."
+                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-500 min-h-[100px]"
+                />
+              </div>
+              {selectedMovementForQc && (
+                <div className="text-sm text-gray-400 space-y-1">
+                  <p><span className="font-medium">Movement ID:</span> {selectedMovementForQc.id}</p>
+                  <p><span className="font-medium">Product:</span> {selectedMovementForQc.product}</p>
+                  <p><span className="font-medium">Quantity:</span> {selectedMovementForQc.quantity}</p>
+                  <p><span className="font-medium">From:</span> {selectedMovementForQc.from}</p>
+                  <p><span className="font-medium">To:</span> {selectedMovementForQc.to}</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setQcModalOpen(false);
+                  setSelectedMovementForQc(null);
+                  setQcNotes("");
+                  setQcResult("passed");
+                }}
+                disabled={qcSubmitting}
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleQcSubmit}
+                disabled={qcSubmitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {qcSubmitting ? "Submitting..." : "Submit QC Check"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Handover Modal */}
+        <Dialog open={handoverModalOpen} onOpenChange={setHandoverModalOpen}>
+          <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle>Record Handover</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Record handover for {selectedMovementForHandover?.product}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="handedOverBy" className="text-white">Handed Over By</Label>
+                <Input
+                  id="handedOverBy"
+                  type="text"
+                  value={handedOverBy}
+                  onChange={(e) => setHandedOverBy(e.target.value)}
+                  placeholder="Name of person handing over"
+                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="receivedBy" className="text-white">Received By</Label>
+                <Input
+                  id="receivedBy"
+                  type="text"
+                  value={receivedBy}
+                  onChange={(e) => setReceivedBy(e.target.value)}
+                  placeholder="Name of person receiving"
+                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="handoverLocation" className="text-white">Handover Location</Label>
+                <Input
+                  id="handoverLocation"
+                  type="text"
+                  value={handoverLocation}
+                  onChange={(e) => setHandoverLocation(e.target.value)}
+                  placeholder="Location of handover"
+                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="handoverCondition" className="text-white">Condition</Label>
+                <Select value={handoverCondition} onValueChange={(value: "excellent" | "good" | "fair" | "poor") => setHandoverCondition(value)}>
+                  <SelectTrigger id="handoverCondition" className="bg-gray-800 border-gray-700 text-white">
+                    <SelectValue placeholder="Select condition" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                    <SelectItem value="excellent">Excellent</SelectItem>
+                    <SelectItem value="good">Good</SelectItem>
+                    <SelectItem value="fair">Fair</SelectItem>
+                    <SelectItem value="poor">Poor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="handoverNotes" className="text-white">Handover Notes</Label>
+                <Textarea
+                  id="handoverNotes"
+                  value={handoverNotes}
+                  onChange={(e) => setHandoverNotes(e.target.value)}
+                  placeholder="Enter handover notes..."
+                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-500 min-h-[100px]"
+                />
+              </div>
+              {selectedMovementForHandover && (
+                <div className="text-sm text-gray-400 space-y-1">
+                  <p><span className="font-medium">Movement ID:</span> {selectedMovementForHandover.id}</p>
+                  <p><span className="font-medium">Product:</span> {selectedMovementForHandover.product}</p>
+                  <p><span className="font-medium">From:</span> {selectedMovementForHandover.from}</p>
+                  <p><span className="font-medium">To:</span> {selectedMovementForHandover.to}</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setHandoverModalOpen(false);
+                  setSelectedMovementForHandover(null);
+                  setHandedOverBy("");
+                  setReceivedBy("");
+                  setHandoverLocation("");
+                  setHandoverNotes("");
+                  setHandoverCondition("excellent");
+                }}
+                disabled={handoverSubmitting}
+                className="border-gray-700 text-white hover:bg-gray-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleHandoverSubmit}
+                disabled={handoverSubmitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {handoverSubmitting ? "Submitting..." : "Submit Handover"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
