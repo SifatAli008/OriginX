@@ -378,35 +378,67 @@ export async function POST(request: NextRequest) {
     }
 
     // Create immutable MOVEMENT transaction (try/catch wrapped)
+    // Only create transaction if orgId is available (admin users without orgId skip transactions)
     let transaction;
-    try {
-      transaction = await createMovementTransaction(
-        movementId,
-        userDoc?.orgId || null,
-        uid,
-        {
-          productId,
-          productName: productName || "Unknown Product",
-          type,
-          from,
-          to,
-          status,
-          quantity,
-          trackingNumber: movementData.trackingNumber,
-        },
-        app
-      );
-    } catch (txError: unknown) {
-      console.error("Error creating transaction:", txError);
-      // If transaction creation fails, still return the movement
-      // but with a warning
-      transaction = {
-        txHash: `pending-${Date.now()}`,
-        blockNumber: 1001,
-        status: "failed" as const,
-        type: "MOVEMENT" as const,
-        timestamp: Date.now(),
-      };
+    if (userDoc?.orgId) {
+      try {
+        transaction = await createMovementTransaction(
+          movementId,
+          userDoc.orgId,
+          uid,
+          {
+            productId,
+            productName: productName || "Unknown Product",
+            type,
+            from,
+            to,
+            status,
+            quantity,
+            trackingNumber: movementData.trackingNumber,
+          },
+          app
+        );
+      } catch (txError: unknown) {
+        console.error("Error creating transaction:", txError);
+        // If transaction creation fails, still return the movement
+        // but with a warning
+        transaction = {
+          txHash: `pending-${Date.now()}`,
+          blockNumber: 1001,
+          status: "failed" as const,
+          type: "MOVEMENT" as const,
+          timestamp: Date.now(),
+        };
+      }
+    } else {
+      // Admin users or users without orgId - create a transaction with system orgId
+      try {
+        transaction = await createMovementTransaction(
+          movementId,
+          "system", // System orgId for admin users
+          uid,
+          {
+            productId,
+            productName: productName || "Unknown Product",
+            type,
+            from,
+            to,
+            status,
+            quantity,
+            trackingNumber: movementData.trackingNumber,
+          },
+          app
+        );
+      } catch (txError: unknown) {
+        console.error("Error creating transaction:", txError);
+        transaction = {
+          txHash: `pending-${Date.now()}`,
+          blockNumber: 1001,
+          status: "failed" as const,
+          type: "MOVEMENT" as const,
+          timestamp: Date.now(),
+        };
+      }
     }
 
     // Update movement document with txHash for direct blockchain linkage

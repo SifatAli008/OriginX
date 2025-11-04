@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
           displayName: "Admin",
           photoURL: null,
           role: "admin",
-          orgId: undefined, // Admin doesn't need orgId
+          orgId: null, // Admin doesn't need orgId
           orgName: undefined,
           mfaEnabled: false,
           status: "active",

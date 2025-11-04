@@ -429,14 +429,15 @@ export async function POST(request: NextRequest) {
     let qrAnomalyResult = null;
     try {
       const firestoreUtils = {
-        collection: getCollection,
-        query: buildQuery,
-        where: buildWhere,
-        orderBy: buildOrderBy,
-        limit: buildLimit,
-        getDocs: fetchDocs,
-        getFirestore,
-        getFirebaseApp,
+        collection: getCollection as (db: unknown, path: string, ...pathSegments: string[]) => unknown,
+        query: buildQuery as (...args: unknown[]) => unknown,
+        where: buildWhere as (fieldPath: string, opStr: string, value: unknown) => unknown,
+        orderBy: buildOrderBy as (fieldPath: string, directionStr?: "asc" | "desc") => unknown,
+        limit: buildLimit as (limit: number) => unknown,
+        getDocs: fetchDocs as (query: unknown) => Promise<{ forEach: (callback: (doc: { data: () => Record<string, unknown> }) => void) => void }>,
+        getFirestore: getFirestore as (app: unknown) => unknown,
+        app: getFirebaseApp(),
+        getFirebaseApp: getFirebaseApp as () => unknown,
       };
       qrAnomalyResult = await detectQRAnomalies(
         qrEncrypted,
