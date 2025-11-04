@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
           displayName: "Admin",
           photoURL: null,
           role: "admin",
-          orgId: undefined, // Admin doesn't need orgId
+          orgId: null, // Admin doesn't need orgId
           orgName: undefined,
           mfaEnabled: false,
           status: "active",
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Non-admin users must have orgId
-    if (userDoc.role !== "admin" && !userDoc.orgId) {
+    if (!userDoc || (userDoc.role !== "admin" && !userDoc.orgId)) {
       return NextResponse.json(
         { error: "User must be associated with an organization. Please complete your company registration." },
         { status: 403 }
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
             movementId: mockMovementId,
             productId,
             productName: productName || "Unknown Product",
-            orgId: userDoc.orgId,
+            orgId: userDoc?.orgId || null,
             type,
             from,
             to,
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
             movementId: mockMovementId,
             productId,
             productName: productName || "Unknown Product",
-            orgId: userDoc.orgId,
+            orgId: userDoc?.orgId || null,
             type,
             from,
             to,
@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
     const movementData: Record<string, unknown> = {
       productId,
       productName: productName || "Unknown Product",
-      orgId: userDoc.orgId,
+      orgId: userDoc?.orgId || null,
       type,
       from,
       to,
@@ -382,7 +382,7 @@ export async function POST(request: NextRequest) {
     try {
       transaction = await createMovementTransaction(
         movementId,
-        userDoc.orgId,
+        userDoc?.orgId || null,
         uid,
         {
           productId,
@@ -516,7 +516,7 @@ export async function GET(request: NextRequest) {
           displayName: "Admin",
           photoURL: null,
           role: "admin",
-          orgId: undefined, // Admin doesn't need orgId
+          orgId: null, // Admin doesn't need orgId
           orgName: undefined,
           mfaEnabled: false,
           status: "active",
@@ -580,7 +580,7 @@ export async function GET(request: NextRequest) {
     let q = buildQuery(movementsRef);
 
     // Filter by organization (non-admin users can only see their org's movements)
-    if (userDoc.role !== "admin" && userDoc.orgId) {
+    if (userDoc && userDoc.role !== "admin" && userDoc.orgId) {
       q = buildQuery(q, buildWhere("orgId", "==", userDoc.orgId));
     }
 

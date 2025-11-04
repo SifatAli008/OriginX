@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
           displayName: "Admin",
           photoURL: null,
           role: "admin",
-          orgId: undefined, // Admin doesn't need orgId
+          orgId: null, // Admin doesn't need orgId
           orgName: undefined,
           mfaEnabled: false,
           status: "active",
@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
     const db = getFirestore(app);
 
     // Build base query filter by org (non-admin users only see their org)
-    const orgFilter = userDoc.role !== "admin" && userDoc.orgId
+    const orgFilter = userDoc && userDoc.role !== "admin" && userDoc.orgId
       ? buildWhere("orgId", "==", userDoc.orgId)
       : null;
 

@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       const successRate = totalVerifications > 0 ? successCount / totalVerifications : 0;
       const averageQualityScore = successRate * 100;
 
-      suppliers.push({
+      const supplierProfile: SupplierProfile = {
         supplierId,
         orgId: supplierData.orgId || "",
         name: supplierData.displayName || supplierData.email || "Unknown",
@@ -138,11 +138,8 @@ export async function GET(request: NextRequest) {
         certifications: supplierData.certifications || [],
         bstiCertified: supplierData.bstiCertified || false,
         importLicense: supplierData.importLicense || false,
-        // Include for downstream consumers and to satisfy lints
-        // (useful metric for dashboards)
-        // Note: matchScore is calculated field, not in Supplier interface but included for recommendations
-        suspiciousCount,
-      });
+      };
+      suppliers.push(supplierProfile);
     }
 
     // Filter by criteria

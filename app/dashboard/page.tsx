@@ -115,7 +115,6 @@ import {
 } from "lucide-react";
 import LoadingScreen from "@/components/loading/LoadingScreen";
 import { getPendingRegistrationRequests } from "@/lib/firebase/company";
-import { getUserDocument } from "@/lib/firebase/firestore";
 
 // Types for dashboard data
 interface DashboardData {
@@ -404,7 +403,7 @@ export default function DashboardPage() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleExportData]);
+  }, [handleExportData, fetchDashboardData]);
 
   if (authState.status === "loading" || !user) {
     return <LoadingScreen message="Loading your dashboard..." />;
