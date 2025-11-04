@@ -23,7 +23,7 @@ async function getFirestoreUtils() {
   const { firebaseConfig } = await import("@/lib/firebase/config");
   
   // Initialize Firebase app on server (avoid client module)
-  let app;
+  let app: ReturnType<typeof initializeApp> | undefined;
   const apps = getApps();
   if (apps.length > 0) {
     app = apps[0];
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         const { firebaseConfig } = await import("@/lib/firebase/config");
         
         // Initialize Firebase app on server (avoid client module)
-        let app;
+        let app: ReturnType<typeof initializeApp> | undefined;
         const apps = getApps();
         if (apps.length > 0) {
           app = apps[0];
