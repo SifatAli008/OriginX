@@ -215,9 +215,12 @@ export async function GET(request: NextRequest) {
     // Older transactions without top-level productId/movementId fields won't match these queries
     // but can still be queried by refId or payload (for backward compatibility)
     const allDocs = await getDocs(q);
-    let items = allDocs.docs.map((doc) => ({
-      ...doc.data(),
-    })) as Array<Record<string, unknown>>;
+    const items = allDocs.docs.map((doc) => {
+      const data = doc.data() as Record<string, unknown>;
+      return {
+        ...data,
+      };
+    });
 
     // Pagination (client-side after productId filter)
     const startIndex = (page - 1) * pageSize;

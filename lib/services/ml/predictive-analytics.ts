@@ -3,8 +3,6 @@
  * Fraud risk scoring using ML-based analysis
  */
 
-import * as tf from "@tensorflow/tfjs";
-
 interface FraudFeatures {
   // Product features
   productAge: number; // Days since registration

@@ -32,8 +32,10 @@ This document outlines all Firebase Firestore collections, security rules, and A
 
 6. **transactions** - Blockchain ledger (append-only)
    - API: `app/api/transactions/route.ts`
-   - Types: `PRODUCT_REGISTER`, `VERIFY`, `MOVEMENT`, `QC_LOG`
+   - Types: `PRODUCT_REGISTER`, `VERIFY`, `MOVEMENT`, `QC_LOG`, `TRANSFER`
    - Immutable: Updates/deletes disabled
+   - Fields: `txHash`, `type`, `status`, `blockNumber`, `refType`, `refId`, `orgId`, `createdBy`, `payload`, `movementId`, `productId`
+   - Common attributes: `movementId` and `productId` as top-level fields for efficient querying
    - Location: Firestore `transactions` collection
 
 ### ✅ Movement & Logistics Collections (3.5)
@@ -41,13 +43,14 @@ This document outlines all Firebase Firestore collections, security rules, and A
 7. **movements** - Shipment and transfer records
    - API: `app/api/movements/route.ts`
    - Client: `app/movements/page.tsx`
-   - Fields: `type`, `status`, `from`, `to`, `trackingNumber`
+   - Fields: `type`, `status`, `from`, `to`, `trackingNumber`, `txHash` (blockchain transaction hash)
+   - Blockchain linkage: Each movement includes `txHash` for direct audit trail
    - Updates: Warehouse/admin only
    - Location: Firestore `movements` collection
 
 8. **handovers** - Digital handover logs
    - API: 
-     - Create: `app/api/movements/[id]/handover/route.ts`
+     - Create: `app/api/movements/[movementId]/handover/route.ts`
      - List: `app/api/handovers/route.ts` ✅ NEW
    - Immutable: Updates/deletes disabled
    - Fields: `movementId`, `handedOverBy`, `receivedBy`, `handoverLocation`, `condition`
@@ -55,7 +58,7 @@ This document outlines all Firebase Firestore collections, security rules, and A
 
 9. **qc_logs** - Quality control logs
    - API:
-     - Create: `app/api/movements/[id]/qc/route.ts`
+     - Create: `app/api/movements/[movementId]/qc/route.ts`
      - List: `app/api/qc-logs/route.ts` ✅ NEW
    - Client: `app/qc-logs/page.tsx` ✅ CONNECTED
    - Immutable: Updates/deletes disabled
@@ -127,16 +130,22 @@ All API routes use:
 #### Movement APIs
 - `POST /api/movements` - Create movement → Firestore `movements` collection
   - Creates: `MOVEMENT` transaction
+  - Updates movement with `txHash` from transaction for direct blockchain linkage
 - `GET /api/movements` - List movements → Firestore query with filters
-- `POST /api/movements/:id/handover` - Record handover → Firestore `handovers` collection
+- `GET /api/movements/by-product/:productId` - Get movements for a specific product
+  - Uses API key authentication (no user token required)
+- `POST /api/movements/:movementId/handover` - Record handover → Firestore `handovers` collection
   - Creates: `MOVEMENT` transaction (with handover metadata)
-- `POST /api/movements/:id/qc` - QC check → Firestore `qc_logs` collection
+- `POST /api/movements/:movementId/qc` - QC check → Firestore `qc_logs` collection
   - Creates: `QC_LOG` transaction
   - Updates: Movement status (if `updateStatus` = true)
 
 #### Transaction APIs
 - `GET /api/transactions` - List transactions → Firestore `transactions` collection
+  - Query parameters: `type`, `status`, `productId`, `movementId`, `orgId`, `startDate`, `endDate`, `page`, `pageSize`
+  - Efficient filtering: `productId` and `movementId` use top-level fields for database-level queries
 - `GET /api/transactions/:txHash` - Get transaction by hash → Firestore query
+  - Returns transaction with `movementId` and `productId` as top-level fields
 
 #### Analytics APIs
 - `GET /api/analytics` - Aggregated KPIs and trends
@@ -213,15 +222,19 @@ All client-side components use:
 3. **Movement Creation**:
    - Create movement → Firestore `movements`
    - Create `MOVEMENT` transaction → Firestore `transactions`
+   - Update movement with `txHash` from transaction → Firestore `movements`
+   - Transaction includes `movementId` and `productId` as top-level fields
 
 4. **Handover**:
    - Create handover → Firestore `handovers`
    - Create `MOVEMENT` transaction (with handover metadata) → Firestore `transactions`
+   - Transaction includes `movementId` and `productId` as top-level fields
 
 5. **QC Check**:
    - Create QC log → Firestore `qc_logs`
    - Update movement status (if requested) → Firestore `movements`
    - Create `QC_LOG` transaction → Firestore `transactions`
+   - Transaction includes `movementId` and `productId` as top-level fields
 
 ## Data Flow Summary
 
@@ -241,6 +254,32 @@ Firestore Collection (products, movements, verifications, etc.)
 Response to Client
 ```
 
+## Movement-Transaction Linkage
+
+### ✅ Direct Blockchain Linkage
+
+**Movements → Transactions:**
+- Each movement document includes `txHash` field
+- Direct reference to blockchain transaction for audit trail
+- Enables bidirectional querying between movements and transactions
+
+**Transactions → Movements:**
+- Transactions include `movementId` as top-level field (for MOVEMENT transactions)
+- Transactions include `productId` as top-level field (for product-related transactions)
+- Enables efficient querying without payload search
+
+**Common Attributes:**
+- `txHash`: Unique transaction hash (movements reference this)
+- `movementId`: Movement ID (transactions reference this)
+- `productId`: Product ID (both reference this)
+- `orgId`: Organization ID (both reference this)
+
+**Benefits:**
+- Complete audit trail: Every movement can be traced to its blockchain transaction
+- Efficient querying: Database-level filters instead of payload searches
+- Unique pair identification: Each transaction-movement pair can be uniquely identified
+- Backward compatibility: Older transactions without top-level fields still queryable by `refId`
+
 ## Verification Checklist
 
 - ✅ All collections have Firestore security rules
@@ -254,6 +293,8 @@ Response to Client
 - ✅ Transaction creation for all events
 - ✅ Analytics API aggregates from Firestore
 - ✅ Reports API queries Firestore
+- ✅ Movement-transaction linkage: `txHash` in movements, `movementId`/`productId` in transactions
+- ✅ Route conflicts resolved: `/api/movements/by-product/:productId` and `/api/movements/:movementId/...`
 
 ## Production Readiness
 

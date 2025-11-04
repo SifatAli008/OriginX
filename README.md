@@ -119,9 +119,9 @@ web/
 - `orgs` — `{ orgId, name, type, branding, settings }`
 - `products` — `{ productId, orgId, name, sku, batchId, imgUrl, qrHash, status, createdAt }`
 - `batches` — `{ batchId, orgId, fileUrl, status, counts, createdAt }`
-- `movements` — `{ moveId, productId, from, to, by, type, qc, createdAt }`
+- `movements` — `{ moveId, productId, from, to, by, type, qc, txHash, createdAt }`
 - `verifications` — `{ verificationId, productId, by, aiScore, verdict, channel, createdAt }`
-- `transactions` — `{ txHash, type, status, blockNumber, refType, refId, orgId, createdAt }`
+- `transactions` — `{ txHash, type, status, blockNumber, refType, refId, orgId, movementId, productId, createdAt }`
 - `suppliers` — `{ supplierId, orgId, name, rating, status }`
 - `reports` — `{ reportId, productId, orgId, reason, reporterId, createdAt }`
 - `alerts` — `{ alertId, orgId, subject, severity, status, createdAt }`
@@ -157,11 +157,12 @@ QR & Verification
 Movements & Logistics
 - `POST /api/movements` — create movement/shipment
 - `GET /api/movements` — list by filters (date, from, to, product)
-- `POST /api/movements/:id/handover` — record handover event
-- `POST /api/movements/:id/qc` — add QC result
+- `GET /api/movements/by-product/:productId` — get movements for a specific product
+- `POST /api/movements/:movementId/handover` — record handover event
+- `POST /api/movements/:movementId/qc` — add QC result
 
 Blockchain (Simulated Ledger)
-- `GET /api/transactions` — explorer list
+- `GET /api/transactions` — explorer list (supports `productId`, `movementId` filters)
 - `GET /api/transactions/:txHash` — detail
 
 Analytics & Reports
@@ -266,7 +267,7 @@ CLOUDINARY_API_SECRET=your-cloudinary-api-secret
 
 ### Vercel Production Deployment
 
-**📖 For detailed step-by-step instructions, see [VERCEL_FIREBASE_SETUP.md](./VERCEL_FIREBASE_SETUP.md)**
+**For detailed step-by-step instructions, see [VERCEL_FIREBASE_SETUP.md](./VERCEL_FIREBASE_SETUP.md)**
 
 For production deployments on Vercel, add all `NEXT_PUBLIC_*` environment variables in the Vercel Dashboard:
 
@@ -283,9 +284,9 @@ For production deployments on Vercel, add all `NEXT_PUBLIC_*` environment variab
 3. Enable for **Production** environment (and Preview/Development if needed)
 4. **Redeploy** after adding variables
 
-⚠️ **Important:** The app will load even if Firebase variables are missing (with warnings), but authentication features won't work until variables are configured.
+**Important:** The app will load even if Firebase variables are missing (with warnings), but authentication features won't work until variables are configured.
 
-**🔧 Troubleshooting:** If you see "Firebase is not configured" errors, check [VERCEL_FIREBASE_SETUP.md](./VERCEL_FIREBASE_SETUP.md) for detailed troubleshooting steps.
+**Troubleshooting:** If you see "Firebase is not configured" errors, check [VERCEL_FIREBASE_SETUP.md](./VERCEL_FIREBASE_SETUP.md) for detailed troubleshooting steps.
 
 ## Troubleshooting
 
@@ -521,7 +522,9 @@ Errors:
 - 429 rate limited
 
 #### GET /api/transactions
-Query params: `page`, `pageSize`, `type` (PRODUCT_REGISTER|VERIFY), `manufacturerId` (admin only), `productId`.
+Query params: `page`, `pageSize`, `type` (PRODUCT_REGISTER|VERIFY|MOVEMENT|QC_LOG), `status`, `productId`, `movementId`, `orgId`, `startDate`, `endDate`.
+
+Supports efficient filtering by `productId` and `movementId` using top-level fields for database-level queries.
 
 Response 200:
 ```json
@@ -552,6 +555,8 @@ Response 200:
   "status": "confirmed",
   "blockNumber": 1024,
   "timestamp": 1730385600,
+  "movementId": "mov_abc123",
+  "productId": "prod_9s8df7",
   "payload": {
     "productId": "prod_9s8df7",
     "manufacturerId": "uid_abc"
@@ -680,9 +685,9 @@ This project uses GitHub Actions for automated testing, building, and deployment
 
 ### Workflows
 - **CI/CD Pipeline** (`ci.yml`): Runs on every push to `main`/`develop` and PRs
-  - ✅ Linting and TypeScript type checking
-  - ✅ Building the Next.js application
-  - ✅ Automatic deployment to Vercel (on `main` branch)
+  - Linting and TypeScript type checking
+  - Building the Next.js application
+  - Automatic deployment to Vercel (on `main` branch)
 - **PR Checks** (`pr-checks.yml`): Ensures code quality before merging
 - **Vercel Deployment** (`vercel-deploy.yml`): Production deployment workflow
 
@@ -700,10 +705,13 @@ For automatic Vercel deployment via GitHub Actions:
 
 ### Recent Improvements
 
-- ✅ Fixed TypeScript compilation errors (Framer Motion variants)
-- ✅ Improved Firebase error handling (graceful degradation)
-- ✅ App no longer crashes when Firebase config is missing
-- ✅ Enhanced CI/CD pipeline reliability
+- Fixed TypeScript compilation errors (Framer Motion variants)
+- Improved Firebase error handling (graceful degradation)
+- App no longer crashes when Firebase config is missing
+- Enhanced CI/CD pipeline reliability
+- Added movement-transaction linkage (txHash in movements, movementId/productId in transactions)
+- Resolved Next.js route conflicts (restructured API routes)
+- Enhanced test suite with better diagnostics and error handling
 
 ## Deployment
 
@@ -721,15 +729,15 @@ vercel --prod
 ```
 
 **Before deploying, ensure:**
-1. ✅ All Firebase environment variables are set in Vercel Dashboard
-2. ✅ Environment variables are enabled for Production environment
-3. ✅ Build passes locally (`npm run build`)
+1. All Firebase environment variables are set in Vercel Dashboard
+2. Environment variables are enabled for Production environment
+3. Build passes locally (`npm run build`)
 
 **Deployment Status:**
-- ✅ TypeScript compilation
-- ✅ Next.js build optimization
-- ✅ Graceful error handling (app won't crash if Firebase isn't configured)
-- ✅ Automatic CI/CD via GitHub Actions
+- TypeScript compilation
+- Next.js build optimization
+- Graceful error handling (app won't crash if Firebase isn't configured)
+- Automatic CI/CD via GitHub Actions
 
 ### Firebase Deployment
 

@@ -90,7 +90,6 @@ export async function analyzeUserBehavior(
     const hour = new Date(s.timestamp).getHours();
     hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
   });
-  const peakScanHour = Array.from(hourCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || 12;
 
   // Location variation
   const uniqueLocations = new Set(scanHistory.map((s) => s.location).filter(Boolean)).size;
