@@ -188,15 +188,10 @@ export function analyzeCryptographicConsistency(
  */
 export async function fetchScanHistory(
   productId: string,
-  firestoreUtils?: {
-    collection: Function;
-    query: Function;
-    where: Function;
-    orderBy: Function;
-    limit: Function;
-    getDocs: Function;
-    getFirestore: Function;
-    getFirebaseApp: Function;
+  firestoreUtils?: FirestoreUtils & {
+    orderBy?: ReturnType<typeof import("firebase/firestore").orderBy>;
+    limit?: ReturnType<typeof import("firebase/firestore").limit>;
+    getFirebaseApp?: () => ReturnType<typeof import("firebase/app").initializeApp> | undefined;
   }
 ): Promise<QRScanRecord[]> {
   if (!firestoreUtils) {
@@ -243,13 +238,22 @@ export async function fetchScanHistory(
  * Comprehensive QR anomaly detection
  * Now integrated with Firestore for scan history
  */
+interface FirestoreUtils {
+  collection: ReturnType<typeof import("firebase/firestore").collection>;
+  query: ReturnType<typeof import("firebase/firestore").query>;
+  where: ReturnType<typeof import("firebase/firestore").where>;
+  getDocs: ReturnType<typeof import("firebase/firestore").getDocs>;
+  getFirestore: ReturnType<typeof import("firebase/firestore").getFirestore>;
+  app?: ReturnType<typeof import("firebase/app").initializeApp>;
+}
+
 export async function detectQRAnomalies(
   qrData: string,
   productId: string,
   scanHistory: QRScanRecord[],
   currentLocation?: string,
   currentUserId?: string,
-  firestoreUtils?: any
+  firestoreUtils?: FirestoreUtils
 ): Promise<QRAnomalyResult> {
   // If scanHistory is empty but we have Firestore access, fetch it
   let actualHistory = scanHistory;

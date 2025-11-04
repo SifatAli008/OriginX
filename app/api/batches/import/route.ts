@@ -12,9 +12,9 @@ import { generateProductQRCode } from "@/lib/utils/qr/generator";
 import { createProductRegisterTransaction } from "@/lib/utils/transactions";
 import type { ProductCategory, ProductStatus } from "@/lib/types/products";
 // Dynamic import for xlsx (optional dependency)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let XLSX: any = null;
-async function getXLSX() {
+type XLSXModule = typeof import("xlsx");
+let XLSX: XLSXModule | null = null;
+async function getXLSX(): Promise<XLSXModule> {
   if (!XLSX) {
     XLSX = await import("xlsx");
   }
