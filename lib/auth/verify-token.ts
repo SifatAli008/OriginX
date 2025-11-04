@@ -14,8 +14,12 @@ const TEST_USER = {
 };
 
 export async function verifyIdToken(token: string) {
-  // Bypass for hardcoded test token (ONLY IN DEVELOPMENT)
-  if (process.env.NODE_ENV === 'development' && token === TEST_TOKEN) {
+  // Bypass for hardcoded test token (ONLY IN DEVELOPMENT/TESTING)
+  // Allow test token when NOT in production (development, test, or undefined)
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  const trimmedToken = token.trim();
+  
+  if (isDevelopment && trimmedToken === TEST_TOKEN) {
     console.warn('⚠️ Using hardcoded test token - NOT FOR PRODUCTION');
     return {
       uid: TEST_USER.uid,
@@ -57,4 +61,14 @@ export async function verifyIdToken(token: string) {
 
 // Export test token for use in test files
 export const HARDCODED_TEST_TOKEN = TEST_TOKEN;
+
+// Helper function to check if we're in development/test mode
+export function isDevelopmentMode(): boolean {
+  return process.env.NODE_ENV !== 'production';
+}
+
+// Helper function to check if a user is the test user
+export function isTestUser(uid: string): boolean {
+  return isDevelopmentMode() && uid === TEST_USER.uid;
+}
 

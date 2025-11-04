@@ -328,7 +328,7 @@
                 </div>
                 <div class="input-group">
                     <label>Firebase Auth Token:</label>
-                    <textarea id="authToken" placeholder="Token will be auto-filled from Firebase or use hardcoded test token">test-token-originx-12345-hardcoded-for-testing</textarea>
+                    <textarea id="authToken" placeholder="Token will be auto-filled when you login with Firebase. Using hardcoded token returns DEMO DATA only."></textarea>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button onclick="initializeFirebase()" id="initFirebaseBtn">
@@ -338,7 +338,7 @@
                     <button onclick="loginWithEmail()">Login with Email</button>
                     <button onclick="loginWithGoogle()">Login with Google</button>
                     <button onclick="getTokenFromFirebase()">Get Token from Firebase</button>
-                    <button class="secondary" onclick="useHardcodedToken()">Use Hardcoded Test Token</button>
+                    <button class="secondary" onclick="useHardcodedToken()" title="⚠️ Demo Mode Only - Returns DEMO DATA">Use Demo Token (Demo Data Only)</button>
                     <button class="secondary" onclick="logoutFirebase()">Logout</button>
                 </div>
                 <div id="userInfo" style="margin-top: 15px; padding: 10px; background: white; border-radius: 5px; display: none;">
@@ -995,24 +995,83 @@
         let firebaseAuth = null;
         let currentUser = null;
         const testHistory = [];
-
-        // Firebase Configuration - Get from window or use defaults
-        const firebaseConfig = {
-            apiKey: window.FIREBASE_API_KEY || "",
-            authDomain: window.FIREBASE_AUTH_DOMAIN || "",
-            projectId: window.FIREBASE_PROJECT_ID || "",
-            storageBucket: window.FIREBASE_STORAGE_BUCKET || "",
-            messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID || "",
-            appId: window.FIREBASE_APP_ID || ""
+        let firebaseConfig = {
+            apiKey: "",
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
         };
+        let isUsingRealFirebase = false;
+
+        // Fetch Firebase configuration from API endpoint
+        async function fetchFirebaseConfig() {
+            try {
+                const baseUrl = document.getElementById('baseUrl')?.value || window.location.origin || 'http://localhost:3000';
+                const response = await fetch(`${baseUrl}/api/config/firebase`);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch Firebase config: ${response.statusText}`);
+                }
+                
+                const config = await response.json();
+                
+                if (config.configured && config.apiKey && config.projectId) {
+                    firebaseConfig = {
+                        apiKey: config.apiKey,
+                        authDomain: config.authDomain,
+                        projectId: config.projectId,
+                        storageBucket: config.storageBucket,
+                        messagingSenderId: config.messagingSenderId,
+                        appId: config.appId
+                    };
+                    isUsingRealFirebase = true;
+                    console.log('✅ Firebase config loaded from API - using REAL Firebase data');
+                    return true;
+                } else {
+                    console.warn('⚠️ Firebase config not fully configured in backend');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Failed to fetch Firebase config from API:', error);
+                console.warn('⚠️ Falling back to window.FIREBASE_* variables or manual config');
+                
+                // Fallback to window variables if API fails
+                firebaseConfig = {
+                    apiKey: window.FIREBASE_API_KEY || "",
+                    authDomain: window.FIREBASE_AUTH_DOMAIN || "",
+                    projectId: window.FIREBASE_PROJECT_ID || "",
+                    storageBucket: window.FIREBASE_STORAGE_BUCKET || "",
+                    messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID || "",
+                    appId: window.FIREBASE_APP_ID || ""
+                };
+                
+                if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+                    isUsingRealFirebase = true;
+                    return true;
+                }
+                
+                return false;
+            }
+        }
 
         // Import Firebase modules dynamically
         async function loadFirebase() {
+            // First, try to fetch Firebase config from API
+            const configLoaded = await fetchFirebaseConfig();
+            
+            if (!configLoaded) {
+                console.warn('⚠️ Firebase config not available. API calls will fail or return demo data.');
+                updateFirebaseStatus('not-configured');
+                return false;
+            }
+            
             try {
                 const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
                 const { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
                 
-                // Initialize Firebase
+                // Initialize Firebase with real config
                 if (firebaseConfig.apiKey && firebaseConfig.projectId) {
                     firebaseApp = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
                     firebaseAuth = getAuth(firebaseApp);
@@ -1030,14 +1089,15 @@
                     });
 
                     updateFirebaseStatus();
+                    console.log('✅ Firebase initialized with REAL Firebase configuration');
                     return true;
                 } else {
-                    console.warn('Firebase config missing. Using hardcoded token mode.');
+                    console.warn('⚠️ Firebase config missing required fields. Using hardcoded token mode (DEMO DATA ONLY).');
                     updateFirebaseStatus('not-configured');
                     return false;
                 }
             } catch (error) {
-                console.error('Failed to load Firebase:', error);
+                console.error('❌ Failed to load Firebase:', error);
                 updateFirebaseStatus('error');
                 return false;
             }
@@ -1050,26 +1110,30 @@
             if (!firebaseAuth) {
                 badge.textContent = '⏳ Loading...';
                 badge.className = 'status-badge loading';
-                text.value = 'Loading Firebase SDK...';
+                text.value = 'Loading Firebase SDK and fetching config...';
                 return;
             }
 
             if (status === 'not-configured') {
                 badge.textContent = '⚠️ Not Configured';
                 badge.className = 'status-badge disconnected';
-                text.value = 'Firebase config missing - using hardcoded token mode';
+                text.value = 'Firebase config missing - API will return DEMO DATA only. Please configure Firebase environment variables.';
             } else if (status === 'error') {
                 badge.textContent = '❌ Error';
                 badge.className = 'status-badge disconnected';
                 text.value = 'Failed to initialize Firebase';
             } else if (currentUser) {
-                badge.textContent = '✅ Connected';
+                badge.textContent = '✅ Connected (Real Firebase)';
                 badge.className = 'status-badge connected';
-                text.value = `Authenticated as: ${currentUser.email}`;
+                text.value = `✅ Using REAL Firebase data | Authenticated as: ${currentUser.email}`;
+            } else if (isUsingRealFirebase) {
+                badge.textContent = '🔵 Real Firebase (Not Logged In)';
+                badge.className = 'status-badge loading';
+                text.value = '✅ Using REAL Firebase data | Please login to get auth token';
             } else {
-                badge.textContent = '🔴 Not Authenticated';
+                badge.textContent = '🔴 Demo Mode';
                 badge.className = 'status-badge disconnected';
-                text.value = 'Not logged in - using hardcoded token';
+                text.value = '⚠️ Using hardcoded token - API will return DEMO DATA. Configure Firebase to use real data.';
             }
         }
 
@@ -1095,10 +1159,12 @@
             btn.disabled = false;
             spinner.style.display = 'none';
             
-            if (loaded) {
-                alert('✅ Firebase initialized successfully!');
+            if (loaded && isUsingRealFirebase) {
+                alert('✅ Firebase initialized successfully!\n\n✅ Using REAL Firebase data from your Firebase project.\n\nPlease login to authenticate and get a real auth token.');
+            } else if (loaded) {
+                alert('⚠️ Firebase initialized but config may be incomplete.\n\nPlease check your Firebase environment variables.');
             } else {
-                alert('⚠️ Firebase configuration missing. Please set environment variables or use hardcoded token.');
+                alert('⚠️ Firebase configuration missing!\n\n❌ API calls will return DEMO DATA only.\n\nTo use REAL Firebase data:\n1. Set Firebase environment variables in .env.local\n2. Restart your dev server\n3. Refresh this page');
             }
         };
 
@@ -1141,16 +1207,18 @@
 
         window.getTokenFromFirebase = async function() {
             if (!currentUser) {
-                alert('No user logged in. Please login first or use hardcoded token.');
-                useHardcodedToken();
+                alert('⚠️ No user logged in.\n\nTo use REAL Firebase data:\n1. Login with Email or Google\n2. Get token from Firebase\n\nOr use hardcoded token (DEMO DATA ONLY)');
+                if (!isUsingRealFirebase) {
+                    useHardcodedToken();
+                }
                 return;
             }
 
             try {
                 const token = await currentUser.getIdToken();
                 document.getElementById('authToken').value = token;
-                addToHistory('Token Retrieved', { success: true, source: 'Firebase' });
-                alert('✅ Token retrieved successfully!');
+                addToHistory('Token Retrieved', { success: true, source: 'Real Firebase', usingRealData: isUsingRealFirebase });
+                alert('✅ Real Firebase auth token retrieved!\n\nThis token will authenticate with your Firebase backend and use REAL data.');
             } catch (error) {
                 alert('❌ Error getting token: ' + error.message);
             }
@@ -1165,8 +1233,9 @@
             try {
                 const { signOut } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
                 await signOut(firebaseAuth);
-                document.getElementById('authToken').value = 'test-token-originx-12345-hardcoded-for-testing';
-                alert('✅ Logged out successfully!');
+                // Clear token - don't auto-set demo token, let user choose
+                document.getElementById('authToken').value = '';
+                alert('✅ Logged out successfully!\n\nToken cleared. Login again to get a real Firebase auth token.\n\n⚠️ Using demo token will return DEMO DATA only.');
             } catch (error) {
                 alert('❌ Logout failed: ' + error.message);
             }
@@ -2265,8 +2334,13 @@
         };
 
         window.useHardcodedToken = function() {
-            document.getElementById('authToken').value = 'test-token-originx-12345-hardcoded-for-testing';
-            addToHistory('Hardcoded Token Set', { success: true, token: 'test-token-originx-12345-hardcoded-for-testing' });
+            const confirmed = confirm('⚠️ WARNING: Hardcoded Token (DEMO MODE)\n\nUsing hardcoded token will:\n❌ Return DEMO/EMPTY data only\n❌ Not connect to real Firebase\n\nOnly use this for testing API structure.\n\nTo use REAL Firebase data, login and get a real token.\n\nContinue with hardcoded token?');
+            if (confirmed) {
+                document.getElementById('authToken').value = 'test-token-originx-12345-hardcoded-for-testing';
+                addToHistory('Hardcoded Token Set (DEMO MODE)', { success: true, token: 'test-token-originx-12345-hardcoded-for-testing', warning: 'Using demo data only' });
+                updateFirebaseStatus();
+                alert('⚠️ Using hardcoded token - DEMO DATA ONLY\n\nAPI responses will be empty or mock data.\nConfigure Firebase and login for real data.');
+            }
         };
     </script>
 </body>
