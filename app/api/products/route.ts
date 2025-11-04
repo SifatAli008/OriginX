@@ -36,11 +36,19 @@ export async function POST(request: NextRequest) {
     }
     const uid = decodedToken.uid;
 
-    // Get user document to verify orgId
+    // Get user document to verify orgId and role
     const userDoc = await getUserDocument(uid);
     if (!userDoc || !userDoc.orgId) {
       return NextResponse.json(
         { error: "User must be associated with an organization" },
+        { status: 403 }
+      );
+    }
+
+    // Only warehouse owners can create products
+    if (userDoc.role !== "warehouse") {
+      return NextResponse.json(
+        { error: "Only warehouse users can create products" },
         { status: 403 }
       );
     }

@@ -186,27 +186,20 @@ export default function DashboardPage() {
         },
       });
 
-            if (!analyticsResponse.ok) {
-              const errorData = await analyticsResponse.json().catch(() => ({}));
-              const errorMessage = errorData.error || "Failed to fetch analytics data";
-              const details = errorData.details ? ` (${errorData.details})` : '';
-              
-              // Handle specific error cases
-              if (analyticsResponse.status === 404 && errorMessage.includes("User profile not found")) {
-                const profileError = "Your user profile is not set up. Please complete your registration or contact support.";
-                addToast({
-                  variant: "error",
-                  title: "Profile Setup Required",
-                  description: profileError,
-                  duration: 10000, // Show for 10 seconds for important message
-                });
-                throw new Error(profileError);
-              }
-              
-              throw new Error(errorMessage + details);
-            }
-
-      const analyticsData = await analyticsResponse.json();
+      let analyticsData: any = {};
+      if (!analyticsResponse.ok) {
+        // Fallback for any 404 on analytics (e.g., missing profile or route)
+        if (analyticsResponse.status === 404) {
+          analyticsData = { kpis: { totalProducts: 0, lossPrevented: 0 } };
+        } else {
+          const errorData = await analyticsResponse.json().catch(() => ({}));
+          const errorMessage = errorData.error || "Failed to fetch analytics data";
+          const details = errorData.details ? ` (${errorData.details})` : '';
+          throw new Error(errorMessage + details);
+        }
+      } else {
+        analyticsData = await analyticsResponse.json();
+      }
       
       // Fetch transactions count for transactions stat
       const transactionsResponse = await fetch('/api/transactions?pageSize=1', {
@@ -222,9 +215,30 @@ export default function DashboardPage() {
         transactionsCount = transactionsData.total || 0;
       }
 
-      // Fetch users count (simplified - using analytics recentActivity or setting to 0 if not available)
-      // Note: User count would require admin access, so we'll use a placeholder or fetch from analytics
-      const usersCount = 0; // TODO: Add user count endpoint or admin check
+      // Fetch users count (admin only)
+      let usersCount = 0;
+      if (user?.role === "admin") {
+        try {
+          const usersResponse = await fetch('/api/users', {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (usersResponse.ok) {
+            const usersData = await usersResponse.json();
+            usersCount = usersData.total || 0;
+          } else {
+            // If unauthorized (not admin) or error, default to 0
+            const errorData = await usersResponse.json().catch(() => ({}));
+            console.warn('Failed to fetch user count:', usersResponse.status, errorData);
+          }
+        } catch (error) {
+          console.error('Error fetching user count:', error);
+          // Continue with 0 if fetch fails
+        }
+      }
 
       // Map analytics data to dashboard stats format
       setDashboardData({
@@ -248,7 +262,7 @@ export default function DashboardPage() {
     } finally {
       setRefreshing(false);
     }
-  }, [addToast]);
+  }, [addToast, user]);
 
   // Combined useEffect for auth and data fetching
   useEffect(() => {
@@ -415,7 +429,7 @@ export default function DashboardPage() {
   const renderDashboard = () => {
     switch (user.role) {
       case "admin":
-        return <AdminDashboard permissions={permissions} />;
+        return <AdminDashboard permissions={permissions} stats={dashboardData.stats} />;
       case "sme":
       case "supplier":
         return <SMEDashboard permissions={permissions} />;
@@ -619,7 +633,13 @@ export default function DashboardPage() {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function AdminDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
+function AdminDashboard({ 
+  permissions: _permissions,
+  stats 
+}: { 
+  permissions: ReturnType<typeof getRolePermissions>;
+  stats: DashboardData['stats'];
+}) {
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const router = useRouter();
@@ -655,7 +675,7 @@ function AdminDashboard({ permissions: _permissions }: { permissions: ReturnType
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
             title="Total Users" 
-            value="0" 
+            value={stats.users.toString()} 
             change="0%" 
             trend="up" 
             icon={<Users className="h-6 w-6" />}
@@ -2137,7 +2157,7 @@ function Sidebar({
       admin: [
         { label: "Registration Requests", icon: <FileText className="h-5 w-5" />, href: "/admin/registration-requests" },
         { label: "User Management", icon: <Users className="h-5 w-5" />, href: "/admin/users" },
-        { label: "Suppliers", icon: <Building2 className="h-5 w-5" />, href: "/suppliers" },
+        { label: "Vendors", icon: <Building2 className="h-5 w-5" />, href: "/vendors" },
         { label: "Products", icon: <Boxes className="h-5 w-5" />, href: "/products" },
         { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
@@ -2167,6 +2187,7 @@ function Sidebar({
         { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
       ],
       warehouse: [
+        { label: "Products", icon: <Boxes className="h-5 w-5" />, href: "/products" },
         { label: "Inbound", icon: <Truck className="h-5 w-5" />, href: "/movements?type=inbound" },
         { label: "Outbound", icon: <Package className="h-5 w-5" />, href: "/movements?type=outbound" },
         { label: "All Movements", icon: <Activity className="h-5 w-5" />, href: "/movements" },

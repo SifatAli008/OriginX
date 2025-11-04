@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useToast } from "@/components/ui/toast";
+import { getFirebaseAuth } from "@/lib/firebase/client";
+import type { UserDocument, UserRole, UserStatus } from "@/lib/types/user";
 import {
   Users,
   Search,
@@ -21,35 +24,44 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  X,
+  Save,
+  Loader2,
 } from "lucide-react";
-import type { UserRole } from "@/lib/types/user";
 
-interface User {
+interface User extends UserDocument {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
+}
+
+interface EditUserData {
   role: UserRole;
-  company: string;
-  status: "active" | "inactive" | "suspended";
-  createdAt: Date;
-  lastLogin?: Date;
+  status: UserStatus;
+  displayName: string | null;
 }
 
 export default function UserManagementPage() {
   const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
+  const { addToast } = useToast();
 
   const [users, setUsers] = useState<User[]>([]);
+  const [totalStats, setTotalStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    suspended: 0,
+    pending: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editData, setEditData] = useState<EditUserData | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {
@@ -63,40 +75,116 @@ export default function UserManagementPage() {
     }
 
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authState.status, user, router]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/users');
-      // const data = await response.json();
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUsers([]);
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/users', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch users: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Map UserDocument[] to User[] with id field
+      const mappedUsers: User[] = (data.users || []).map((u: UserDocument) => ({
+        ...u,
+        id: u.uid,
+      }));
+
+      setUsers(mappedUsers);
+      setTotalStats({
+        total: data.total || 0,
+        active: data.active || 0,
+        inactive: mappedUsers.filter(u => u.status === "inactive").length,
+        suspended: mappedUsers.filter(u => u.status === "suspended").length,
+        pending: data.pending || 0,
+      });
     } catch (error) {
       console.error("Failed to fetch users:", error);
+      addToast({
+        variant: "error",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch users",
+      });
     } finally {
       setLoading(false);
     }
+  }, [addToast]);
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setEditData({
+      role: user.role,
+      status: user.status,
+      displayName: user.displayName,
+    });
+    setShowEditModal(true);
   };
 
-  const handleSuspendUser = async (userId: string) => {
-    try {
-      // TODO: API call
-      console.log("Suspending user:", userId);
-      await fetchUsers();
-    } catch (error) {
-      console.error("Failed to suspend user:", error);
-    }
-  };
+  const handleSaveEdit = async () => {
+    if (!selectedUser || !editData) return;
 
-  const handleActivateUser = async (userId: string) => {
+    setSaving(true);
     try {
-      // TODO: API call
-      console.log("Activating user:", userId);
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(`/api/users/${selectedUser.uid}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role: editData.role,
+          status: editData.status,
+          displayName: editData.displayName,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to update user: ${response.status}`);
+      }
+
+      addToast({
+        variant: "success",
+        title: "Success",
+        description: "User updated successfully",
+      });
+
+      setShowEditModal(false);
+      setSelectedUser(null);
+      setEditData(null);
       await fetchUsers();
     } catch (error) {
-      console.error("Failed to activate user:", error);
+      console.error("Failed to update user:", error);
+      addToast({
+        variant: "error",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update user",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -104,20 +192,96 @@ export default function UserManagementPage() {
     if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
       return;
     }
+
+    setDeleting(userId);
     try {
-      // TODO: API call
-      console.log("Deleting user:", userId);
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to delete user: ${response.status}`);
+      }
+
+      addToast({
+        variant: "success",
+        title: "Success",
+        description: "User deleted successfully",
+      });
+
       await fetchUsers();
     } catch (error) {
       console.error("Failed to delete user:", error);
+      addToast({
+        variant: "error",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete user",
+      });
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleToggleStatus = async (user: User) => {
+    const newStatus: UserStatus = user.status === "active" ? "suspended" : "active";
+    
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(`/api/users/${user.uid}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to update user: ${response.status}`);
+      }
+
+      addToast({
+        variant: "success",
+        title: "Success",
+        description: `User ${newStatus === "active" ? "activated" : "suspended"} successfully`,
+      });
+
+      await fetchUsers();
+    } catch (error) {
+      console.error("Failed to toggle user status:", error);
+      addToast({
+        variant: "error",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update user status",
+      });
     }
   };
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.company.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const displayName = u.displayName || '';
+    const matchesSearch = 
+      displayName.toLowerCase().includes(searchLower) ||
+      u.email.toLowerCase().includes(searchLower) ||
+      (u.orgName || '').toLowerCase().includes(searchLower);
     
     const matchesRole = roleFilter === "all" || u.role === roleFilter;
     const matchesStatus = statusFilter === "all" || u.status === statusFilter;
@@ -130,6 +294,7 @@ export default function UserManagementPage() {
       case "active": return "text-green-400 bg-green-500/10 border-green-500/20";
       case "inactive": return "text-gray-400 bg-gray-500/10 border-gray-500/20";
       case "suspended": return "text-red-400 bg-red-500/10 border-red-500/20";
+      case "pending": return "text-yellow-400 bg-yellow-500/10 border-yellow-500/20";
       default: return "text-gray-400 bg-gray-500/10 border-gray-500/20";
     }
   };
@@ -171,13 +336,16 @@ export default function UserManagementPage() {
             </h1>
             <p className="text-gray-400 text-lg">Manage system users and permissions</p>
           </div>
-          <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/20 transition-all duration-200">
+          <Button 
+            onClick={() => router.push('/admin/invite-user')}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/20 transition-all duration-200"
+          >
             <UserPlus className="h-4 w-4 mr-2" />
-            Add User
+            Invite User
           </Button>
         </div>
 
-        {/* Stats Cards - Matching Dashboard Style */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -188,7 +356,7 @@ export default function UserManagementPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-white mb-2">
-                {users.length}
+                {totalStats.total}
               </div>
             </CardContent>
           </Card>
@@ -202,21 +370,21 @@ export default function UserManagementPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-white mb-2">
-                {users.filter(u => u.status === "active").length}
+                {totalStats.active}
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-400">Inactive</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-400">Pending</CardTitle>
               <div className="text-gray-400 p-2 rounded-lg bg-gray-800/50">
                 <Clock className="h-6 w-6" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-white mb-2">
-                {users.filter(u => u.status === "inactive").length}
+                {totalStats.pending}
               </div>
             </CardContent>
           </Card>
@@ -230,7 +398,7 @@ export default function UserManagementPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-white mb-2">
-                {users.filter(u => u.status === "suspended").length}
+                {totalStats.suspended}
               </div>
             </CardContent>
           </Card>
@@ -242,7 +410,7 @@ export default function UserManagementPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, email, or company..."
+              placeholder="Search by name, email, or organization..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"
@@ -270,6 +438,7 @@ export default function UserManagementPage() {
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
+              <option value="pending">Pending</option>
               <option value="inactive">Inactive</option>
               <option value="suspended">Suspended</option>
             </select>
@@ -300,7 +469,7 @@ export default function UserManagementPage() {
                 <p className="text-gray-500 text-sm">
                   {searchTerm || roleFilter !== "all" || statusFilter !== "all"
                     ? "Try adjusting your filters" 
-                    : "Add your first user to get started"}
+                    : "Invite your first user to get started"}
                 </p>
               </div>
             ) : (
@@ -315,13 +484,13 @@ export default function UserManagementPage() {
                         Role
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Company
+                        Organization
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Status
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Last Login
+                        Created
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Actions
@@ -333,7 +502,7 @@ export default function UserManagementPage() {
                       <tr key={u.id} className="hover:bg-gray-800/30 transition-colors">
                         <td className="px-4 py-4">
                           <div>
-                            <p className="text-white font-medium">{u.firstName} {u.lastName}</p>
+                            <p className="text-white font-medium">{u.displayName || u.email}</p>
                             <p className="text-sm text-gray-400">{u.email}</p>
                           </div>
                         </td>
@@ -344,7 +513,7 @@ export default function UserManagementPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-gray-300">{u.company}</p>
+                          <p className="text-gray-300">{u.orgName || "N/A"}</p>
                         </td>
                         <td className="px-4 py-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getStatusColor(u.status)}`}>
@@ -353,7 +522,7 @@ export default function UserManagementPage() {
                         </td>
                         <td className="px-4 py-4">
                           <p className="text-gray-400 text-sm">
-                            {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : "Never"}
+                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "N/A"}
                           </p>
                         </td>
                         <td className="px-4 py-4">
@@ -361,10 +530,7 @@ export default function UserManagementPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                setSelectedUser(u);
-                                setShowModal(true);
-                              }}
+                              onClick={() => handleEditUser(u)}
                               className="border-gray-700 text-white hover:bg-gray-800"
                             >
                               <Edit className="h-4 w-4" />
@@ -373,8 +539,9 @@ export default function UserManagementPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleSuspendUser(u.id)}
+                                onClick={() => handleToggleStatus(u)}
                                 className="border-gray-700 text-orange-400 hover:bg-orange-500/10"
+                                disabled={deleting === u.id}
                               >
                                 <Lock className="h-4 w-4" />
                               </Button>
@@ -382,8 +549,9 @@ export default function UserManagementPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleActivateUser(u.id)}
+                                onClick={() => handleToggleStatus(u)}
                                 className="border-gray-700 text-green-400 hover:bg-green-500/10"
+                                disabled={deleting === u.id}
                               >
                                 <Unlock className="h-4 w-4" />
                               </Button>
@@ -393,8 +561,13 @@ export default function UserManagementPage() {
                               variant="outline"
                               onClick={() => handleDeleteUser(u.id)}
                               className="border-gray-700 text-red-400 hover:bg-red-500/10"
+                              disabled={deleting === u.id}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {deleting === u.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </td>
@@ -406,8 +579,122 @@ export default function UserManagementPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit Modal */}
+        {showEditModal && selectedUser && editData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-900/95 border border-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
+              <div className="flex items-center justify-between p-6 border-b border-gray-800">
+                <h2 className="text-xl font-bold text-white">Edit User</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedUser(null);
+                    setEditData(null);
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedUser.email}
+                    disabled
+                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.displayName || ''}
+                    onChange={(e) => setEditData({ ...editData, displayName: e.target.value || null })}
+                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    placeholder="Enter display name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Role
+                  </label>
+                  <select
+                    value={editData.role}
+                    onChange={(e) => setEditData({ ...editData, role: e.target.value as UserRole })}
+                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="sme">SME</option>
+                    <option value="supplier">Supplier</option>
+                    <option value="warehouse">Warehouse</option>
+                    <option value="auditor">Auditor</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={editData.status}
+                    onChange={(e) => setEditData({ ...editData, status: e.target.value as UserStatus })}
+                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-800">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedUser(null);
+                    setEditData(null);
+                  }}
+                  disabled={saving}
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
 }
-

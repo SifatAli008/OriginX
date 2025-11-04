@@ -1,0 +1,161 @@
+/**
+ * API Route: Vendors Aggregation
+ * GET /api/vendors - List vendors (auditor, warehouse, sme, supplier) with stats
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { verifyIdToken } from "@/lib/auth/verify-token";
+import type { UserDocument } from "@/lib/types/user";
+import type { ProductDocument } from "@/lib/types/products";
+
+const VENDOR_ROLES = new Set(["auditor", "warehouse", "sme", "supplier"]);
+
+export async function GET(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = await verifyIdToken(token);
+    if (!decoded || !decoded.uid) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+    }
+
+    // Admin only (with fallback for admin email)
+    const { getUserDocumentServer } = await import("@/lib/firebase/firestore-server");
+    const adminEmail = (decoded.email || '').toLowerCase();
+    let adminDoc = await getUserDocumentServer(decoded.uid, decoded.email || undefined);
+    if (!adminDoc && adminEmail === 'admin@originx.com') {
+      // Create a temporary admin profile for development if missing
+      adminDoc = {
+        uid: decoded.uid,
+        email: decoded.email || 'admin@originx.com',
+        displayName: 'Admin',
+        photoURL: null,
+        role: 'admin',
+        orgId: null,
+        orgName: undefined,
+        mfaEnabled: false,
+        status: 'active',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      } as UserDocument;
+    }
+    if (!adminDoc || adminDoc.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
+    }
+
+    // Load Firebase config
+    const { firebaseConfig } = await import("@/lib/firebase/config");
+    if (!firebaseConfig.projectId) {
+      return NextResponse.json({ error: "Firebase not configured" }, { status: 500 });
+    }
+
+    const projectId = firebaseConfig.projectId;
+
+    // Fetch users via Firestore REST API
+    const usersResp = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users?pageSize=1000`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    if (!usersResp.ok) {
+      const err = await usersResp.json().catch(() => ({}));
+      return NextResponse.json({ error: err.error?.message || "Failed to load users" }, { status: 500 });
+    }
+    const usersData = await usersResp.json();
+
+    const allUsers: UserDocument[] = (usersData.documents || []).map((doc: any) => {
+      const f = doc.fields || {};
+      return {
+        uid: doc.name.split("/").pop() || "",
+        email: f.email?.stringValue || f.email || "",
+        displayName: f.displayName?.stringValue ?? f.displayName ?? null,
+        photoURL: f.photoURL?.stringValue ?? f.photoURL ?? null,
+        role: f.role?.stringValue || f.role || "sme",
+        orgId: f.orgId?.stringValue ?? f.orgId ?? null,
+        orgName: f.orgName?.stringValue ?? f.orgName ?? undefined,
+        mfaEnabled: !!(f.mfaEnabled?.booleanValue ?? f.mfaEnabled ?? false),
+        status: f.status?.stringValue || f.status || "pending",
+        createdAt: f.createdAt?.integerValue ? parseInt(f.createdAt.integerValue) : Date.now(),
+        updatedAt: f.updatedAt?.integerValue ? parseInt(f.updatedAt.integerValue) : Date.now(),
+      } as UserDocument;
+    });
+
+    const vendors = allUsers.filter(u => VENDOR_ROLES.has(u.role));
+    const vendorIds = new Set(vendors.map(v => v.uid));
+
+    // Fetch products via REST API and aggregate
+    const productsResp = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/products?pageSize=1000`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    if (!productsResp.ok) {
+      const err = await productsResp.json().catch(() => ({}));
+      return NextResponse.json({ error: err.error?.message || "Failed to load products" }, { status: 500 });
+    }
+    const productsData = await productsResp.json();
+
+    const products: ProductDocument[] = (productsData.documents || []).map((doc: any) => {
+      const f = doc.fields || {};
+      return {
+        productId: doc.name.split("/").pop() || "",
+        orgId: f.orgId?.stringValue || "",
+        name: f.name?.stringValue || "",
+        description: f.description?.stringValue || undefined,
+        sku: f.sku?.stringValue || "",
+        category: f.category?.stringValue || "other",
+        imgUrl: f.imgUrl?.stringValue || undefined,
+        qrHash: f.qrHash?.stringValue || "",
+        qrDataUrl: f.qrDataUrl?.stringValue || undefined,
+        status: f.status?.stringValue || "active",
+        manufacturerId: f.manufacturerId?.stringValue || "",
+        manufacturerName: f.manufacturerName?.stringValue || undefined,
+        metadata: undefined,
+        createdAt: f.createdAt?.integerValue ? parseInt(f.createdAt.integerValue) : Date.now(),
+        updatedAt: f.updatedAt?.integerValue ? parseInt(f.updatedAt.integerValue) : undefined,
+      } as ProductDocument;
+    });
+
+    const vendorProducts = products.filter(p => vendorIds.has(p.manufacturerId));
+
+    const totalVendors = vendors.length;
+    const activeVendors = vendors.filter(v => v.status === "active").length;
+    const totalProducts = vendorProducts.length;
+    // Placeholder: no rating field in users/products; return 0.0
+    const avgRating = 0.0;
+
+    // Basic details for list
+    const vendorList = vendors.map(v => ({
+      uid: v.uid,
+      email: v.email,
+      displayName: v.displayName,
+      role: v.role,
+      status: v.status,
+      orgId: v.orgId,
+      orgName: v.orgName,
+      createdAt: v.createdAt,
+      products: vendorProducts.filter(p => p.manufacturerId === v.uid).length,
+    }));
+
+    return NextResponse.json({
+      stats: {
+        total: totalVendors,
+        active: activeVendors,
+        totalProducts,
+        avgRating,
+      },
+      vendors: vendorList,
+    }, { status: 200 });
+  } catch (error: unknown) {
+    console.error("[Vendors API] Error:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+  }
+}
+
+

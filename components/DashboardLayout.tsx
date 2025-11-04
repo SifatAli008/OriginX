@@ -66,7 +66,7 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
       admin: [
         { label: "Registration Requests", icon: <FileText className="h-5 w-5" />, href: "/admin/registration-requests" },
         { label: "User Management", icon: <Users className="h-5 w-5" />, href: "/admin/users" },
-        { label: "Suppliers", icon: <Building2 className="h-5 w-5" />, href: "/suppliers" },
+        { label: "Vendors", icon: <Building2 className="h-5 w-5" />, href: "/vendors" },
         { label: "Products", icon: <Boxes className="h-5 w-5" />, href: "/products" },
         { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
@@ -87,6 +87,7 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
         { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
       ],
       warehouse: [
+        { label: "Products", icon: <Boxes className="h-5 w-5" />, href: "/products" },
         { label: "Inbound", icon: <Truck className="h-5 w-5" />, href: "/movements?type=inbound" },
         { label: "Outbound", icon: <Package className="h-5 w-5" />, href: "/movements?type=outbound" },
         { label: "All Movements", icon: <Activity className="h-5 w-5" />, href: "/movements" },
