@@ -109,8 +109,7 @@ export async function GET(request: NextRequest) {
     const result = await analyzeUserBehavior(
       targetUserId,
       scanHistory,
-      targetUserDoc?.role,
-      targetUserDoc?.orgId
+      targetUserDoc?.role
     );
 
     return NextResponse.json({

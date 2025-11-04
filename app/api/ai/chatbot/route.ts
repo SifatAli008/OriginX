@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const context: { userId: string; userRole: string; orgId?: string; recentVerifications?: number } = {
       userId: uid,
       userRole: userDoc.role,
-      orgId: userDoc.orgId,
+      orgId: userDoc.orgId || undefined,
     };
 
     if (app) {

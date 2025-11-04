@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by criteria
     const criteria = {
-      orgId: userDoc.orgId,
+      orgId: userDoc.orgId || undefined,
       category,
       location,
       minQualityScore,

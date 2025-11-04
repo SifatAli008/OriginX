@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch all suppliers
-    const { collection, query, getDocs, getFirestore, getFirebaseApp } = await getFirestoreUtils();
+    const { collection, query, where, getDocs, getFirestore, getFirebaseApp } = await getFirestoreUtils();
     const app = getFirebaseApp();
     if (!app) {
       return NextResponse.json(

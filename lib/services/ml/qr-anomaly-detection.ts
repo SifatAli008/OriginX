@@ -188,18 +188,17 @@ export function analyzeCryptographicConsistency(
  */
 export async function fetchScanHistory(
   productId: string,
-  firestoreUtils?: FirestoreUtils & {
-    orderBy?: ReturnType<typeof import("firebase/firestore").orderBy>;
-    limit?: ReturnType<typeof import("firebase/firestore").limit>;
-    getFirebaseApp?: () => ReturnType<typeof import("firebase/app").initializeApp> | undefined;
-  }
+  firestoreUtils?: FirestoreUtils
 ): Promise<QRScanRecord[]> {
   if (!firestoreUtils) {
     return [];
   }
 
   try {
-    const { collection, query, where, orderBy, limit, getDocs, getFirestore, getFirebaseApp } = firestoreUtils;
+    const { collection, query, where, orderBy, limit: limitFn, getDocs, getFirestore, getFirebaseApp } = firestoreUtils;
+    if (!getFirebaseApp) {
+      return [];
+    }
     const app = getFirebaseApp();
     if (!app) return [];
 
@@ -207,12 +206,17 @@ export async function fetchScanHistory(
     const verificationsRef = collection(db, "verifications");
     
     // Get last 100 verifications for this product
-    const q = query(
+    const queryArgs: unknown[] = [
       verificationsRef,
       where("productId", "==", productId),
-      orderBy("createdAt", "desc"),
-      limit(100)
-    );
+    ];
+    if (orderBy) {
+      queryArgs.push(orderBy("createdAt", "desc"));
+    }
+    if (limitFn) {
+      queryArgs.push(limitFn(100));
+    }
+    const q = query(...queryArgs);
 
     const snapshot = await getDocs(q);
     const history: QRScanRecord[] = [];
@@ -239,12 +243,15 @@ export async function fetchScanHistory(
  * Now integrated with Firestore for scan history
  */
 interface FirestoreUtils {
-  collection: ReturnType<typeof import("firebase/firestore").collection>;
-  query: ReturnType<typeof import("firebase/firestore").query>;
-  where: ReturnType<typeof import("firebase/firestore").where>;
-  getDocs: ReturnType<typeof import("firebase/firestore").getDocs>;
-  getFirestore: ReturnType<typeof import("firebase/firestore").getFirestore>;
-  app?: ReturnType<typeof import("firebase/app").initializeApp>;
+  collection: (db: unknown, path: string, ...pathSegments: string[]) => unknown;
+  query: (...args: unknown[]) => unknown;
+  where: (fieldPath: string, opStr: string, value: unknown) => unknown;
+  orderBy?: (fieldPath: string, directionStr?: "asc" | "desc") => unknown;
+  limit?: (limit: number) => unknown;
+  getDocs: (query: unknown) => Promise<{ forEach: (callback: (doc: { data: () => Record<string, unknown> }) => void) => void }>;
+  getFirestore: (app: unknown) => unknown;
+  app?: unknown;
+  getFirebaseApp?: () => unknown;
 }
 
 export async function detectQRAnomalies(
