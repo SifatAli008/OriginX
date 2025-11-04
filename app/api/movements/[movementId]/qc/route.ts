@@ -1,6 +1,6 @@
 /**
  * API Route: Movement Quality Control
- * POST /api/movements/:id/qc - Record QC check and approval for a movement
+ * POST /api/movements/:movementId/qc - Record QC check and approval for a movement
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -69,12 +69,12 @@ async function getFirestoreUtils() {
 }
 
 /**
- * POST /api/movements/:id/qc
+ * POST /api/movements/:movementId/qc
  * Record a quality control check for a movement
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ movementId: string }> }
 ) {
   try {
     // Verify authentication
@@ -156,7 +156,7 @@ export async function POST(
     }
 
     // Get movement ID from params
-    const { id: movementId } = await params;
+    const { movementId } = await params;
 
     if (!movementId) {
       return NextResponse.json(

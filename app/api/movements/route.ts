@@ -15,6 +15,8 @@ async function getFirestoreUtils() {
     const {
       collection,
       addDoc,
+      doc,
+      updateDoc,
       query,
       where,
       orderBy,
@@ -36,6 +38,8 @@ async function getFirestoreUtils() {
       return {
         collection,
         addDoc,
+        doc,
+        updateDoc,
         query,
         where,
         orderBy,
@@ -60,6 +64,8 @@ async function getFirestoreUtils() {
       return {
         collection,
         addDoc,
+        doc,
+        updateDoc,
         query,
         where,
         orderBy,
@@ -73,6 +79,8 @@ async function getFirestoreUtils() {
     return {
       collection,
       addDoc,
+      doc,
+      updateDoc,
       query,
       where,
       orderBy,
@@ -85,10 +93,12 @@ async function getFirestoreUtils() {
     console.error("Error in getFirestoreUtils:", error instanceof Error ? error.message : String(error));
     // Return a structure with null app so calling code can handle it
     try {
-      const { collection, addDoc, query, where, orderBy, limit, getDocs, getFirestore } = await import("firebase/firestore");
+      const { collection, addDoc, doc, updateDoc, query, where, orderBy, limit, getDocs, getFirestore } = await import("firebase/firestore");
       return {
         collection,
         addDoc,
+        doc,
+        updateDoc,
         query,
         where,
         orderBy,
@@ -216,6 +226,8 @@ export async function POST(request: NextRequest) {
     const {
       collection: getCollection,
       addDoc,
+      doc,
+      updateDoc,
       getFirestore,
       app,
     } = await getFirestoreUtils();
@@ -389,6 +401,22 @@ export async function POST(request: NextRequest) {
         type: "MOVEMENT" as const,
         timestamp: Date.now(),
       };
+    }
+
+    // Update movement document with txHash for direct blockchain linkage
+    try {
+      const movementRef = doc(db, "movements", movementId);
+      await updateDoc(movementRef, {
+        txHash: transaction.txHash,
+        updatedAt: Date.now(),
+      });
+      // Also update movementData for response
+      movementData.txHash = transaction.txHash;
+    } catch (updateError: unknown) {
+      // Log error but don't fail the request - movement was already created
+      console.error("Error updating movement with txHash:", updateError);
+      // Still include txHash in response even if update failed
+      movementData.txHash = transaction.txHash;
     }
 
     return NextResponse.json(

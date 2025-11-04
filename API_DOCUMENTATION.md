@@ -1,8 +1,18 @@
 # OriginX API Documentation
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Base URL:** `https://your-domain.com/api`  
 **Last Updated:** January 2025
+
+## Recent Updates (v1.1)
+
+### Movement-Transaction Linkage Enhancement
+- **Movements now include `txHash`**: Direct blockchain transaction reference for complete audit trails
+- **Transactions include common attributes**: `movementId` and `productId` as top-level fields for efficient querying
+- **New query parameter**: `movementId` filter for transaction queries
+- **Enhanced filtering**: `productId` now uses database-level queries (more efficient than payload search)
+
+See [Movement-Transaction Linkage](#movement-transaction-linkage) section for details.
 
 ---
 
@@ -490,6 +500,8 @@ Content-Type: application/json
   "trackingNumber": "TRACK123",
   "createdBy": "uid_abc",
   "createdAt": 1730385600,
+  "updatedAt": 1730385600,
+  "txHash": "0x1f3a...",
   "transaction": {
     "txHash": "0x1f3a...",
     "blockNumber": 1024,
@@ -499,6 +511,8 @@ Content-Type: application/json
   }
 }
 ```
+
+**Note:** The `txHash` field is now included directly in the movement object for direct blockchain linkage. This enables efficient querying and complete audit trail verification.
 
 **Error Responses:**
 - `401` - Unauthorized
@@ -532,13 +546,17 @@ Authorization: Bearer <firebase_id_token>
       "id": "movement_abc123",
       "productId": "prod_9s8df7",
       "productName": "Brake Pad X1",
+      "orgId": "org_123",
       "type": "outbound",
       "from": "Warehouse A",
       "to": "Warehouse B",
       "status": "pending",
       "quantity": 10,
       "trackingNumber": "TRACK123",
-      "createdAt": 1730385600
+      "createdBy": "uid_abc",
+      "createdAt": 1730385600,
+      "updatedAt": 1730385600,
+      "txHash": "0x1f3a..."
     }
   ],
   "total": 50,
@@ -547,6 +565,8 @@ Authorization: Bearer <firebase_id_token>
 }
 ```
 
+**Note:** Each movement now includes a `txHash` field that links directly to its blockchain transaction. This enables efficient lookup and complete audit trail verification.
+
 **Error Responses:**
 - `401` - Unauthorized
 - `404` - User not found
@@ -554,7 +574,7 @@ Authorization: Bearer <firebase_id_token>
 
 ---
 
-#### GET /api/movements/:productId
+#### GET /api/movements/by-product/:productId
 
 Fetch movements for a specific product using an API key (no user token required).
 
@@ -577,19 +597,25 @@ x-api-key: <INTERNAL_API_KEY>
       "id": "movement_abc123",
       "productId": "prod_9s8df7",
       "productName": "Brake Pad X1",
+      "orgId": "org_123",
       "type": "outbound",
       "from": "Warehouse A",
       "to": "Warehouse B",
       "status": "pending",
       "quantity": 10,
       "trackingNumber": "TRACK123",
-      "createdAt": 1730385600
+      "createdBy": "uid_abc",
+      "createdAt": 1730385600,
+      "updatedAt": 1730385600,
+      "txHash": "0x1f3a..."
     }
   ],
   "total": 1,
   "pageSize": 50
 }
 ```
+
+**Note:** Movements include `txHash` for direct blockchain linkage. Use this hash to query the corresponding transaction via `GET /api/transactions/:txHash`.
 
 **Example:**
 ```
@@ -606,7 +632,7 @@ Header: x-api-key: <INTERNAL_API_KEY>
 
 ### Handovers
 
-#### POST /api/movements/:id/handover
+#### POST /api/movements/:movementId/handover
 
 Record a handover event for a movement.
 
@@ -718,7 +744,7 @@ Authorization: Bearer <firebase_id_token>
 
 ### Quality Control
 
-#### POST /api/movements/:id/qc
+#### POST /api/movements/:movementId/qc
 
 Record a quality control check for a movement.
 
@@ -866,7 +892,8 @@ Authorization: Bearer <firebase_id_token>
 - `type` (optional) - Filter by transaction type (`PRODUCT_REGISTER`, `VERIFY`, `MOVEMENT`, `QC_LOG`)
 - `refType` (optional) - Filter by reference type (`product`, `movement`, `verification`, `batch`)
 - `refId` (optional) - Filter by reference ID
-- `productId` (optional) - Filter by product ID (searches in payload)
+- `movementId` (optional) - Filter by movement ID (for MOVEMENT transactions) - **NEW**
+- `productId` (optional) - Filter by product ID (top-level field for efficient querying)
 - `status` (optional) - Filter by status (`pending`, `confirmed`, `failed`)
 - `startDate` (optional) - Filter by start date (timestamp)
 - `endDate` (optional) - Filter by end date (timestamp)
@@ -883,11 +910,13 @@ Authorization: Bearer <firebase_id_token>
   "items": [
     {
       "txHash": "0x1f3a...",
-      "type": "PRODUCT_REGISTER",
+      "type": "MOVEMENT",
       "status": "confirmed",
       "blockNumber": 1024,
-      "refType": "product",
-      "refId": "prod_9s8df7",
+      "refType": "movement",
+      "refId": "movement_abc123",
+      "movementId": "movement_abc123",
+      "productId": "prod_9s8df7",
       "orgId": "org_123",
       "createdBy": "uid_abc",
       "createdAt": 1730385600,
@@ -895,8 +924,12 @@ Authorization: Bearer <firebase_id_token>
       "payload": {
         "productId": "prod_9s8df7",
         "productName": "Brake Pad X1",
-        "sku": "BPX1-2025",
-        "category": "automotive"
+        "type": "outbound",
+        "from": "Warehouse A",
+        "to": "Warehouse B",
+        "status": "pending",
+        "quantity": 10,
+        "trackingNumber": "TRACK123"
       }
     }
   ],
@@ -906,6 +939,11 @@ Authorization: Bearer <firebase_id_token>
   "hasMore": true
 }
 ```
+
+**Note:** 
+- Transactions now include `movementId` and `productId` as top-level fields for efficient querying and unique pair identification with movements.
+- Use `movementId` to directly query transactions for a specific movement.
+- Use `productId` for efficient product-level filtering (database-level query, not payload search).
 
 ---
 
@@ -925,11 +963,13 @@ Authorization: Bearer <firebase_id_token>
 ```json
 {
   "txHash": "0x1f3a...",
-  "type": "PRODUCT_REGISTER",
+  "type": "MOVEMENT",
   "status": "confirmed",
   "blockNumber": 1024,
-  "refType": "product",
-  "refId": "prod_9s8df7",
+  "refType": "movement",
+  "refId": "movement_abc123",
+  "movementId": "movement_abc123",
+  "productId": "prod_9s8df7",
   "orgId": "org_123",
   "createdBy": "uid_abc",
   "createdAt": 1730385600,
@@ -937,11 +977,23 @@ Authorization: Bearer <firebase_id_token>
   "payload": {
     "productId": "prod_9s8df7",
     "productName": "Brake Pad X1",
-    "sku": "BPX1-2025",
-    "category": "automotive"
+    "type": "outbound",
+    "from": "Warehouse A",
+    "to": "Warehouse B",
+    "status": "pending",
+    "quantity": 10,
+    "trackingNumber": "TRACK123"
   }
 }
 ```
+
+**Common Attributes for Unique Pair Identification:**
+- `movementId`: Direct link to movement document (for MOVEMENT transactions)
+- `productId`: Direct link to product (for product-related transactions)
+- `txHash`: Unique blockchain transaction identifier
+- `orgId`: Organization identifier (shared with movements)
+
+These attributes enable efficient bidirectional queries between movements and transactions.
 
 **Error Responses:**
 - `401` - Unauthorized
@@ -949,6 +1001,68 @@ Authorization: Bearer <firebase_id_token>
 - `403` - Access denied (not your organization)
 - `404` - Transaction not found
 - `500` - Internal server error
+
+---
+
+#### Movement-Transaction Linkage
+
+Movements and transactions are now directly linked through common attributes for efficient querying and complete audit trails.
+
+**Common Attributes:**
+- `txHash` - Present in both movement and transaction documents
+- `movementId` - Movement document ID (present in transaction as top-level field)
+- `productId` - Product identifier (present in both documents)
+- `orgId` - Organization identifier (present in both documents)
+
+**Query Examples:**
+
+1. **Find transaction for a movement:**
+   ```bash
+   # Option 1: Direct lookup via txHash
+   GET /api/transactions/:txHash
+   # Where txHash comes from movement.txHash
+   
+   # Option 2: Query by movementId
+   GET /api/transactions?movementId=movement_abc123
+   ```
+
+2. **Find movement for a transaction:**
+   ```bash
+   # Use movementId from transaction
+   GET /api/movements
+   # Filter by id === transaction.movementId
+   ```
+
+3. **Find all movements and transactions for a product:**
+   ```bash
+   # Movements
+   GET /api/movements?productId=prod_xyz789
+   
+   # Transactions (efficient database query)
+   GET /api/transactions?productId=prod_xyz789
+   ```
+
+4. **Verify movement-transaction pair:**
+   ```javascript
+   // Get movement
+   const movement = await fetch('/api/movements/movement_abc123');
+   
+   // Get transaction using movement's txHash
+   const transaction = await fetch(`/api/transactions/${movement.txHash}`);
+   
+   // Verify linkage
+   if (transaction.movementId === movement.id && 
+       transaction.productId === movement.productId) {
+     console.log('Valid pair verified!');
+   }
+   ```
+
+**Benefits:**
+- ✅ **Direct 1:1 linkage**: Every movement has a direct reference to its blockchain transaction
+- ✅ **Efficient queries**: Database-level filtering by `movementId` and `productId` (not payload search)
+- ✅ **Complete audit trail**: Can prove "this movement was recorded on-chain" with a single field
+- ✅ **Bidirectional links**: Both movement → transaction and transaction → movement queries are supported
+- ✅ **Unique pair identification**: Multiple attributes ensure each pair can be uniquely identified
 
 ---
 

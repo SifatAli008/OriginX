@@ -123,7 +123,8 @@ export async function GET(request: NextRequest) {
       | "batch"
       | null;
     const refId = searchParams.get("refId");
-    const productId = searchParams.get("productId"); // Search in payload
+    const productId = searchParams.get("productId"); // Can be top-level field or in payload
+    const movementId = searchParams.get("movementId"); // Direct movement reference
     const status = searchParams.get("status") as
       | "pending"
       | "confirmed"
@@ -188,6 +189,14 @@ export async function GET(request: NextRequest) {
     if (refId) {
       q = buildQuery(q, buildWhere("refId", "==", refId));
     }
+    // Filter by movementId (top-level field for efficient querying)
+    if (movementId) {
+      q = buildQuery(q, buildWhere("movementId", "==", movementId));
+    }
+    // Filter by productId (top-level field for efficient querying)
+    if (productId) {
+      q = buildQuery(q, buildWhere("productId", "==", productId));
+    }
     if (status) {
       q = buildQuery(q, buildWhere("status", "==", status));
     }
@@ -201,21 +210,14 @@ export async function GET(request: NextRequest) {
     // Order by creation date (newest first)
     q = buildQuery(q, buildOrderBy("createdAt", "desc"));
 
-    // Get all matching transactions first (for client-side productId filtering)
+    // Get all matching transactions
+    // Note: productId and movementId are now filtered at query level (above) for efficiency
+    // Older transactions without top-level productId/movementId fields won't match these queries
+    // but can still be queried by refId or payload (for backward compatibility)
     const allDocs = await getDocs(q);
     let items = allDocs.docs.map((doc) => ({
       ...doc.data(),
     })) as Array<Record<string, unknown>>;
-
-    // Filter by productId in payload if provided (client-side)
-    if (productId) {
-      items = items.filter(
-        (tx) => {
-          const payload = tx.payload as Record<string, unknown> | undefined;
-          return payload?.productId === productId;
-        }
-      );
-    }
 
     // Pagination (client-side after productId filter)
     const startIndex = (page - 1) * pageSize;

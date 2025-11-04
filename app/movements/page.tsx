@@ -37,6 +37,7 @@ interface Movement {
   trackingNumber: string;
   createdAt: Date;
   estimatedDelivery?: Date;
+  txHash?: string; // Blockchain transaction hash for audit trail
 }
 
 function MovementsContent() {

@@ -359,6 +359,23 @@
 
         <!-- Movements Tab -->
         <div id="tab-movements" class="tab-content active">
+            <!-- Info Section -->
+            <div class="section" style="background: #e7f3ff; border-left-color: #0066cc;">
+                <div class="section-header">
+                    <h2>ℹ️ Movement-Transaction Linkage</h2>
+                </div>
+                <div class="section-content">
+                    <p style="margin-bottom: 10px; color: #0066cc;">
+                        <strong>New in v1.1:</strong> Movements now include a <code>txHash</code> field that directly links to their blockchain transaction.
+                    </p>
+                    <ul style="margin-left: 20px; color: #555;">
+                        <li>Every movement automatically includes <code>txHash</code> for direct blockchain linkage</li>
+                        <li>Use <code>txHash</code> to query the corresponding transaction via <code>GET /api/transactions/:txHash</code></li>
+                        <li>Transactions include <code>movementId</code> and <code>productId</code> as top-level fields for efficient querying</li>
+                    </ul>
+                </div>
+            </div>
+            
             <!-- Test 1: POST /api/movements -->
             <div class="section">
                 <div class="section-header" onclick="toggleSection(this)">
@@ -483,6 +500,24 @@
 
         <!-- Blockchain Tab -->
         <div id="tab-blockchain" class="tab-content">
+            <!-- Info Section -->
+            <div class="section" style="background: #e7f3ff; border-left-color: #0066cc;">
+                <div class="section-header">
+                    <h2>ℹ️ Enhanced Transaction Querying</h2>
+                </div>
+                <div class="section-content">
+                    <p style="margin-bottom: 10px; color: #0066cc;">
+                        <strong>New in v1.1:</strong> Transactions now support enhanced filtering with common attributes.
+                    </p>
+                    <ul style="margin-left: 20px; color: #555;">
+                        <li><code>movementId</code> filter: Query transactions for a specific movement (NEW)</li>
+                        <li><code>productId</code> filter: Efficient database-level product filtering</li>
+                        <li>Transactions include <code>movementId</code> and <code>productId</code> as top-level fields</li>
+                        <li>All fields auto-populate when creating movements or querying transactions</li>
+                    </ul>
+                </div>
+            </div>
+            
             <!-- Test 4: GET /api/transactions -->
             <div class="section">
                 <div class="section-header" onclick="toggleSection(this)">
@@ -510,6 +545,14 @@
                                 <option value="confirmed" selected>confirmed</option>
                                 <option value="failed">failed</option>
                             </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Movement ID (optional):</label>
+                            <input type="text" id="txMovementId" placeholder="Filter by movement ID">
+                        </div>
+                        <div class="input-group">
+                            <label>Product ID (optional):</label>
+                            <input type="text" id="txProductId" placeholder="Filter by product ID">
                         </div>
                     </div>
                     <button onclick="testGetTransactions()" id="btnGetTransactions">
@@ -1300,8 +1343,22 @@
                 const timing = Math.round(performance.now() - startTime);
                 
                 let result;
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
+                const contentType = response.headers.get('content-type') || '';
+                
+                // Check if this is a binary response (blob) that should not be consumed yet
+                const isBinaryResponse = contentType.includes('application/octet-stream') || 
+                                        contentType.includes('application/vnd.') ||
+                                        contentType.includes('text/csv') ||
+                                        contentType.includes('application/vnd.ms-excel') ||
+                                        contentType.includes('application/vnd.openxmlformats-officedocument');
+                
+                if (isBinaryResponse) {
+                    // For binary responses, clone the response BEFORE reading
+                    // Read from clone so original response body remains available
+                    const clonedResponse = response.clone();
+                    result = await clonedResponse.blob();
+                    // Return the original (unconsumed) response so it can be used for downloads
+                } else if (contentType.includes('application/json')) {
                     result = await response.json();
                 } else {
                     result = await response.text();
@@ -1312,7 +1369,7 @@
                 }
 
                 return {
-                    response,
+                    response: response, // Original response (body may be consumed for non-binary)
                     result,
                     timing,
                     ok: response.ok
@@ -1343,22 +1400,44 @@
                 notes: 'Test movement from API console',
             };
 
-            const { response, result, timing, ok } = await makeRequest(
+            const requestResult = await makeRequest(
                 'POST',
                 `${getBaseUrl()}/api/movements`,
                 data,
                 'spinnerCreateMovement'
             );
 
+            if (!requestResult) {
+                showResult('createResult', {
+                    status: null,
+                    statusText: 'Request failed - no token or connection error',
+                    data: null,
+                }, true, null);
+                return;
+            }
+
+            const { response, result, timing, ok, error } = requestResult;
+
             showResult('createResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
+                status: response?.status ?? (error ? 0 : null),
+                statusText: response?.statusText || error || 'Unknown error',
+                data: result || (error ? { error } : null),
+            }, !ok || !!error, timing);
 
             if (result?.movementId) {
                 document.getElementById('handoverMovementId').value = result.movementId;
                 document.getElementById('qcMovementId').value = result.movementId;
+            }
+            // Auto-fill txHash if available
+            if (result?.txHash) {
+                document.getElementById('txHash').value = result.txHash;
+            }
+            // Auto-fill transaction filters if movement was created
+            if (result?.movementId && document.getElementById('txMovementId')) {
+                document.getElementById('txMovementId').value = result.movementId;
+            }
+            if (result?.productId && document.getElementById('txProductId')) {
+                document.getElementById('txProductId').value = result.productId;
             }
         };
 
@@ -1371,18 +1450,29 @@
             params.append('page', '1');
             params.append('pageSize', '25');
 
-            const { response, result, timing, ok } = await makeRequest(
+            const requestResult = await makeRequest(
                 'GET',
                 `${getBaseUrl()}/api/movements?${params}`,
                 null,
                 'spinnerGetMovements'
             );
 
+            if (!requestResult) {
+                showResult('listResult', {
+                    status: null,
+                    statusText: 'Request failed - no token or connection error',
+                    data: null,
+                }, true, null);
+                return;
+            }
+
+            const { response, result, timing, ok, error } = requestResult;
+
             showResult('listResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
+                status: response?.status ?? (error ? 0 : null),
+                statusText: response?.statusText || error || 'Unknown error',
+                data: result || (error ? { error } : null),
+            }, !ok || !!error, timing);
         };
 
         window.testHandover = async function() {
@@ -1417,32 +1507,56 @@
             if (result?.transaction?.txHash) {
                 document.getElementById('txHash').value = result.transaction.txHash;
             }
+            // Also check if movement has txHash directly
+            if (result?.movement?.txHash) {
+                document.getElementById('txHash').value = result.movement.txHash;
+            }
         };
 
         window.testGetTransactions = async function() {
             const params = new URLSearchParams();
             const type = document.getElementById('txType').value;
             const status = document.getElementById('txStatus').value;
+            const movementId = document.getElementById('txMovementId').value;
+            const productId = document.getElementById('txProductId').value;
+            
             if (type) params.append('type', type);
             if (status) params.append('status', status);
+            if (movementId) params.append('movementId', movementId);
+            if (productId) params.append('productId', productId);
             params.append('page', '1');
             params.append('pageSize', '25');
 
-            const { response, result, timing, ok } = await makeRequest(
+            const requestResult = await makeRequest(
                 'GET',
                 `${getBaseUrl()}/api/transactions?${params}`,
                 null,
                 'spinnerGetTransactions'
             );
 
+            if (!requestResult) {
+                showResult('txListResult', {
+                    status: null,
+                    statusText: 'Request failed - no token or connection error',
+                    data: null,
+                }, true, null);
+                return;
+            }
+
+            const { response, result, timing, ok, error } = requestResult;
+
             showResult('txListResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
+                status: response?.status ?? (error ? 0 : null),
+                statusText: response?.statusText || error || 'Unknown error',
+                data: result || (error ? { error } : null),
+            }, !ok || !!error, timing);
 
             if (result?.items?.[0]?.txHash) {
                 document.getElementById('txHash').value = result.items[0].txHash;
+            }
+            // Auto-fill movementId if found in transaction
+            if (result?.items?.[0]?.movementId && !document.getElementById('txMovementId').value) {
+                document.getElementById('txMovementId').value = result.items[0].movementId;
             }
         };
 
@@ -1526,18 +1640,29 @@
             if (startDate) params.append('startDate', startDate);
             if (endDate) params.append('endDate', endDate);
 
-            const { response, result, timing, ok } = await makeRequest(
+            const requestResult = await makeRequest(
                 'GET',
                 `${getBaseUrl()}/api/analytics${params.toString() ? '?' + params.toString() : ''}`,
                 null,
                 'spinnerGetAnalytics'
             );
 
+            if (!requestResult) {
+                showResult('analyticsResult', {
+                    status: null,
+                    statusText: 'Request failed - no token or connection error',
+                    data: null,
+                }, true, null);
+                return;
+            }
+
+            const { response, result, timing, ok, error } = requestResult;
+
             showResult('analyticsResult', {
-                status: response?.status,
-                statusText: response?.statusText,
-                data: result,
-            }, !ok, timing);
+                status: response?.status ?? (error ? 0 : null),
+                statusText: response?.statusText || error || 'Unknown error',
+                data: result || (error ? { error } : null),
+            }, !ok || !!error, timing);
         };
 
         window.testExportReport = async function() {
@@ -1550,21 +1675,57 @@
             if (startDate) params.append('startDate', startDate);
             if (endDate) params.append('endDate', endDate);
 
-            const { response, result, timing, ok } = await makeRequest(
+            const requestResult = await makeRequest(
                 'GET',
                 `${getBaseUrl()}/api/reports?${params.toString()}`,
                 null,
                 'spinnerExportReport'
             );
 
-            if (ok && response) {
-                // Clone the response so we can read it multiple times
-                const clonedResponse = response.clone();
-                const blob = await response.blob();
+            if (!requestResult) {
+                showResult('reportResult', {
+                    status: null,
+                    statusText: 'Request failed - no token or connection error',
+                    data: null,
+                }, true, null);
+                return;
+            }
+
+            const { response, result, timing, ok, error } = requestResult;
+
+            if (ok && response && !error) {
+                // Handle binary responses (blobs)
+                let blob;
+                let text = '';
                 
-                // Read text from cloned response for preview
-                const textBlob = await clonedResponse.blob();
-                const text = await textBlob.text();
+                if (result instanceof Blob) {
+                    // Result is already a blob from makeRequest
+                    blob = result;
+                    // Try to read text for preview (for CSV/text files)
+                    try {
+                        // Clone the blob to read text without consuming the original
+                        const textBlob = blob.slice();
+                        text = await textBlob.text();
+                    } catch (e) {
+                        text = 'Binary file (preview not available)';
+                    }
+                } else if (response.bodyUsed === false) {
+                    // Response body hasn't been consumed, read it as blob
+                    blob = await response.blob();
+                    // Try to read text for preview
+                    try {
+                        const textBlob = blob.slice();
+                        text = await textBlob.text();
+                    } catch (e) {
+                        text = 'Binary file (preview not available)';
+                    }
+                } else {
+                    // Fallback: create blob from result if it's text
+                    blob = new Blob([typeof result === 'string' ? result : JSON.stringify(result)], {
+                        type: response.headers.get('content-type') || 'application/octet-stream'
+                    });
+                    text = typeof result === 'string' ? result : JSON.stringify(result);
+                }
                 
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -1587,9 +1748,9 @@
                 }, false, timing);
             } else {
                 showResult('reportResult', {
-                    status: response?.status,
-                    statusText: response?.statusText,
-                    data: result,
+                    status: response?.status ?? (error ? 0 : null),
+                    statusText: response?.statusText || error || 'Unknown error',
+                    data: result || (error ? { error } : null),
                 }, true, timing);
             }
         };
@@ -1800,9 +1961,77 @@
             }
 
             const resultElement = document.getElementById('allTestsResult');
+            if (!resultElement) {
+                alert('Error: allTestsResult element not found!');
+                return;
+            }
+            
             resultElement.style.display = 'block';
             resultElement.className = 'result';
             resultElement.textContent = '🚀 Starting test suite...\n\n';
+            resultElement.textContent += `Base URL: ${getBaseUrl()}\n`;
+            resultElement.textContent += `Token: ${token.substring(0, 20)}...\n\n`;
+
+            // Check if accessed via file:// protocol (causes CORS issues)
+            if (window.location.protocol === 'file:') {
+                resultElement.textContent += '⚠️ WARNING: File opened via file:// protocol!\n';
+                resultElement.textContent += '   This causes CORS issues and requests will fail.\n\n';
+                resultElement.textContent += '🔧 Solution:\n';
+                resultElement.textContent += '   Access this file via the Next.js server:\n';
+                resultElement.textContent += '   http://localhost:3000/test-api.html\n\n';
+                resultElement.textContent += '   Or copy the file to public/ and access it via the server.\n\n';
+                resultElement.className = 'result error';
+            }
+
+            // First, verify server connectivity
+            resultElement.textContent += '🔍 Checking server connectivity...\n';
+            let serverReachable = false;
+            try {
+                // Try a simple GET to a known endpoint (products list should work without auth for public endpoints)
+                const testUrl = `${getBaseUrl()}/api/products?page=1&pageSize=1`;
+                const healthCheck = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }).catch((err) => {
+                    // Network error - server not reachable
+                    return { error: err.message, status: 0 };
+                });
+                
+                if (healthCheck.error || healthCheck.status === 0) {
+                    resultElement.textContent += '❌ Server is not reachable!\n';
+                    resultElement.textContent += `   Error: ${healthCheck.error || 'Network error (status 0)'}\n`;
+                    resultElement.textContent += `   URL tested: ${testUrl}\n\n`;
+                    resultElement.textContent += '🔧 Troubleshooting steps:\n';
+                    resultElement.textContent += '1. ✅ Check if server is running:\n';
+                    resultElement.textContent += '   Run: npm run dev\n';
+                    resultElement.textContent += '   Or: npm start\n\n';
+                    resultElement.textContent += '2. ✅ Verify the Base URL is correct:\n';
+                    resultElement.textContent += `   Current: ${getBaseUrl()}\n`;
+                    resultElement.textContent += '   Default should be: http://localhost:3000\n\n';
+                    resultElement.textContent += '3. ✅ Check CORS configuration:\n';
+                    resultElement.textContent += '   Make sure your Next.js server allows requests from this origin\n';
+                    resultElement.textContent += '   Check next.config.js for CORS settings\n\n';
+                    resultElement.textContent += '4. ✅ Check firewall/antivirus:\n';
+                    resultElement.textContent += '   Some firewalls block localhost connections\n\n';
+                    resultElement.textContent += '⚠️ Tests will continue but will likely fail...\n\n';
+                    resultElement.className = 'result error';
+                } else if (healthCheck.status >= 200 && healthCheck.status < 500) {
+                    resultElement.textContent += `✅ Server is reachable (status: ${healthCheck.status})\n\n`;
+                    serverReachable = true;
+                } else {
+                    resultElement.textContent += `⚠️ Server responded but with error status: ${healthCheck.status}\n`;
+                    resultElement.textContent += '   This might indicate authentication or configuration issues\n\n';
+                }
+            } catch (e) {
+                resultElement.textContent += '❌ Server connectivity check failed\n';
+                resultElement.textContent += `   Error: ${e.message}\n`;
+                resultElement.textContent += `   Type: ${e.name}\n\n`;
+                resultElement.textContent += '⚠️ Tests will continue but will likely fail...\n\n';
+                resultElement.className = 'result error';
+            }
 
             const results = [];
             const spinner = document.getElementById('spinnerRunAll');
@@ -1811,14 +2040,30 @@
             try {
                 resultElement.textContent += '🧪 Test 1: Creating movement...\n';
                 await testCreateMovement();
-                await new Promise(r => setTimeout(r, 1500));
-                const createPre = document.getElementById('createResult')?.querySelector('pre');
-                const createData = createPre ? JSON.parse(createPre.textContent) : { status: null };
-                results.push({ test: 'Create Movement', status: createData.status, statusText: createData.statusText });
-                if (createData.status >= 200 && createData.status < 300) {
-                resultElement.textContent += '✅ Movement created\n\n';
+                await new Promise(r => setTimeout(r, 2000)); // Increased wait time
+                const createResultEl = document.getElementById('createResult');
+                const createPre = createResultEl?.querySelector('pre');
+                let createData = { status: null, statusText: 'N/A', data: {} };
+                if (createPre && createPre.textContent && createPre.textContent.trim()) {
+                    try {
+                        createData = JSON.parse(createPre.textContent);
+                        // Debug: log what we parsed
+                        if (createData.status === undefined && createData.status !== null) {
+                            resultElement.textContent += `⚠️ Warning: createData.status is undefined. Full data: ${JSON.stringify(createData).substring(0, 200)}\n`;
+                        }
+                    } catch (e) {
+                        resultElement.textContent += `⚠️ Failed to parse create result: ${e.message}\n`;
+                        resultElement.textContent += `   Raw content preview: ${createPre.textContent.substring(0, 200)}...\n\n`;
+                    }
                 } else {
-                    resultElement.textContent += `⚠️ Movement creation returned status ${createData.status}\n\n`;
+                    resultElement.textContent += `⚠️ No result element found or empty response. createResultEl exists: ${!!createResultEl}, createPre exists: ${!!createPre}\n\n`;
+                }
+                const createStatus = 'status' in createData ? createData.status : null;
+                results.push({ test: 'Create Movement', status: createStatus, statusText: createData.statusText || 'N/A' });
+                if (createStatus !== null && createStatus >= 200 && createStatus < 300) {
+                    resultElement.textContent += '✅ Movement created\n\n';
+                } else {
+                    resultElement.textContent += `⚠️ Movement creation returned status ${createStatus === null ? 'null' : createStatus === undefined ? 'undefined' : createStatus}\n\n`;
                 }
 
                 const movementId = createData.data?.movementId;
@@ -1826,14 +2071,26 @@
 
                 resultElement.textContent += '🧪 Test 2: Listing movements...\n';
                 await testGetMovements();
-                await new Promise(r => setTimeout(r, 1500));
-                const listPre = document.getElementById('listResult')?.querySelector('pre');
-                const listData = listPre ? JSON.parse(listPre.textContent) : { status: null };
-                results.push({ test: 'List Movements', status: listData.status, statusText: listData.statusText });
-                if (listData.status >= 200 && listData.status < 300) {
+                await new Promise(r => setTimeout(r, 2000)); // Increased wait time
+                const listResultEl = document.getElementById('listResult');
+                const listPre = listResultEl?.querySelector('pre');
+                let listData = { status: null, statusText: 'N/A', data: {} };
+                if (listPre && listPre.textContent && listPre.textContent.trim()) {
+                    try {
+                        listData = JSON.parse(listPre.textContent);
+                    } catch (e) {
+                        resultElement.textContent += `⚠️ Failed to parse list result: ${e.message}\n`;
+                        resultElement.textContent += `   Raw content preview: ${listPre.textContent.substring(0, 100)}...\n\n`;
+                    }
+                } else {
+                    resultElement.textContent += `⚠️ No result element found or empty response. Check if listResult element exists.\n\n`;
+                }
+                const listStatus = 'status' in listData ? listData.status : null;
+                results.push({ test: 'List Movements', status: listStatus, statusText: listData.statusText || 'N/A' });
+                if (listStatus !== null && listStatus >= 200 && listStatus < 300) {
                     resultElement.textContent += '✅ Movements listed\n\n';
                 } else {
-                    resultElement.textContent += `⚠️ List movements returned status ${listData.status}\n\n`;
+                    resultElement.textContent += `⚠️ List movements returned status ${listStatus === null ? 'null' : listStatus === undefined ? 'undefined' : listStatus}\n\n`;
                 }
 
                 if (movementId) {
@@ -1842,13 +2099,20 @@
                     await testHandover();
                     await new Promise(r => setTimeout(r, 1500));
                     const handoverPre = document.getElementById('handoverResult')?.querySelector('pre');
-                    const handoverData = handoverPre ? JSON.parse(handoverPre.textContent) : { status: null, data: {} };
+                    let handoverData = { status: null, statusText: 'N/A', data: {} };
+                    if (handoverPre && handoverPre.textContent) {
+                        try {
+                            handoverData = JSON.parse(handoverPre.textContent);
+                        } catch (e) {
+                            resultElement.textContent += `⚠️ Failed to parse handover result: ${e.message}\n\n`;
+                        }
+                    }
                     results.push({ test: 'Handover', status: handoverData.status, statusText: handoverData.statusText });
                     const txHash2 = handoverData.data?.transaction?.txHash;
                     if (handoverData.status >= 200 && handoverData.status < 300) {
                         resultElement.textContent += '✅ Handover recorded\n\n';
                     } else {
-                        resultElement.textContent += `⚠️ Handover returned status ${handoverData.status}\n\n`;
+                        resultElement.textContent += `⚠️ Handover returned status ${handoverData.status || 'undefined'}\n\n`;
                     }
 
                     resultElement.textContent += '🧪 Test 4: Creating QC log...\n';
@@ -1856,26 +2120,45 @@
                     await testCreateQC();
                     await new Promise(r => setTimeout(r, 1500));
                     const qcPre = document.getElementById('qcResultDiv')?.querySelector('pre');
-                    const qcData = qcPre ? JSON.parse(qcPre.textContent) : { status: null };
+                    let qcData = { status: null, statusText: 'N/A', data: {} };
+                    if (qcPre && qcPre.textContent) {
+                        try {
+                            qcData = JSON.parse(qcPre.textContent);
+                        } catch (e) {
+                            resultElement.textContent += `⚠️ Failed to parse QC result: ${e.message}\n\n`;
+                        }
+                    }
                     results.push({ test: 'QC Log', status: qcData.status, statusText: qcData.statusText });
                     if (qcData.status >= 200 && qcData.status < 300) {
                         resultElement.textContent += '✅ QC log created\n\n';
                     } else {
-                        resultElement.textContent += `⚠️ QC log returned status ${qcData.status}\n\n`;
+                        resultElement.textContent += `⚠️ QC log returned status ${qcData.status || 'undefined'}\n\n`;
                     }
                 }
 
                 resultElement.textContent += '🧪 Test 5: Getting transactions...\n';
                 await testGetTransactions();
-                await new Promise(r => setTimeout(r, 1500));
-                const txPre = document.getElementById('txListResult')?.querySelector('pre');
-                const txData = txPre ? JSON.parse(txPre.textContent) : { status: null, data: {} };
-                results.push({ test: 'Get Transactions', status: txData.status, statusText: txData.statusText });
+                await new Promise(r => setTimeout(r, 2000)); // Increased wait time
+                const txResultEl = document.getElementById('txListResult');
+                const txPre = txResultEl?.querySelector('pre');
+                let txData = { status: null, statusText: 'N/A', data: {} };
+                if (txPre && txPre.textContent && txPre.textContent.trim()) {
+                    try {
+                        txData = JSON.parse(txPre.textContent);
+                    } catch (e) {
+                        resultElement.textContent += `⚠️ Failed to parse transactions result: ${e.message}\n`;
+                        resultElement.textContent += `   Raw content preview: ${txPre.textContent.substring(0, 100)}...\n\n`;
+                    }
+                } else {
+                    resultElement.textContent += `⚠️ No result element found or empty response. Check if txListResult element exists.\n\n`;
+                }
+                const txStatus = 'status' in txData ? txData.status : null;
+                results.push({ test: 'Get Transactions', status: txStatus, statusText: txData.statusText || 'N/A' });
                 const txHash3 = txHash1 || txData.data?.items?.[0]?.txHash;
-                if (txData.status >= 200 && txData.status < 300) {
+                if (txStatus !== null && txStatus >= 200 && txStatus < 300) {
                     resultElement.textContent += '✅ Transactions listed\n\n';
                 } else {
-                    resultElement.textContent += `⚠️ Get transactions returned status ${txData.status}\n\n`;
+                    resultElement.textContent += `⚠️ Get transactions returned status ${txStatus === null ? 'null' : txStatus === undefined ? 'undefined' : txStatus}\n\n`;
                 }
 
                 if (txHash3) {
@@ -1884,37 +2167,68 @@
                     await testGetTransactionByHash();
                     await new Promise(r => setTimeout(r, 1500));
                     const txHashPre = document.getElementById('txHashResult')?.querySelector('pre');
-                    const txHashData = txHashPre ? JSON.parse(txHashPre.textContent) : { status: null };
+                    let txHashData = { status: null, statusText: 'N/A' };
+                    if (txHashPre && txHashPre.textContent) {
+                        try {
+                            txHashData = JSON.parse(txHashPre.textContent);
+                        } catch (e) {
+                            resultElement.textContent += `⚠️ Failed to parse transaction hash result: ${e.message}\n\n`;
+                        }
+                    }
                     results.push({ test: 'Get Transaction by Hash', status: txHashData.status, statusText: txHashData.statusText });
                     if (txHashData.status >= 200 && txHashData.status < 300) {
                         resultElement.textContent += '✅ Transaction retrieved\n\n';
                     } else {
-                        resultElement.textContent += `⚠️ Get transaction by hash returned status ${txHashData.status}\n\n`;
+                        resultElement.textContent += `⚠️ Get transaction by hash returned status ${txHashData.status || 'undefined'}\n\n`;
                     }
                 }
 
                 resultElement.textContent += '🧪 Test 7: Getting analytics...\n';
                 await testGetAnalytics();
-                await new Promise(r => setTimeout(r, 1500));
-                const analyticsPre = document.getElementById('analyticsResult')?.querySelector('pre');
-                const analyticsData = analyticsPre ? JSON.parse(analyticsPre.textContent) : { status: null };
-                results.push({ test: 'Analytics', status: analyticsData.status, statusText: analyticsData.statusText });
-                if (analyticsData.status >= 200 && analyticsData.status < 300) {
+                await new Promise(r => setTimeout(r, 2000)); // Increased wait time
+                const analyticsResultEl = document.getElementById('analyticsResult');
+                const analyticsPre = analyticsResultEl?.querySelector('pre');
+                let analyticsData = { status: null, statusText: 'N/A' };
+                if (analyticsPre && analyticsPre.textContent && analyticsPre.textContent.trim()) {
+                    try {
+                        analyticsData = JSON.parse(analyticsPre.textContent);
+                    } catch (e) {
+                        resultElement.textContent += `⚠️ Failed to parse analytics result: ${e.message}\n`;
+                        resultElement.textContent += `   Raw content preview: ${analyticsPre.textContent.substring(0, 100)}...\n\n`;
+                    }
+                } else {
+                    resultElement.textContent += `⚠️ No result element found or empty response. Check if analyticsResult element exists.\n\n`;
+                }
+                const analyticsStatus = 'status' in analyticsData ? analyticsData.status : null;
+                results.push({ test: 'Analytics', status: analyticsStatus, statusText: analyticsData.statusText || 'N/A' });
+                if (analyticsStatus !== null && analyticsStatus >= 200 && analyticsStatus < 300) {
                     resultElement.textContent += '✅ Analytics retrieved\n\n';
                 } else {
-                    resultElement.textContent += `⚠️ Get analytics returned status ${analyticsData.status}\n\n`;
+                    resultElement.textContent += `⚠️ Get analytics returned status ${analyticsStatus === null ? 'null' : analyticsStatus === undefined ? 'undefined' : analyticsStatus}\n\n`;
                 }
 
                 resultElement.textContent += '🧪 Test 8: Exporting report...\n';
                 await testExportReport();
-                await new Promise(r => setTimeout(r, 1500));
-                const reportPre = document.getElementById('reportResult')?.querySelector('pre');
-                const reportData = reportPre ? JSON.parse(reportPre.textContent) : { status: null };
-                results.push({ test: 'Export Report', status: reportData.status, statusText: reportData.statusText });
-                if (reportData.status >= 200 && reportData.status < 300) {
+                await new Promise(r => setTimeout(r, 2000)); // Increased wait time
+                const reportResultEl = document.getElementById('reportResult');
+                const reportPre = reportResultEl?.querySelector('pre');
+                let reportData = { status: null, statusText: 'N/A' };
+                if (reportPre && reportPre.textContent && reportPre.textContent.trim()) {
+                    try {
+                        reportData = JSON.parse(reportPre.textContent);
+                    } catch (e) {
+                        resultElement.textContent += `⚠️ Failed to parse report result: ${e.message}\n`;
+                        resultElement.textContent += `   Raw content preview: ${reportPre.textContent.substring(0, 100)}...\n\n`;
+                    }
+                } else {
+                    resultElement.textContent += `⚠️ No result element found or empty response. Check if reportResult element exists.\n\n`;
+                }
+                const reportStatus = 'status' in reportData ? reportData.status : null;
+                results.push({ test: 'Export Report', status: reportStatus, statusText: reportData.statusText || 'N/A' });
+                if (reportStatus !== null && reportStatus >= 200 && reportStatus < 300) {
                     resultElement.textContent += '✅ Report exported\n\n';
                 } else {
-                    resultElement.textContent += `⚠️ Export report returned status ${reportData.status}\n\n`;
+                    resultElement.textContent += `⚠️ Export report returned status ${reportStatus === null ? 'null' : reportStatus === undefined ? 'undefined' : reportStatus}\n\n`;
                 }
 
                 resultElement.textContent += '✅ All tests completed successfully!\n\n';
@@ -1924,11 +2238,11 @@
                 // Check status - status should be a number between 200-299 for success
                 const passed = results.filter(r => {
                     const status = r.status;
-                    return status && typeof status === 'number' && status >= 200 && status < 300;
+                    return status !== null && status !== undefined && typeof status === 'number' && status >= 200 && status < 300;
                 }).length;
                 const failed = results.filter(r => {
                     const status = r.status;
-                    return !status || (typeof status === 'number' && (status < 200 || status >= 300));
+                    return status === null || status === undefined || (typeof status === 'number' && (status < 200 || status >= 300));
                 }).length;
                 
                 resultElement.textContent += `- Passed: ${passed}\n`;
@@ -1937,9 +2251,9 @@
                 // Show status for each test
                 resultElement.textContent += `\nTest Results:\n`;
                 results.forEach(r => {
-                    const status = r.status || 'N/A';
+                    const status = r.status === null ? 'null' : r.status === undefined ? 'undefined' : r.status;
                     const statusIcon = (typeof status === 'number' && status >= 200 && status < 300) ? '✅' : '❌';
-                    resultElement.textContent += `${statusIcon} ${r.test}: ${status}\n`;
+                    resultElement.textContent += `${statusIcon} ${r.test}: ${status}${r.statusText && r.statusText !== 'N/A' ? ` (${r.statusText})` : ''}\n`;
                 });
 
                 spinner.style.display = 'none';

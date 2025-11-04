@@ -1,6 +1,6 @@
 /**
  * API Route: Movement Handover
- * POST /api/movements/:id/handover - Record handover event for a movement
+ * POST /api/movements/:movementId/handover - Record handover event for a movement
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -85,12 +85,12 @@ async function getFirestoreUtils() {
 }
 
 /**
- * POST /api/movements/:id/handover
+ * POST /api/movements/:movementId/handover
  * Record a handover event for a movement
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ movementId: string }> }
 ) {
   try {
     // Verify authentication
@@ -164,7 +164,7 @@ export async function POST(
     }
 
     // Get movement ID from params
-    const { id: movementId } = await params;
+    const { movementId } = await params;
 
     if (!movementId) {
       return NextResponse.json(

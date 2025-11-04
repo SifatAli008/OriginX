@@ -1,6 +1,6 @@
 /**
  * API Route: Get Movements by Product (API Key Secured)
- * GET /api/movements/[productId]
+ * GET /api/movements/by-product/[productId]
  * Header: x-api-key: <INTERNAL_API_KEY>
  */
 

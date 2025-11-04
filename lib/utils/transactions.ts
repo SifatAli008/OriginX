@@ -97,6 +97,9 @@ export interface TransactionDocument {
   payload?: Record<string, unknown>;  // Additional payload data
   createdAt: number;                  // Timestamp
   confirmedAt?: number;               // Confirmation timestamp
+  // Common attributes for unique pair identification
+  movementId?: string;                 // Movement ID (for MOVEMENT transactions) - links to movement
+  productId?: string;                 // Product ID (for product-related transactions) - links to product
 }
 
 /**
@@ -156,6 +159,8 @@ export async function createProductRegisterTransaction(
     payload: payload || {},
     createdAt: timestamp,
     confirmedAt: timestamp,
+    // Common attributes for unique pair identification
+    productId, // Direct link to product
   };
 
   try {
@@ -202,6 +207,10 @@ export async function createTransaction(
   const latestBlock = await getLatestBlockNumber(firebaseApp);
   const blockNumber = latestBlock + 1;
 
+  // Extract common attributes from payload for unique pair identification
+  const productId = payload?.productId as string | undefined;
+  const movementId = refType === "movement" ? refId : undefined;
+
   const transaction: Omit<TransactionDocument, "txHash"> = {
     type,
     status: "confirmed",
@@ -213,6 +222,9 @@ export async function createTransaction(
     payload: payload || {},
     createdAt: timestamp,
     confirmedAt: timestamp,
+    // Common attributes for unique pair identification (when available)
+    ...(productId && { productId }),
+    ...(movementId && { movementId }),
   };
 
   try {
@@ -241,15 +253,54 @@ export async function createMovementTransaction(
   payload?: Record<string, unknown>,
   app?: FirebaseApp
 ): Promise<TransactionDocument> {
-  return createTransaction(
-    "MOVEMENT",
-    "movement",
-    movementId,
+  const firebaseApp = app || await getFirebaseAppServer();
+  if (!firebaseApp) {
+    throw new Error("Firebase app not initialized");
+  }
+
+  const db = getFirestore(firebaseApp);
+  const timestamp = Date.now();
+
+  // Generate transaction hash
+  const txHash = await generateTransactionHash("MOVEMENT", movementId, timestamp, orgId);
+
+  // Get latest block number and increment (sequential block numbers)
+  const latestBlock = await getLatestBlockNumber(firebaseApp);
+  const blockNumber = latestBlock + 1;
+
+  // Extract productId from payload for common attribute linkage
+  const productId = payload?.productId as string | undefined;
+
+  const transaction: Omit<TransactionDocument, "txHash"> = {
+    type: "MOVEMENT",
+    status: "confirmed",
+    blockNumber,
+    refType: "movement",
+    refId: movementId,
     orgId,
     createdBy,
-    payload,
-    app
-  );
+    payload: payload || {},
+    createdAt: timestamp,
+    confirmedAt: timestamp,
+    // Common attributes for unique pair identification with movements
+    movementId, // Direct link to movement document
+    productId, // Direct link to product (extracted from payload)
+  };
+
+  try {
+    await addDoc(collection(db, "transactions"), {
+      ...transaction,
+      txHash,
+    });
+
+    return {
+      ...transaction,
+      txHash,
+    };
+  } catch (error) {
+    console.error("Failed to create transaction:", error);
+    throw new Error("Failed to create transaction");
+  }
 }
 
 /**
