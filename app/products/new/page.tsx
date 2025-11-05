@@ -10,6 +10,7 @@ import { Package, ChevronRight, Home, Save, X, Upload } from "lucide-react";
 import Image from "next/image";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import type { ProductCategory } from "@/lib/types/products";
+import { uploadImageToCloudinary } from "@/lib/utils/cloudinary";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -51,15 +52,6 @@ export default function NewProductPage() {
     }
   };
 
-  const convertFileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -76,19 +68,20 @@ export default function NewProductPage() {
         throw new Error("Failed to get authentication token");
       }
 
-      // Convert image to base64 if selected
-      let imageBase64: string | undefined;
-      if (selectedImage) {
-        imageBase64 = await convertFileToBase64(selectedImage);
-      }
-
       // Validate required fields
       if (!formData.category || (typeof formData.category === "string" && formData.category.trim() === "")) {
         throw new Error("Category is required");
       }
 
-      // Type-safe category after validation
       const category: ProductCategory = formData.category as ProductCategory;
+
+      // Upload image directly to Cloudinary (unsigned preset)
+      let imageUrl: string | undefined;
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+      if (selectedImage) {
+        const result = await uploadImageToCloudinary(selectedImage, "products", uploadPreset);
+        imageUrl = result.secureUrl || result.url;
+      }
 
       // Prepare request body
       const body: {
@@ -96,7 +89,7 @@ export default function NewProductPage() {
         sku: string;
         category: ProductCategory;
         description?: string;
-        image?: string;
+        image?: { url: string };
         metadata?: {
           brand?: string;
           model?: string;
@@ -111,8 +104,8 @@ export default function NewProductPage() {
         description: formData.description || undefined,
       };
 
-      if (imageBase64) {
-        body.image = imageBase64;
+      if (imageUrl) {
+        body.image = { url: imageUrl };
       }
 
       if (formData.brand || formData.model || formData.serialNumber || formData.manufacturingDate || formData.expiryDate) {
@@ -280,7 +273,7 @@ export default function NewProductPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Expiry Date</label>
+                  <label className="block text sm font-medium text-gray-400 mb-2">Expiry Date</label>
                   <input
                     type="date"
                     value={formData.expiryDate}

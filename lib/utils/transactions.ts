@@ -92,7 +92,7 @@ export interface TransactionDocument {
   blockNumber?: number;               // Block number (simulated)
   refType: "product" | "movement" | "verification" | "batch";
   refId: string;                      // Reference ID (productId, movementId, etc.)
-  orgId: string;                      // Organization ID
+  orgId?: string;                     // Organization ID (optional)
   createdBy: string;                  // User ID who created the transaction
   payload?: Record<string, unknown>;  // Additional payload data
   createdAt: number;                  // Timestamp
@@ -109,9 +109,9 @@ async function generateTransactionHash(
   type: TransactionType,
   refId: string,
   timestamp: number,
-  orgId: string
+  orgId?: string
 ): Promise<string> {
-  const data = `${type}:${refId}:${timestamp}:${orgId}`;
+  const data = `${type}:${refId}:${timestamp}:${orgId || "global"}`;
   
   // Use Web Crypto API for browser compatibility
   const encoder = new TextEncoder();
@@ -128,7 +128,7 @@ async function generateTransactionHash(
  */
 export async function createProductRegisterTransaction(
   productId: string,
-  orgId: string,
+  orgId: string | undefined,
   createdBy: string,
   payload?: Record<string, unknown>,
   app?: FirebaseApp
@@ -154,7 +154,7 @@ export async function createProductRegisterTransaction(
     blockNumber,
     refType: "product",
     refId: productId,
-    orgId,
+    ...(orgId ? { orgId } : {}),
     createdBy,
     payload: payload || {},
     createdAt: timestamp,
@@ -187,7 +187,7 @@ export async function createTransaction(
   type: TransactionType,
   refType: TransactionDocument["refType"],
   refId: string,
-  orgId: string,
+  orgId: string | undefined,
   createdBy: string,
   payload?: Record<string, unknown>,
   app?: FirebaseApp
@@ -217,7 +217,7 @@ export async function createTransaction(
     blockNumber,
     refType,
     refId,
-    orgId,
+    ...(orgId ? { orgId } : {}),
     createdBy,
     payload: payload || {},
     createdAt: timestamp,

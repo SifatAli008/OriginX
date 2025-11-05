@@ -115,9 +115,7 @@ export async function GET(request: NextRequest) {
     // Admin users can proceed even without a Firestore document (for development/testing)
     if (!userDoc) {
       const isAdminEmail = userEmail.toLowerCase() === "admin@originx.com";
-      
       if (isAdminEmail && process.env.NODE_ENV !== 'production') {
-        // For admin users in development, create a temporary user doc
         console.warn(`[Analytics] Admin user document not found, using temporary admin profile for ${uid}`);
         userDoc = {
           uid,
@@ -125,7 +123,7 @@ export async function GET(request: NextRequest) {
           displayName: "Admin",
           photoURL: null,
           role: "admin",
-          orgId: null, // Admin doesn't need orgId
+          orgId: null,
           orgName: undefined,
           mfaEnabled: false,
           status: "active",
@@ -133,13 +131,17 @@ export async function GET(request: NextRequest) {
           updatedAt: Date.now(),
         };
       } else {
-        return NextResponse.json(
-          { 
-            error: "User profile not found. Please complete your registration or contact support.",
-            details: process.env.NODE_ENV === 'development' ? `UID: ${uid}, Email: ${userEmail}` : undefined
+        // Return default analytics instead of 404 so dashboards don't break for new users
+        return NextResponse.json({
+          kpis: {
+            totalProducts: 0,
+            lossPrevented: 0,
+            verifications: 0,
+            movements: 0,
+            registrations: 0,
           },
-          { status: 404 }
-        );
+          charts: {},
+        }, { status: 200 });
       }
     }
 

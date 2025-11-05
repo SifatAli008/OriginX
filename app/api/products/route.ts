@@ -6,12 +6,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
-import { createProduct } from "@/lib/firebase/products";
 import { uploadImageToCloudinarySigned } from "@/lib/utils/cloudinary";
 import { generateProductQRCode } from "@/lib/utils/qr/generator";
 import { createProductRegisterTransaction } from "@/lib/utils/transactions";
 import type { ProductCategory, ProductStatus, ProductFilters } from "@/lib/types/products";
-import { getUserDocument } from "@/lib/firebase/firestore";
+import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
+import { getAdminFirestore } from "@/lib/firebase/admin";
 
 const QR_AES_SECRET = process.env.QR_AES_SECRET || "default-secret-key-change-in-production";
 
@@ -36,16 +36,16 @@ export async function POST(request: NextRequest) {
     }
     const uid = decodedToken.uid;
 
-    // Get user document to verify orgId and role
-    const userDoc = await getUserDocument(uid);
-    if (!userDoc || !userDoc.orgId) {
+    // Get user document for role check (server-side)
+    const userDoc = await getUserDocumentServer(uid, decodedToken.email);
+    if (!userDoc) {
       return NextResponse.json(
-        { error: "User must be associated with an organization" },
-        { status: 403 }
+        { error: "User record not found" },
+        { status: 404 }
       );
     }
 
-    // Only warehouse owners can create products
+    // Only warehouse users can create products
     if (userDoc.role !== "warehouse") {
       return NextResponse.json(
         { error: "Only warehouse users can create products" },
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       description,
       sku,
       category,
-      image, // Can be File (base64) or URL
+      image, // Can be base64 data URL or { url: string }
       metadata,
     } = body;
 
@@ -92,20 +92,18 @@ export async function POST(request: NextRequest) {
 
     let imgUrl: string | undefined;
 
-    // Upload image to Cloudinary if provided
-    if (image) {
+    // Accept direct URL (preferred)
+    if (image && typeof image === "object" && typeof image.url === "string") {
+      imgUrl = image.url;
+    }
+
+    // Fallback: upload base64 to Cloudinary if provided
+    if (!imgUrl && image && typeof image === "string" && image.startsWith("data:image")) {
       try {
-        // Handle base64 image
-        if (typeof image === "string" && image.startsWith("data:image")) {
-          // Convert base64 to Buffer
-          const base64Data = image.split(",")[1];
-          const buffer = Buffer.from(base64Data, "base64");
-          const result = await uploadImageToCloudinarySigned(buffer, "products");
-          imgUrl = result.secureUrl;
-        } else if (typeof image === "object" && image.url) {
-          // If image is already uploaded and URL provided
-          imgUrl = image.url;
-        }
+        const base64Data = image.split(",")[1];
+        const buffer = Buffer.from(base64Data, "base64");
+        const result = await uploadImageToCloudinarySigned(buffer, "products");
+        imgUrl = result.secureUrl;
       } catch (error) {
         console.error("Failed to upload image:", error);
         return NextResponse.json(
@@ -115,9 +113,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create product document
-    const productData = {
-      orgId: userDoc.orgId,
+    // Create product document (Admin Firestore)
+    const db = getAdminFirestore();
+    const productRef = await db.collection("products").add({
       name,
       description: description || undefined,
       sku,
@@ -129,38 +127,30 @@ export async function POST(request: NextRequest) {
       manufacturerId: uid,
       manufacturerName: userDoc.displayName || userDoc.email,
       metadata: metadata || {},
-    };
+      createdAt: Date.now(),
+    });
 
-    // Create product in Firestore (will generate productId)
-    const productId = await createProduct(productData);
+    const productId = productRef.id;
 
-    // Generate encrypted QR code
-    const qrSecret = QR_AES_SECRET;
+    // Generate encrypted QR code (use global scope since there's no orgId)
     const qrResult = await generateProductQRCode(
       productId,
       uid,
-      userDoc.orgId,
-      qrSecret,
+      "global",
+      QR_AES_SECRET,
       { size: 400 }
     );
 
-    // Update product with QR hash
-    const { updateDoc, doc, getFirestore } = await import("firebase/firestore");
-    const { getFirebaseApp } = await import("@/lib/firebase/client");
-    const app = getFirebaseApp();
-    if (app) {
-      const db = getFirestore(app);
-      const productRef = doc(db, "products", productId);
-      await updateDoc(productRef, {
-        qrHash: qrResult.encrypted,
-        qrDataUrl: qrResult.dataUrl,
-      });
-    }
+    // Update product with QR hash (Admin)
+    await productRef.update({
+      qrHash: qrResult.encrypted,
+      qrDataUrl: qrResult.dataUrl,
+    });
 
-    // Create immutable PRODUCT_REGISTER transaction
+    // Create immutable PRODUCT_REGISTER transaction (orgId omitted)
     const transaction = await createProductRegisterTransaction(
       productId,
-      userDoc.orgId,
+      undefined,
       uid,
       {
         productName: name,
@@ -214,10 +204,11 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
     const uid = decodedToken.uid;
 
-    // Get user document
-    const userDoc = await getUserDocument(uid);
+    // Get user document (server-side)
+    const userDoc = await getUserDocumentServer(uid, decodedToken.email);
     if (!userDoc) {
       return NextResponse.json(
         { error: "User not found" },
@@ -236,7 +227,7 @@ export async function GET(request: NextRequest) {
 
     // Build filters (non-admin users can only see their org's products)
     const filters: ProductFilters = {
-      orgId: userDoc.orgId || undefined,
+      orgId: userDoc.role === "admin" ? undefined : (userDoc.orgId || undefined),
       page,
       pageSize,
     };
@@ -245,7 +236,7 @@ export async function GET(request: NextRequest) {
       filters.category = category as ProductCategory;
     }
     if (status) {
-      filters.status = status as ProductStatus;
+      filters.status = status as any;
     }
     if (search) {
       filters.search = search;
@@ -254,16 +245,14 @@ export async function GET(request: NextRequest) {
       filters.batchId = batchId;
     }
     if (userDoc.role === "admin") {
-      // Admin can see all products
       const manufacturerId = searchParams.get("manufacturerId");
       if (manufacturerId) {
         filters.manufacturerId = manufacturerId;
       }
-      // Admin can see cross-org, so remove orgId filter
-      delete filters.orgId;
     }
 
-    // Get products
+    // Use client library for listing (it reads with user auth on the client normally).
+    // For server listing you may want a dedicated admin listing; keeping as-is for now.
     const { getProducts } = await import("@/lib/firebase/products");
     const result = await getProducts(filters);
 
