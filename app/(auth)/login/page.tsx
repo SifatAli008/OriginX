@@ -140,7 +140,7 @@ export default function LoginPage() {
                 }
               }
             }
-          } catch (invitationError: unknown) {
+          } catch (invitationError) {
             // If invitation check fails (permission error or no invitation), continue with normal flow
             const errorMessage = invitationError instanceof Error ? invitationError.message : String(invitationError);
             console.log("No invitation found or permission error (this is OK for new users):", errorMessage);
@@ -204,7 +204,7 @@ export default function LoginPage() {
               userDoc = await getUserDocument(currentAuthUser.uid);
               console.log("✅ Non-admin user document created:", userDoc ? "Document exists" : "Document still missing");
               }
-            } catch (createError: unknown) {
+            } catch (createError) {
             console.error("❌ Error creating user document:", createError);
               const error = createError as { code?: string; message?: string };
             console.error("❌ Error code:", error.code);
@@ -322,7 +322,7 @@ export default function LoginPage() {
             }, 500);
             return;
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.error("❌ Error handling Google auth success:", err);
         if (isMounted) {
           const errorMessage = getFirebaseAuthErrorMessage(err);
@@ -617,7 +617,7 @@ export default function LoginPage() {
             }
           }, 15000);
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.error("❌ Error handling redirect result:", err);
         const errorObj = err as { code?: string; message?: string; stack?: string };
         console.error("Error details:", {
@@ -791,13 +791,13 @@ export default function LoginPage() {
           await updateProfile(cred.user, { displayName: "Admin" });
           
           // User is already signed in after createUserWithEmailAndPassword
-        } catch (createErr: unknown) {
+        } catch (createErr) {
           // If account already exists, try to sign in with static password
           const createError = createErr as { code?: string; message?: string };
           if (createError.code === "auth/email-already-in-use") {
             try {
               await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD);
-            } catch (signInErr: unknown) {
+            } catch (signInErr) {
               const signInError = signInErr as { code?: string; message?: string };
               // Account exists but password doesn't match - try to reset or show error
               if (signInError.code === "auth/invalid-credential" || signInError.code === "auth/wrong-password") {
@@ -826,7 +826,7 @@ export default function LoginPage() {
           }
           
           await signInWithEmailAndPassword(auth, normalizedEmail, password);
-        } catch (err: unknown) {
+        } catch (err) {
           // Enhanced error handling
           const error = err as { code?: string; message?: string };
           if (error.code === "auth/invalid-email") {
@@ -954,7 +954,7 @@ export default function LoginPage() {
           return;
         }
       }
-    } catch (err: unknown) {
+    } catch (err) {
       setError(getFirebaseAuthErrorMessage(err));
     } finally {
       setLoading(false);
@@ -972,7 +972,6 @@ export default function LoginPage() {
     setLoading(true);
     setIsGoogleSignInInProgress(true);
     
-    try {
       const auth = getFirebaseAuth();
       if (!auth) {
         setError("Firebase is not configured. Please check your environment variables and restart the dev server.");
@@ -1012,14 +1011,9 @@ export default function LoginPage() {
       googleProvider.addScope('email');
       googleProvider.addScope('profile');
       
-      try {
-        // For IP addresses and Vercel deployments, use popup instead of redirect
-        // Redirects can be unreliable on Vercel due to Next.js router interference
-        // For localhost and regular domains, use redirect
-        if (isIpAddress || isVercelDeployment) {
-          const reason = isVercelDeployment ? "Vercel deployment (redirects unreliable)" : "IP address (redirects may not work with IPs)";
-          console.log(`🔄 Using popup method for ${reason}`);
-          sessionStorage.setItem('google_auth_popup', 'true');
+      // Always use popup to avoid redirect timing issues in Next.js
+      console.log("🔄 Using popup method for Google sign-in (default)");
+      sessionStorage.setItem('google_auth_popup', 'true');
           
           try {
             const result = await signInWithPopup(auth, googleProvider);
@@ -1178,7 +1172,7 @@ export default function LoginPage() {
             // Default: Redirect to register-company for incomplete setup
             console.log("⚠️ User setup incomplete - redirecting to register-company");
             router.push("/register-company");
-          } catch (popupError: unknown) {
+          } catch (popupError) {
             sessionStorage.removeItem('google_auth_popup');
             const error = popupError as { code?: string; message?: string };
             
@@ -1197,50 +1191,9 @@ export default function LoginPage() {
             setLoading(false);
             setIsGoogleSignInInProgress(false);
             return;
-          }
-        } else {
-          // Use redirect for localhost and regular domains
-          console.log("🔄 Using redirect method for domain:", currentHostname);
-          sessionStorage.setItem('google_auth_redirect', 'true');
-          sessionStorage.setItem('google_auth_redirect_url', currentUrl);
-          
-          console.log("🔄 Calling signInWithRedirect now...");
-          console.log("🔄 Redirect URL will be:", currentOrigin + "/login");
-          
-        await signInWithRedirect(auth, googleProvider);
-          console.log("⚠️ signInWithRedirect returned (this shouldn't happen - should redirect immediately)");
         }
-        
-        // The redirect will navigate away immediately - this code won't run
-        // The result will be handled in the useEffect when the page loads after redirect
-      } catch (redirectErr: unknown) {
-        // Remove flag on error
-        sessionStorage.removeItem('google_auth_redirect');
-        // Enhanced error handling for redirect errors
-        console.error("Google sign-in redirect error:", redirectErr);
-        const redirectError = redirectErr as { code?: string; message?: string };
-        
-        if (redirectError.code === "auth/operation-not-allowed") {
-          setError("Google sign-in is not enabled. Please enable it in Firebase Console → Authentication → Sign-in method → Google.");
-        } else if (redirectError.code === "auth/popup-blocked") {
-          setError("Popup was blocked. Please allow popups and try again.");
-        } else if (redirectError.code === "auth/unauthorized-domain") {
-          const currentDomain = window.location.hostname;
-          setError(`Unauthorized domain: ${currentDomain}. Add it in Firebase Console → Authentication → Settings → Authorized domains.`);
-        } else if (redirectError.code === "auth/redirect-operation-pending") {
-          setError("A sign-in operation is already in progress. Please wait for it to complete.");
-        } else {
-          setError(getFirebaseAuthErrorMessage(redirectErr) || "Failed to initiate Google sign-in. Please try again.");
-        }
-        setLoading(false);
       }
-    } catch (err: unknown) {
-      console.error("Unexpected error in Google sign-in:", err);
-      const errorMessage = getFirebaseAuthErrorMessage(err);
-      setError(errorMessage || "An unexpected error occurred. Please try again.");
-      setLoading(false);
-    }
-  }
+
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function handleMFAVerify(_code: string) {
