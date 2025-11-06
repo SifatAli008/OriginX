@@ -65,8 +65,6 @@ export default function AuthListener() {
               displayName,
               photoURL,
               role: userDoc.role,
-              orgId: userDoc.orgId,
-              orgName: userDoc.orgName,
               mfaEnabled: userDoc.mfaEnabled,
               status: userDoc.status,
             };
@@ -79,7 +77,6 @@ export default function AuthListener() {
               displayName,
               photoURL,
               role: "sme",
-              orgId: null,
               mfaEnabled: false,
               status: "pending", // New users should be pending until they register company
             }));
@@ -93,7 +90,6 @@ export default function AuthListener() {
             displayName,
             photoURL,
             role: "sme",
-            orgId: null,
             mfaEnabled: false,
             status: "pending", // New users should be pending until they register company
           }));

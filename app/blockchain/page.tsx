@@ -1,5 +1,7 @@
 "use client";
 
+import { getUserDocument } from "@/lib/firebase/firestore";
+
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
@@ -128,9 +130,14 @@ export default function BlockchainPage() {
 
     if (authState.status === "authenticated" && user) {
       // Non-admin users must have orgId
-      if (user.role !== "admin" && !user.orgId) {
-        router.push("/register-company");
-        return;
+      if (user.role !== "admin") {
+        getUserDocument(user.uid).then((userDoc) => {
+          if (!userDoc?.orgId) {
+            router.push("/register-company");
+          }
+        }).catch(() => {
+          // Allow access if fetch fails
+        });
       }
       fetchTransactions();
     }

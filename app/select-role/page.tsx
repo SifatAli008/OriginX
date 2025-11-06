@@ -149,8 +149,17 @@ export default function SelectRolePage() {
       }
     };
 
-    if (user && user.orgId && user.status === "active") {
-      checkRegistrationStatus();
+    if (user && user.status === "active") {
+      // Fetch user document to check orgId
+      getUserDocument(user.uid).then((userDoc) => {
+        if (userDoc?.orgId) {
+          checkRegistrationStatus();
+        } else {
+          setLoading(false);
+        }
+      }).catch(() => {
+        setLoading(false);
+      });
     } else {
       setLoading(false);
     }

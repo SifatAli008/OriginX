@@ -11,7 +11,7 @@ import { getFirebaseAuth } from "@/lib/firebase/client";
 import { createCompanyRegistrationRequest, getOrganization } from "@/lib/firebase/company";
 import { updateDoc, doc } from "firebase/firestore";
 import { getFirestore } from "@/lib/firebase/client";
-import { updateUserRole } from "@/lib/firebase/firestore";
+import { updateUserRole, getUserDocument } from "@/lib/firebase/firestore";
 import { Loader2, Building2, CheckCircle2, Plus, Users, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,10 +68,14 @@ export default function RegisterCompanyPage() {
         return;
       }
       // User already has a company (fully set up) - redirect to dashboard
-      if (user.orgId && user.status === "active" && user.role !== "sme") {
-        router.push("/dashboard");
-        return;
-      }
+      // Fetch user document to check orgId
+      getUserDocument(user.uid).then((userDoc) => {
+        if (userDoc?.orgId && user.status === "active" && user.role !== "sme") {
+          router.push("/dashboard");
+        }
+      }).catch(() => {
+        // Continue with registration if fetch fails
+      });
     }
   }, [authState.status, user, router]);
 

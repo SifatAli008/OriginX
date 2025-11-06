@@ -97,8 +97,8 @@ export default function EditProductPage() {
           brand: productData.metadata?.brand || "",
           model: productData.metadata?.model || "",
           serialNumber: productData.metadata?.serialNumber || "",
-          manufacturingDate: productData.metadata?.manufacturingDate || "",
-          expiryDate: productData.metadata?.expiryDate || "",
+          manufacturingDate: String(productData.metadata?.manufacturingDate || ""),
+          expiryDate: String(productData.metadata?.expiryDate || ""),
         });
         
         // Set image preview if exists

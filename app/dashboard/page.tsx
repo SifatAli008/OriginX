@@ -240,12 +240,13 @@ export default function DashboardPage() {
       }
 
       // Map analytics data to dashboard stats format
+      const kpis = analyticsData.kpis as { totalProducts?: number; lossPrevented?: number } | undefined;
       setDashboardData({
         stats: {
           users: usersCount,
-          products: analyticsData.kpis?.totalProducts || 0,
+          products: kpis?.totalProducts || 0,
           transactions: transactionsCount,
-          revenue: analyticsData.kpis?.lossPrevented || 0, // Using lossPrevented as revenue proxy
+          revenue: kpis?.lossPrevented || 0, // Using lossPrevented as revenue proxy
         },
         loading: false,
         lastUpdated: new Date(),
