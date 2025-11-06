@@ -245,20 +245,16 @@ export async function GET(request: NextRequest) {
 
     const db = getFirestore(app);
 
-    // Build base query filter by org (non-admin users only see their org)
-    // No org scoping in current model
-    const orgFilter = null;
-
     // ========== KPIs ==========
 
     // Total Products
     const productsRef = getCollection(db, "products");
-    let productsQuery = buildQuery(productsRef);
+    const productsQuery = buildQuery(productsRef);
     // org filter removed
     let productsSnapshot;
     try {
       productsSnapshot = await getDocs(productsQuery);
-    } catch (permError) {
+    } catch (_permError) {
       // Gracefully handle missing/insufficient permissions by returning empty analytics
       const empty: AnalyticsData = {
         kpis: {

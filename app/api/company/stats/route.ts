@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,9 +43,9 @@ export async function GET(request: NextRequest) {
     const manufacturerId = userDoc.role === "admin" ? null : decoded.uid;
 
     // 1. Total Products - filter by manufacturerId (user's UID) for company users
-    let productsQuery: any = db.collection("products");
+    let productsQuery = db.collection("products");
     if (manufacturerId) {
-      productsQuery = productsQuery.where("manufacturerId", "==", manufacturerId);
+      productsQuery = productsQuery.where("manufacturerId", "==", manufacturerId) as typeof productsQuery;
     }
     const productsSnapshot = await productsQuery.get();
     const totalProducts = productsSnapshot.size;
@@ -53,16 +54,16 @@ export async function GET(request: NextRequest) {
     
     // Active products (status === "active")
     const activeProducts = productsSnapshot.docs.filter(
-      (doc: any) => doc.data().status === "active"
+      (doc: QueryDocumentSnapshot) => doc.data().status === "active"
     ).length;
 
     // 2. Total Batches - filter by orgId or createdBy
-    let batchesQuery: any = db.collection("batches");
+    let batchesQuery = db.collection("batches");
     if (orgId) {
-      batchesQuery = batchesQuery.where("orgId", "==", orgId);
+      batchesQuery = batchesQuery.where("orgId", "==", orgId) as typeof batchesQuery;
     } else if (userDoc.role !== "admin") {
       // If no orgId, filter by createdBy (user's UID)
-      batchesQuery = batchesQuery.where("createdBy", "==", decoded.uid);
+      batchesQuery = batchesQuery.where("createdBy", "==", decoded.uid) as typeof batchesQuery;
     }
     const batchesSnapshot = await batchesQuery.get();
     const totalBatches = batchesSnapshot.size;
@@ -75,16 +76,16 @@ export async function GET(request: NextRequest) {
     // Filter by organization if not admin
     if (orgId) {
       // Get product IDs for this organization
-      const orgProductIds = productsSnapshot.docs.map((doc: any) => doc.id);
+      const orgProductIds = productsSnapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id);
       if (orgProductIds.length > 0) {
         // Note: Firestore 'in' queries are limited to 10 items, so we'll filter after fetching
         // For now, we'll get all recent verifications and filter in memory
         const allVerifications = await db.collection("verifications")
           .where("createdAt", ">=", thirtyDaysAgo)
           .get();
-        const recentVerifications = allVerifications.docs.filter((doc: any) => {
+        const recentVerifications = allVerifications.docs.filter((doc: QueryDocumentSnapshot) => {
           const data = doc.data();
-          return orgProductIds.includes(data.productId);
+          return orgProductIds.includes(data.productId as string);
         });
         recentVerificationsCount = recentVerifications.length;
       } else {
@@ -99,13 +100,13 @@ export async function GET(request: NextRequest) {
 
     // 4. Recent Activity (products created in last 7 days)
     const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    const recentProducts = productsSnapshot.docs.filter((doc: any) => {
+    const recentProducts = productsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
       const createdAt = doc.data().createdAt || 0;
       return createdAt >= sevenDaysAgo;
     }).length;
 
     // 5. Products with QR codes
-    const productsWithQR = productsSnapshot.docs.filter((doc: any) => {
+    const productsWithQR = productsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
       const data = doc.data();
       return data.qrDataUrl || data.qrCode;
     }).length;
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
       out_of_stock: 0,
       pending: 0,
     };
-    productsSnapshot.docs.forEach((doc: any) => {
+    productsSnapshot.docs.forEach((doc: QueryDocumentSnapshot) => {
       const status = doc.data().status || "active";
       if (status in productsByStatus) {
         productsByStatus[status as keyof typeof productsByStatus]++;
@@ -125,16 +126,16 @@ export async function GET(request: NextRequest) {
     });
 
     // 7. Products in batches
-    const productsInBatches = productsSnapshot.docs.filter((doc: any) => {
+    const productsInBatches = productsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
       return doc.data().batchId;
     }).length;
 
     // 8. Unique categories count
     const categoriesSet = new Set<string>();
-    productsSnapshot.docs.forEach((doc: any) => {
+    productsSnapshot.docs.forEach((doc: QueryDocumentSnapshot) => {
       const category = doc.data().category;
       if (category) {
-        categoriesSet.add(category);
+        categoriesSet.add(category as string);
       }
     });
     const uniqueCategories = categoriesSet.size;
@@ -142,12 +143,12 @@ export async function GET(request: NextRequest) {
     // 9. Total verifications (all time)
     let totalVerificationsCount = 0;
     if (orgId) {
-      const orgProductIds = productsSnapshot.docs.map((doc: any) => doc.id);
+      const orgProductIds = productsSnapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id);
       if (orgProductIds.length > 0) {
         const allVerifications = await db.collection("verifications").get();
-        const orgVerifications = allVerifications.docs.filter((doc: any) => {
+        const orgVerifications = allVerifications.docs.filter((doc: QueryDocumentSnapshot) => {
           const data = doc.data();
-          return orgProductIds.includes(data.productId);
+          return orgProductIds.includes(data.productId as string);
         });
         totalVerificationsCount = orgVerifications.length;
       }
@@ -162,15 +163,15 @@ export async function GET(request: NextRequest) {
     let fake = 0;
 
     if (orgId) {
-      const orgProductIds = productsSnapshot.docs.map((doc: any) => doc.id);
+      const orgProductIds = productsSnapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id);
       if (orgProductIds.length > 0) {
         const allVerifications30d = await db.collection("verifications")
           .where("createdAt", ">=", thirtyDaysAgo)
           .get();
         
-        allVerifications30d.docs.forEach((doc: any) => {
+        allVerifications30d.docs.forEach((doc: QueryDocumentSnapshot) => {
           const data = doc.data();
-          if (orgProductIds.includes(data.productId)) {
+          if (orgProductIds.includes(data.productId as string)) {
             if (data.verdict === "GENUINE") genuine++;
             else if (data.verdict === "SUSPICIOUS") suspicious++;
             else if (data.verdict === "FAKE") fake++;
@@ -198,12 +199,12 @@ export async function GET(request: NextRequest) {
     }
 
     // 11. Products without images
-    const productsWithoutImages = productsSnapshot.docs.filter((doc: any) => {
+    const productsWithoutImages = productsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
       return !doc.data().imgUrl;
     }).length;
 
     // 12. Recent batches (last 7 days)
-    const recentBatches = batchesSnapshot.docs.filter((doc: any) => {
+    const recentBatches = batchesSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
       const createdAt = doc.data().createdAt || 0;
       return createdAt >= sevenDaysAgo;
     }).length;

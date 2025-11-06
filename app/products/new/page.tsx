@@ -10,7 +10,6 @@ import { Package, ChevronRight, Home, Save, X, Upload } from "lucide-react";
 import Image from "next/image";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import type { ProductCategory } from "@/lib/types/products";
-import { uploadImageToCloudinary } from "@/lib/utils/cloudinary";
 
 export default function NewProductPage() {
   const router = useRouter();

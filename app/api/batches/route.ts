@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,27 +30,27 @@ export async function GET(request: NextRequest) {
     }
 
     const db = getAdminFirestore();
-    let batchesQuery: any = db.collection("batches");
+    let batchesQuery = db.collection("batches");
 
     // Filter by organization if user is not admin
     if (userDoc.role !== "admin") {
       if (userDoc.orgId) {
-        batchesQuery = batchesQuery.where("orgId", "==", userDoc.orgId);
+        batchesQuery = batchesQuery.where("orgId", "==", userDoc.orgId) as typeof batchesQuery;
       } else {
         // If user has no orgId, filter by createdBy
-        batchesQuery = batchesQuery.where("createdBy", "==", decoded.uid);
+        batchesQuery = batchesQuery.where("createdBy", "==", decoded.uid) as typeof batchesQuery;
       }
     }
 
     const snapshot = await batchesQuery.get();
-    const batches = snapshot.docs.map((doc: any) => {
+    const batches = snapshot.docs.map((doc: QueryDocumentSnapshot) => {
       const data = doc.data();
       return {
         batchId: doc.id,
-        name: data.name || `Batch ${doc.id.substring(0, 8)}`,
+        name: (data.name as string) || `Batch ${doc.id.substring(0, 8)}`,
         status: data.status,
-        totalCount: data.totalCount || 0,
-        createdAt: data.createdAt,
+        totalCount: (data.totalCount as number) || 0,
+        createdAt: data.createdAt as number,
       };
     });
 

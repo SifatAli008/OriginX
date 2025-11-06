@@ -431,7 +431,7 @@ export default function ProductsPage() {
         throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      await response.json();
       
       addToast({
         variant: "success",

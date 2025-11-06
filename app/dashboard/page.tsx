@@ -102,7 +102,6 @@ import {
   Zap,
   DollarSign,
   Eye,
-  Download,
   Home,
   Menu,
   X,

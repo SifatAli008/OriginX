@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { getFirebaseAuth, googleProvider } from "@/lib/firebase/client";
-import { signInWithEmailAndPassword, signInWithRedirect, signInWithPopup, getRedirectResult, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, getRedirectResult, onAuthStateChanged } from "firebase/auth";
 import AuthCard from "../AuthCard";
 import { FcGoogle } from "react-icons/fc";
 import { useAppSelector, RootState } from "@/lib/store";

@@ -66,7 +66,7 @@ export default function CompanySmeDetailPage() {
               base = { ...base, rating: match.rating ?? base.rating, returns: match.returns ?? base.returns };
             }
           }
-        } catch (_) {
+        } catch {
           // ignore enrichment errors
         }
         setVendor(base);

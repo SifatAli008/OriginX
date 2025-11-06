@@ -87,7 +87,7 @@ async function verifyAdminAccess(token: string): Promise<{ uid: string; email: s
   try {
     const { getUserDocumentServer } = await import("@/lib/firebase/firestore-server");
     userDoc = await getUserDocumentServer(uid, userEmail);
-  } catch (error) {
+  } catch {
     if (isAdminEmail) {
       // Allow admin email even if document fetch fails
       return { uid, email: userEmail };
