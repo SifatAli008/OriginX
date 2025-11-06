@@ -69,20 +69,25 @@ export async function GET(request: NextRequest) {
     }
     const usersData = await usersResp.json();
 
-    const allUsers: UserDocument[] = (usersData.documents || []).map((doc: any) => {
+    interface FirestoreDocument {
+      name: string;
+      fields?: Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean } | string | number | boolean>;
+    }
+
+    const allUsers: UserDocument[] = (usersData.documents || []).map((doc: FirestoreDocument) => {
       const f = doc.fields || {};
       return {
         uid: doc.name.split("/").pop() || "",
-        email: f.email?.stringValue || f.email || "",
-        displayName: f.displayName?.stringValue ?? f.displayName ?? null,
-        photoURL: f.photoURL?.stringValue ?? f.photoURL ?? null,
-        role: f.role?.stringValue || f.role || "sme",
-        orgId: f.orgId?.stringValue ?? f.orgId ?? null,
-        orgName: f.orgName?.stringValue ?? f.orgName ?? undefined,
-        mfaEnabled: !!(f.mfaEnabled?.booleanValue ?? f.mfaEnabled ?? false),
-        status: f.status?.stringValue || f.status || "pending",
-        createdAt: f.createdAt?.integerValue ? parseInt(f.createdAt.integerValue) : Date.now(),
-        updatedAt: f.updatedAt?.integerValue ? parseInt(f.updatedAt.integerValue) : Date.now(),
+        email: (typeof f.email === "object" && f.email?.stringValue) || (typeof f.email === "string" ? f.email : "") || "",
+        displayName: (typeof f.displayName === "object" && f.displayName?.stringValue) ?? (typeof f.displayName === "string" ? f.displayName : null) ?? null,
+        photoURL: (typeof f.photoURL === "object" && f.photoURL?.stringValue) ?? (typeof f.photoURL === "string" ? f.photoURL : null) ?? null,
+        role: (typeof f.role === "object" && f.role?.stringValue) || (typeof f.role === "string" ? f.role : "sme") || "sme",
+        orgId: (typeof f.orgId === "object" && f.orgId?.stringValue) ?? (typeof f.orgId === "string" ? f.orgId : null) ?? null,
+        orgName: (typeof f.orgName === "object" && f.orgName?.stringValue) ?? (typeof f.orgName === "string" ? f.orgName : undefined) ?? undefined,
+        mfaEnabled: !!(typeof f.mfaEnabled === "object" && f.mfaEnabled?.booleanValue ?? (typeof f.mfaEnabled === "boolean" ? f.mfaEnabled : false) ?? false),
+        status: (typeof f.status === "object" && f.status?.stringValue) || (typeof f.status === "string" ? f.status : "pending") || "pending",
+        createdAt: (typeof f.createdAt === "object" && f.createdAt?.integerValue ? parseInt(f.createdAt.integerValue) : Date.now()),
+        updatedAt: (typeof f.updatedAt === "object" && f.updatedAt?.integerValue ? parseInt(f.updatedAt.integerValue) : Date.now()),
       } as UserDocument;
     });
 
@@ -102,7 +107,12 @@ export async function GET(request: NextRequest) {
     }
     const productsData = await productsResp.json();
 
-    const products: ProductDocument[] = (productsData.documents || []).map((doc: any) => {
+    interface FirestoreProductDocument {
+      name: string;
+      fields?: Record<string, { stringValue?: string; integerValue?: string; mapValue?: { fields?: Record<string, unknown> } } | string | number | Record<string, unknown>>;
+    }
+
+    const products: ProductDocument[] = (productsData.documents || []).map((doc: FirestoreProductDocument) => {
       const f = doc.fields || {};
       return {
         productId: doc.name.split("/").pop() || "",

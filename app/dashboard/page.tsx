@@ -185,7 +185,7 @@ export default function DashboardPage() {
         },
       });
 
-      let analyticsData: any = {};
+      let analyticsData: Record<string, unknown> = {};
       if (!analyticsResponse.ok) {
         // Fallback for any 404 on analytics (e.g., missing profile or route)
         if (analyticsResponse.status === 404) {
@@ -1689,10 +1689,14 @@ const formatCellValue = (value: unknown): React.ReactNode => {
   return "-";
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function _DataTable({ title, columns, data, loading = false }: DataTableProps) {
+// Unused component - kept for potential future use
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, react-hooks/rules-of-hooks
+function DataTableUnused({ title, columns, data, loading = false }: DataTableProps) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [currentPage, setCurrentPage] = useState(1);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [sortColumn, setSortColumn] = useState<string | null>(null);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const itemsPerPage = 5;
 

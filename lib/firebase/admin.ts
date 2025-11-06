@@ -25,7 +25,7 @@ if (typeof process !== 'undefined' && process.env && !process.env.FIREBASE_SERVI
 				}
 			}
 		}
-	} catch (e) {
+	} catch {
 		// Ignore errors - Next.js should handle env loading
 	}
 }

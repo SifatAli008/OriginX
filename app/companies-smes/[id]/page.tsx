@@ -61,7 +61,7 @@ export default function CompanySmeDetailPage() {
           const vendorsResp = await fetch('/api/vendors', { headers: { Authorization: `Bearer ${token}` } });
           if (vendorsResp.ok) {
             const vData = await vendorsResp.json();
-            const match = (vData.vendors || []).find((v: any) => v.uid === base.uid);
+            const match = (vData.vendors || []).find((v: { uid: string; rating?: number; returns?: number }) => v.uid === base.uid);
             if (match) {
               base = { ...base, rating: match.rating ?? base.rating, returns: match.returns ?? base.returns };
             }

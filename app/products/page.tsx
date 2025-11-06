@@ -1237,7 +1237,7 @@ export default function ProductsPage() {
                     autoFocus
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Category will be converted to lowercase with underscores (e.g., "Food & Beverage" → "food_beverage")
+                    Category will be converted to lowercase with underscores (e.g., &quot;Food &amp; Beverage&quot; → &quot;food_beverage&quot;)
                   </p>
                 </div>
               </div>
