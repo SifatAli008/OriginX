@@ -8,7 +8,9 @@
 if (typeof process !== 'undefined' && process.env && !process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
 	try {
 		// Try to load dotenv if available (for development)
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const fs = require('fs');
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const path = require('path');
 		const envPath = path.join(process.cwd(), '.env.local');
 		if (fs.existsSync(envPath)) {
@@ -38,13 +40,14 @@ function initAdminApp(): any {
 	if (adminApp) return adminApp;
 
 	// Lazy require firebase-admin modules
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let adminAppModule: any;
 	try {
 		// Use eval('require') to prevent bundlers from resolving at build time
 		// eslint-disable-next-line no-eval
 		const req = eval('require');
 		adminAppModule = req('firebase-admin/app');
-	} catch (_e) {
+	} catch {
 		throw new Error("firebase-admin is not installed. Please add 'firebase-admin' to your dependencies for server routes that need it.");
 	}
 
@@ -72,7 +75,9 @@ function initAdminApp(): any {
 	// If not found, try reloading from file (Next.js might not have loaded it)
 	if (!serviceAccountB64) {
 		try {
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
 			const fs = require('fs');
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
 			const path = require('path');
 			const envPath = path.join(process.cwd(), '.env.local');
 			if (fs.existsSync(envPath)) {
@@ -104,7 +109,9 @@ function initAdminApp(): any {
 	console.log('[Firebase Admin] Service account length:', serviceAccountB64 ? serviceAccountB64.length : 0);
 	if (!serviceAccountB64) {
 		console.warn('[Firebase Admin] Service account not found! Checking .env.local...');
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const fs = require('fs');
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const path = require('path');
 		const envPath = path.join(process.cwd(), '.env.local');
 		if (fs.existsSync(envPath)) {
@@ -210,7 +217,7 @@ export function getAdminFirestore() {
 		throw new Error('Firebase Admin app not initialized');
 	}
 	// Lazy require main firebase-admin to avoid subpath resolution issues
-	// eslint-disable-next-line no-eval
+	// eslint-disable-next-line no-eval, @typescript-eslint/no-require-imports
 	const req = eval('require');
 	const admin = req('firebase-admin');
 	// Use legacy accessor which binds to the default app initialized above

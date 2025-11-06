@@ -615,9 +615,8 @@ export default function DashboardPage() {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function AdminDashboard({ 
-  permissions: _permissions,
+  permissions: _permissions, // eslint-disable-line @typescript-eslint/no-unused-vars
   stats 
 }: { 
   permissions: ReturnType<typeof getRolePermissions>;
@@ -1690,13 +1689,10 @@ const formatCellValue = (value: unknown): React.ReactNode => {
 };
 
 // Unused component - kept for potential future use
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, react-hooks/rules-of-hooks
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function DataTableUnused({ title, columns, data, loading = false }: DataTableProps) {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [currentPage, setCurrentPage] = useState(1);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [sortColumn, setSortColumn] = useState<string | null>(null);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const itemsPerPage = 5;
 

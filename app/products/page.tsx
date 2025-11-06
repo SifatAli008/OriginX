@@ -1339,7 +1339,7 @@ export default function ProductsPage() {
                           <div>
                             <p className="text-sm font-medium text-red-400 mb-1">Warning</p>
                             <p className="text-xs text-gray-400">
-                              Deleting this category will not affect existing products that use it, but you won't be able to select it for new products.
+                              Deleting this category will not affect existing products that use it, but you won&apos;t be able to select it for new products.
                             </p>
                           </div>
                         </div>
