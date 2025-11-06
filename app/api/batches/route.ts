@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort by creation date (newest first)
-    batches.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    batches.sort((a: { createdAt: number }, b: { createdAt: number }) => (b.createdAt || 0) - (a.createdAt || 0));
 
     return NextResponse.json({ batches }, { status: 200 });
   } catch (error: unknown) {

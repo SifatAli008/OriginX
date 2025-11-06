@@ -728,15 +728,22 @@ export default function LoginPage() {
     setLoading(false);
     
     const user = authState.user;
-    if (user.role === "admin") {
+    // Fetch full user document to get orgId (ExtendedAuthUser doesn't include orgId)
+    getUserDocument(user.uid).then((userDoc) => {
+      if (user.role === "admin") {
+        setTimeout(() => router.push("/dashboard"), 500);
+      } else if (user.status === "pending" && !userDoc?.orgId) {
+        setTimeout(() => router.push("/register-company"), 500);
+      } else if (userDoc?.orgId && user.status === "active" && user.role === "sme") {
+        setTimeout(() => router.push("/select-role"), 500);
+      } else {
+        setTimeout(() => router.push("/dashboard"), 500);
+      }
+    }).catch((error) => {
+      console.error("Error fetching user document:", error);
+      // Fallback to dashboard if user document fetch fails
       setTimeout(() => router.push("/dashboard"), 500);
-    } else if (user.status === "pending" && !user.orgId) {
-      setTimeout(() => router.push("/register-company"), 500);
-    } else if (user.orgId && user.status === "active" && user.role === "sme") {
-      setTimeout(() => router.push("/select-role"), 500);
-    } else {
-      setTimeout(() => router.push("/dashboard"), 500);
-    }
+    });
   }, [authState.user, redirecting, router]);
 
   async function handleEmailLogin(e: React.FormEvent) {

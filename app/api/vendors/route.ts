@@ -112,24 +112,47 @@ export async function GET(request: NextRequest) {
       fields?: Record<string, { stringValue?: string; integerValue?: string; mapValue?: { fields?: Record<string, unknown> } } | string | number | Record<string, unknown>>;
     }
 
+    // Helper function to extract string value from Firestore field
+    const getStringValue = (field: unknown): string | undefined => {
+      if (typeof field === "object" && field !== null && "stringValue" in field) {
+        return (field as { stringValue?: string }).stringValue;
+      }
+      if (typeof field === "string") {
+        return field;
+      }
+      return undefined;
+    };
+
+    // Helper function to extract integer value from Firestore field
+    const getIntegerValue = (field: unknown): number | undefined => {
+      if (typeof field === "object" && field !== null && "integerValue" in field) {
+        const value = (field as { integerValue?: string }).integerValue;
+        return value ? parseInt(value) : undefined;
+      }
+      if (typeof field === "number") {
+        return field;
+      }
+      return undefined;
+    };
+
     const products: ProductDocument[] = (productsData.documents || []).map((doc: FirestoreProductDocument) => {
       const f = doc.fields || {};
       return {
         productId: doc.name.split("/").pop() || "",
-        orgId: f.orgId?.stringValue || "",
-        name: f.name?.stringValue || "",
-        description: f.description?.stringValue || undefined,
-        sku: f.sku?.stringValue || "",
-        category: f.category?.stringValue || "other",
-        imgUrl: f.imgUrl?.stringValue || undefined,
-        qrHash: f.qrHash?.stringValue || "",
-        qrDataUrl: f.qrDataUrl?.stringValue || undefined,
-        status: f.status?.stringValue || "active",
-        manufacturerId: f.manufacturerId?.stringValue || "",
-        manufacturerName: f.manufacturerName?.stringValue || undefined,
+        orgId: getStringValue(f.orgId) || "",
+        name: getStringValue(f.name) || "",
+        description: getStringValue(f.description) || undefined,
+        sku: getStringValue(f.sku) || "",
+        category: getStringValue(f.category) || "other",
+        imgUrl: getStringValue(f.imgUrl) || undefined,
+        qrHash: getStringValue(f.qrHash) || "",
+        qrDataUrl: getStringValue(f.qrDataUrl) || undefined,
+        status: getStringValue(f.status) || "active",
+        manufacturerId: getStringValue(f.manufacturerId) || "",
+        manufacturerName: getStringValue(f.manufacturerName) || undefined,
         metadata: undefined,
-        createdAt: f.createdAt?.integerValue ? parseInt(f.createdAt.integerValue) : Date.now(),
-        updatedAt: f.updatedAt?.integerValue ? parseInt(f.updatedAt.integerValue) : undefined,
+        createdAt: getIntegerValue(f.createdAt) || Date.now(),
+        updatedAt: getIntegerValue(f.updatedAt) || undefined,
       } as ProductDocument;
     });
 

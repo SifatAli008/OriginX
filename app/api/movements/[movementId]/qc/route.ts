@@ -356,7 +356,7 @@ export async function POST(
       "QC_LOG",
       "movement",
       movementId,
-      userDoc.orgId,
+      userDoc.orgId || undefined,
       uid,
       {
         qcId,
