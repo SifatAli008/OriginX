@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 /**
  * API Route: Movement Quality Control
  * POST /api/movements/:movementId/qc - Record QC check and approval for a movement
@@ -140,17 +141,17 @@ export async function POST(
       }
     }
     
-    if (!userDoc || !userDoc.orgId) {
+    if (!userDoc) {
       return NextResponse.json(
-        { error: "User must be associated with an organization" },
+        { error: "User profile required" },
         { status: 403 }
       );
     }
 
-    // Check if user has warehouse or admin role (required for QC)
-    if (userDoc.role !== "warehouse" && userDoc.role !== "admin") {
+    // Check if user has company/SME or admin role (required for QC)
+    if (userDoc.role !== "company" && userDoc.role !== "sme" && userDoc.role !== "admin") {
       return NextResponse.json(
-        { error: "Access denied - Only warehouse staff and admins can perform QC checks" },
+        { error: "Access denied - Only company/SME users and admins can perform QC checks" },
         { status: 403 }
       );
     }
@@ -292,12 +293,7 @@ export async function POST(
     const movementData = movementDoc.data();
 
     // Check if user has permission (non-admin users can only QC movements in their org)
-    if (userDoc.role !== "admin" && movementData.orgId !== userDoc.orgId) {
-      return NextResponse.json(
-        { error: "Access denied - You can only QC movements in your organization" },
-        { status: 403 }
-      );
-    }
+    // No org-based restriction in current model
 
     // Determine inspector name
     const inspectorName = qcInspector || inspectedBy || userDoc.displayName || userDoc.email;

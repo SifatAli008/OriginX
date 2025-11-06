@@ -8,7 +8,8 @@ import { verifyIdToken } from "@/lib/auth/verify-token";
 import type { UserDocument } from "@/lib/types/user";
 import type { ProductDocument } from "@/lib/types/products";
 
-const VENDOR_ROLES = new Set(["auditor", "warehouse", "sme", "supplier"]);
+// In the simplified RBAC, vendors are SMEs and Companies
+const VENDOR_ROLES = new Set(["sme", "company"]);
 
 export async function GET(request: NextRequest) {
   try {
@@ -141,6 +142,9 @@ export async function GET(request: NextRequest) {
       orgName: v.orgName,
       createdAt: v.createdAt,
       products: vendorProducts.filter(p => p.manufacturerId === v.uid).length,
+      // Placeholder fields until ratings/returns are tracked per vendor
+      rating: 0,
+      returns: 0,
     }));
 
     return NextResponse.json({

@@ -535,35 +535,14 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // If user document doesn't exist, check if this is an admin user
+    // If user document doesn't exist, gracefully return empty result set (avoid client error)
     if (!userDoc) {
-      const isAdminEmail = userEmail.toLowerCase() === "admin@originx.com";
-      
-      if (isAdminEmail && process.env.NODE_ENV !== 'production') {
-        // For admin users in development, create a temporary user doc
-        console.warn(`[Movements GET] Admin user document not found, using temporary admin profile for ${uid}`);
-        userDoc = {
-          uid,
-          email: userEmail,
-          displayName: "Admin",
-          photoURL: null,
-          role: "admin",
-          orgId: null, // Admin doesn't need orgId
-          orgName: undefined,
-          mfaEnabled: false,
-          status: "active",
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-      } else {
-        return NextResponse.json(
-          { 
-            error: "User profile not found. Please complete your registration or contact support.",
-            details: process.env.NODE_ENV === 'development' ? `UID: ${uid}, Email: ${userEmail}` : undefined
-          },
-          { status: 404 }
-        );
-      }
+      const page = parseInt(request.nextUrl.searchParams.get("page") || "1");
+      const pageSize = parseInt(request.nextUrl.searchParams.get("pageSize") || "25");
+      return NextResponse.json(
+        { items: [], total: 0, page, pageSize },
+        { status: 200 }
+      );
     }
 
     // Parse query parameters

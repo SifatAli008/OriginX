@@ -177,8 +177,8 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i]!;
       try {
-        // Validate category
-        const validCategories: ProductCategory[] = [
+        // Validate category - check if it's a default category or a custom category
+        const defaultCategories: ProductCategory[] = [
           "electronics",
           "automotive",
           "pharmaceuticals",
@@ -189,9 +189,22 @@ export async function POST(request: NextRequest) {
           "other",
         ];
         
-        let category = row.category.toLowerCase() as ProductCategory;
-        if (!validCategories.includes(category)) {
-          category = "other";
+        let category = row.category.toLowerCase().replace(/\s+/g, "_") as ProductCategory;
+        
+        // Check if it's a default category
+        if (!defaultCategories.includes(category)) {
+          // Check if it's a custom category (using admin Firestore)
+          const { getAdminFirestore } = await import("@/lib/firebase/admin");
+          const adminDb = getAdminFirestore();
+          const customCategory = await adminDb.collection("categories")
+            .where("name", "==", category)
+            .limit(1)
+            .get();
+          
+          if (customCategory.empty) {
+            // Default to "other" if category doesn't exist
+            category = "other";
+          }
         }
 
         // Prepare product data

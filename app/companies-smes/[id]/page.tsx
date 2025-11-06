@@ -20,9 +20,11 @@ interface VendorDetail {
   orgName?: string;
   createdAt: number;
   updatedAt: number;
+  rating?: number;
+  returns?: number;
 }
 
-export default function VendorDetailPage() {
+export default function CompanySmeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const authState = useAppSelector((s) => s.auth);
@@ -49,12 +51,27 @@ export default function VendorDetailPage() {
         const resp = await fetch(`/api/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
-          throw new Error(err.error || `Failed to load vendor: ${resp.status}`);
+          throw new Error(err.error || `Failed to load record: ${resp.status}`);
         }
         const data = await resp.json();
-        setVendor(data.user);
+        let base: VendorDetail = data.user;
+
+        // Try to enrich with rating/returns from vendors API (best-effort)
+        try {
+          const vendorsResp = await fetch('/api/vendors', { headers: { Authorization: `Bearer ${token}` } });
+          if (vendorsResp.ok) {
+            const vData = await vendorsResp.json();
+            const match = (vData.vendors || []).find((v: any) => v.uid === base.uid);
+            if (match) {
+              base = { ...base, rating: match.rating ?? base.rating, returns: match.returns ?? base.returns };
+            }
+          }
+        } catch (_) {
+          // ignore enrichment errors
+        }
+        setVendor(base);
       } catch (e) {
-        addToast({ variant: "error", title: "Error", description: e instanceof Error ? e.message : "Failed to load vendor" });
+        addToast({ variant: "error", title: "Error", description: e instanceof Error ? e.message : "Failed to load record" });
       } finally {
         setLoading(false);
       }
@@ -76,20 +93,20 @@ export default function VendorDetailPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-400 mb-6">
           <Home className="h-4 w-4" />
           <ChevronRight className="h-3 w-3" />
-          <button className="text-white/80 hover:underline" onClick={() => router.push('/vendors')}>Vendors</button>
+          <button className="text-white/80 hover:underline" onClick={() => router.push('/companies-smes')}>Companies & SMEs</button>
           <ChevronRight className="h-3 w-3" />
           <span className="text-white font-medium">Details</span>
         </nav>
 
         <div className="mb-6">
-          <Button variant="outline" onClick={() => router.push('/vendors')} className="border-gray-700 text-white hover:bg-gray-800">
+          <Button variant="outline" onClick={() => router.push('/companies-smes')} className="border-gray-700 text-white hover:bg-gray-800">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
         </div>
 
         <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
           <CardHeader>
-            <CardTitle className="text-white">Vendor Information</CardTitle>
+            <CardTitle className="text-white">Company / SME Information</CardTitle>
           </CardHeader>
           <CardContent>
             {loading || !vendor ? (
@@ -100,6 +117,8 @@ export default function VendorDetailPage() {
                 <div><span className="text-gray-400">Email:</span> {vendor.email}</div>
                 <div><span className="text-gray-400">Role:</span> {vendor.role.toUpperCase()}</div>
                 <div><span className="text-gray-400">Status:</span> {vendor.status}</div>
+                <div><span className="text-gray-400">Rating:</span> {typeof vendor.rating === 'number' ? vendor.rating.toFixed(1) : '—'}</div>
+                <div><span className="text-gray-400">Returns:</span> {typeof vendor.returns === 'number' ? vendor.returns : 0}</div>
                 <div><span className="text-gray-400">Organization:</span> {vendor.orgName || 'N/A'}</div>
                 <div><span className="text-gray-400">Created:</span> {new Date(vendor.createdAt).toLocaleString()}</div>
                 <div><span className="text-gray-400">Updated:</span> {new Date(vendor.updatedAt).toLocaleString()}</div>

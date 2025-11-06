@@ -30,9 +30,11 @@ interface VendorListItem {
   orgName?: string;
   createdAt: number;
   products: number;
+  rating?: number;
+  returns?: number;
 }
 
-export default function VendorsPage() {
+export default function CompaniesSMEsPage() {
   const router = useRouter();
   const authState = useAppSelector((s) => s.auth);
   const user = authState.user;
@@ -65,7 +67,7 @@ export default function VendorsPage() {
       const resp = await fetch('/api/vendors', { headers: { Authorization: `Bearer ${token}` } });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || `Failed to load vendors: ${resp.status}`);
+        throw new Error(err.error || `Failed to load companies: ${resp.status}`);
       }
       const data = await resp.json();
       setStats({
@@ -76,7 +78,7 @@ export default function VendorsPage() {
       });
       setVendors(data.vendors || []);
     } catch (e) {
-      addToast({ variant: "error", title: "Error", description: e instanceof Error ? e.message : "Failed to load vendors" });
+      addToast({ variant: "error", title: "Error", description: e instanceof Error ? e.message : "Failed to load companies" });
     } finally {
       setLoading(false);
     }
@@ -107,14 +109,14 @@ export default function VendorsPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-400 mb-6">
           <Home className="h-4 w-4" />
           <ChevronRight className="h-3 w-3" />
-          <span className="text-white font-medium">Vendors</span>
+          <span className="text-white font-medium">Companies & SMEs</span>
         </nav>
 
         {/* Header */}
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-2">Vendors</h1>
-            <p className="text-gray-400 text-lg">Auditors, Warehouses, SMEs and Suppliers</p>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-2">Companies & SMEs</h1>
+            <p className="text-gray-400 text-lg">Manage companies and SME partners</p>
           </div>
         </div>
 
@@ -122,7 +124,7 @@ export default function VendorsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-400">Total Vendors</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-400">Total Companies/SMEs</CardTitle>
               <div className="text-gray-400 p-2 rounded-lg bg-gray-800/50"><Building2 className="h-6 w-6" /></div>
             </CardHeader>
             <CardContent>
@@ -164,7 +166,7 @@ export default function VendorsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search vendors..."
+              placeholder="Search companies or SMEs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
@@ -181,24 +183,26 @@ export default function VendorsPage() {
             {loading ? (
               <div className="text-center py-12">
                 <RefreshCw className="h-12 w-12 text-gray-600 mx-auto mb-3 animate-spin" />
-                <p className="text-gray-400">Loading vendors...</p>
+                <p className="text-gray-400">Loading companies...</p>
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-12">
                 <Building2 className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 text-lg mb-2">No vendors found</p>
-                <p className="text-gray-500 text-sm">Try adjusting your filters</p>
+                <p className="text-gray-400 text-lg mb-2">No companies/SMEs found</p>
+                <p className="text-gray-500 text-sm">Try adjusting your search</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-800">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vendor</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Role</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Organization</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Products</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Rating</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Returns</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Details</th>
                     </tr>
                   </thead>
@@ -217,9 +221,11 @@ export default function VendorsPage() {
                         <td className="px-4 py-4"><span className="text-gray-300">{v.orgName || 'N/A'}</span></td>
                         <td className="px-4 py-4"><span className="text-gray-300 capitalize">{v.status}</span></td>
                         <td className="px-4 py-4"><span className="text-gray-300">{v.products}</span></td>
+                        <td className="px-4 py-4"><span className="text-gray-300">{typeof v.rating === 'number' ? v.rating.toFixed(1) : '—'}</span></td>
+                        <td className="px-4 py-4"><span className="text-gray-300">{typeof v.returns === 'number' ? v.returns : 0}</span></td>
                         <td className="px-4 py-4 text-right">
                           <Button size="sm" className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
-                            onClick={() => router.push(`/vendors/${v.uid}`)}>
+                            onClick={() => router.push(`/companies-smes/${v.uid}`)}>
                             View <ArrowRight className="h-4 w-4 ml-2" />
                           </Button>
                         </td>

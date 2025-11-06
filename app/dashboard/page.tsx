@@ -289,7 +289,6 @@ export default function DashboardPage() {
     if (user) {
       console.log("Dashboard - User state:", {
         status: user.status,
-        orgId: user.orgId,
         role: user.role,
         email: user.email
       });
@@ -340,25 +339,9 @@ export default function DashboardPage() {
           return;
         }
       
-      // CRITICAL: Non-admin users MUST have an orgId to access dashboard
-      // If they don't have orgId, redirect to register-company regardless of status
-      if (!user.orgId) {
-        console.log("Dashboard - Non-admin user without orgId - redirecting to register-company");
-        router.push("/register-company");
-        return;
-      }
-      
-      // Check if user needs to register company (only for non-admin users)
-      // Status should be "pending" and no orgId
-      if (user.status === "pending" && !user.orgId) {
-        console.log("Dashboard - Redirecting to register-company");
-        router.push("/register-company");
-        return;
-      }
-      
-      // Final check: Non-admin users must have orgId and active status to access dashboard
-      if (!user.orgId || user.status !== "active") {
-        console.log("Dashboard - User setup incomplete - redirecting to register-company");
+      // Check if user needs to complete profile (non-admins must be active)
+      if (user.status !== "active") {
+        console.log("Dashboard - User not active - redirecting to register-company");
         router.push("/register-company");
         return;
       }
@@ -371,7 +354,7 @@ export default function DashboardPage() {
             const { getUserDocument } = await import("@/lib/firebase/firestore");
             const userDoc = await getUserDocument(user.uid);
             if (userDoc && !userDoc.roleSelectedAt) {
-              // User has orgId and is active, but hasn't explicitly selected a role yet
+              // User is active but hasn't explicitly selected a role yet
               console.log("Dashboard - User needs to select role, redirecting to select-role");
               router.push("/select-role");
               return;
@@ -431,12 +414,9 @@ export default function DashboardPage() {
       case "admin":
         return <AdminDashboard permissions={permissions} stats={dashboardData.stats} />;
       case "sme":
-      case "supplier":
         return <SMEDashboard permissions={permissions} />;
-      case "warehouse":
-        return <WarehouseDashboard permissions={permissions} />;
-      case "auditor":
-        return <AuditorDashboard permissions={permissions} />;
+      case "company":
+        return <CompanyDashboard />;
       default:
         return <DefaultDashboard />;
     }
@@ -538,31 +518,35 @@ export default function DashboardPage() {
                 <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportData}
-                className="border-gray-700 text-white hover:bg-gray-800"
-                title="Export Data (Ctrl+E)"
-              >
-                <FileDown className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilterModal(!showFilterModal)}
-                className="border-gray-700 text-white hover:bg-gray-800"
-                title="Filter Data (Ctrl+F)"
-              >
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
+              {user.role === "admin" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportData}
+                    className="border-gray-700 text-white hover:bg-gray-800"
+                    title="Export Data (Ctrl+E)"
+                  >
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilterModal(!showFilterModal)}
+                    className="border-gray-700 text-white hover:bg-gray-800"
+                    title="Filter Data (Ctrl+F)"
+                  >
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filter
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
           {/* Filter Modal */}
-          {showFilterModal && (
+          {showFilterModal && user.role === "admin" && (
             <div className="mb-6 p-4 bg-gray-900/80 border border-gray-800 rounded-lg backdrop-blur-sm animate-in fade-in slide-in-from-top-4 duration-300">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Filter Dashboard Data</h3>
@@ -773,399 +757,206 @@ function AdminDashboard({
         </div>
       </section>
 
-      {/* Reports Section */}
-      <section>
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-1">Analytics Reports</h2>
-            <p className="text-gray-400 text-sm">Comprehensive system reports and insights</p>
-          </div>
-          <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Monthly Performance Report */}
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-gray-700 transition-all cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <FileCheck className="h-5 w-5 text-blue-400" />
-                </div>
-                <span className="text-xs text-gray-500">PDF</span>
-              </div>
-              <CardTitle className="text-white mt-4">Monthly Performance</CardTitle>
-              <CardDescription className="text-gray-400">Revenue, users & transactions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-xs text-gray-500">Last updated: Today</span>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </div>
-            </CardContent>
-          </Card>
+      {/* Simplified: Reports section removed */}
 
-          {/* System Health Report */}
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-gray-700 transition-all cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <Activity className="h-5 w-5 text-green-400" />
-                </div>
-                <span className="text-xs text-gray-500">PDF</span>
-              </div>
-              <CardTitle className="text-white mt-4">System Health</CardTitle>
-              <CardDescription className="text-gray-400">Uptime, API status & performance</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-xs text-gray-500">Last updated: Today</span>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </div>
-            </CardContent>
-          </Card>
+      {/* Simplified: Notifications and System Status removed */}
 
-          {/* User Activity Report */}
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-gray-700 transition-all cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <Users className="h-5 w-5 text-purple-400" />
-                </div>
-                <span className="text-xs text-gray-500">PDF</span>
-              </div>
-              <CardTitle className="text-white mt-4">User Activity</CardTitle>
-              <CardDescription className="text-gray-400">Logins, sessions & engagement</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-xs text-gray-500">Last updated: Today</span>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+      {/* Simplified: Recent Activity removed */}
 
-      {/* Notifications and System Status */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <NotificationPanel />
-        <SystemHealthPanel />
-        <QuickStatsPanel />
-      </section>
-
-      {/* Recent Activity Section */}
-      <section>
-        <RecentActivity />
-      </section>
-
-      {/* Data Records Table */}
-      <section>
-        <DataTable
-          title="Recent Transactions"
-          columns={["ID", "User", "Type", "Amount", "Status", "Date"]}
-          data={[]}
-          loading={false}
-        />
-      </section>
+      {/* Simplified: Table removed */}
     </div>
   );
 }
 
-// SME/Supplier Dashboard - Focus on product management and business operations
+// SME/Supplier Dashboard - Simplified
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SMEDashboard({ permissions: _permissions }: { permissions: ReturnType<typeof getRolePermissions> }) {
-  const router = useRouter();
-  
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    activeProducts: 0,
+    productsWithQR: 0,
+    recentProducts: 0,
+    totalVerifications: 0,
+    recentVerifications: 0,
+    totalBatches: 0,
+    uniqueCategories: 0,
+    verificationBreakdown: {
+      genuine: 0,
+      suspicious: 0,
+      fake: 0,
+    },
+  });
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Fetch SME stats
+  const fetchStats = useCallback(async () => {
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      const response = await fetch('/api/sme/stats', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch stats");
+      }
+
+      const data = await response.json();
+      setStats(data.stats || {
+        totalProducts: 0,
+        activeProducts: 0,
+        productsWithQR: 0,
+        recentProducts: 0,
+        totalVerifications: 0,
+        recentVerifications: 0,
+        totalBatches: 0,
+        uniqueCategories: 0,
+        verificationBreakdown: {
+          genuine: 0,
+          suspicious: 0,
+          fake: 0,
+        },
+      });
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error("[SME Dashboard] Error fetching stats:", error);
+      setStats({
+        totalProducts: 0,
+        activeProducts: 0,
+        productsWithQR: 0,
+        recentProducts: 0,
+        totalVerifications: 0,
+        recentVerifications: 0,
+        totalBatches: 0,
+        uniqueCategories: 0,
+        verificationBreakdown: {
+          genuine: 0,
+          suspicious: 0,
+          fake: 0,
+        },
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
       <section>
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-white mb-2">Business Dashboard</h2>
-          <p className="text-gray-400 text-sm">Manage your products, track shipments, and monitor business performance</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-2">Business Dashboard</h2>
+            <p className="text-gray-400 text-sm">Manage your products and business operations</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchStats()}
+            disabled={loading}
+            className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
       </section>
 
-      {/* Primary Business Metrics */}
+      {/* Key Metrics - Row 1 */}
       <section>
         <div className="mb-6">
           <h3 className="text-xl font-semibold text-white mb-1">Key Performance Indicators</h3>
-          <p className="text-gray-400 text-sm">Your core business metrics at a glance</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <StatCard 
             title="Total Products" 
-            value="0" 
-            change="0%" 
+            value={loading ? "..." : stats.totalProducts.toLocaleString()} 
+            change={`${stats.activeProducts} active`} 
             trend="up" 
             icon={<Package className="h-6 w-6" />}
           />
           <StatCard 
-            title="Active Shipments" 
-            value="0" 
-            change="0" 
-            trend="up" 
-            icon={<Truck className="h-6 w-6" />}
-          />
-          <StatCard 
-            title="Verifications" 
-            value="0" 
-            change="0%" 
-            trend="up" 
-            icon={<Shield className="h-6 w-6" />}
-          />
-          <StatCard 
-            title="Revenue (MTD)" 
-            value="$0" 
-            change="0%" 
-            trend="up" 
-            icon={<DollarSign className="h-6 w-6" />}
-          />
-        </div>
-      </section>
-
-      {/* Product & Supply Chain Metrics */}
-      <section>
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-white mb-1">Product & Supply Chain</h3>
-          <p className="text-gray-400 text-sm">Track your product catalog and supply chain operations</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            title="Products Pending Registration" 
-            value="0" 
-            change="0 awaiting" 
-            trend="down" 
-            icon={<Clock className="h-6 w-6" />}
-          />
-          <StatCard 
-            title="Active Batches" 
-            value="0" 
-            change="0 batches" 
-            trend="up" 
-            icon={<Boxes className="h-6 w-6" />}
-          />
-          <StatCard 
-            title="Verification Success Rate" 
-            value="0%" 
-            change="0% verified" 
+            title="Active Products" 
+            value={loading ? "..." : stats.activeProducts.toLocaleString()} 
+            change={`${stats.productsWithQR} with QR`} 
             trend="up" 
             icon={<CheckCircle className="h-6 w-6" />}
           />
           <StatCard 
-            title="Avg Time to Market" 
-            value="0 Days" 
-            change="0 days" 
-            trend="down" 
-            icon={<Zap className="h-6 w-6" />}
+            title="Total Verifications" 
+            value={loading ? "..." : stats.totalVerifications.toLocaleString()} 
+            change={`${stats.recentVerifications} in last 30d`} 
+            trend="up" 
+            icon={<ShieldCheck className="h-6 w-6" />}
+          />
+          <StatCard 
+            title="Recent Products" 
+            value={loading ? "..." : stats.recentProducts.toLocaleString()} 
+            change="Added in last 7 days" 
+            trend="up" 
+            icon={<Clock className="h-6 w-6" />}
           />
         </div>
-      </section>
 
-      {/* Quick Actions */}
-      <section>
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-white mb-1">Quick Actions</h3>
-          <p className="text-gray-400 text-sm">Common tasks and operations</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/products/new")}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Boxes className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-white">Register New Product</CardTitle>
-                  <CardDescription>Add a new product to your catalog</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/products/batch-import")}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <FileDown className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-white">Batch Import</CardTitle>
-                  <CardDescription>Upload CSV/XLS to register multiple products</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/verify")}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <QrCode className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-white">Verify Product</CardTitle>
-                  <CardDescription>Scan QR code to verify authenticity</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/movements")}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Truck className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-white">Track Shipments</CardTitle>
-                  <CardDescription>Monitor your product movements</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/verifications")}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Shield className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-white">View Verifications</CardTitle>
-                  <CardDescription>Check product authenticity status</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/blockchain")}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Activity className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-white">Blockchain Ledger</CardTitle>
-                  <CardDescription>View immutable transaction records</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-primary transition-all cursor-pointer" onClick={() => router.push("/analytics")}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-white">Analytics</CardTitle>
-                  <CardDescription>View KPIs and trend analysis</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
-      </section>
-
-      {/* Business Performance Charts */}
-      <section>
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-white mb-1">Business Analytics</h3>
-          <p className="text-gray-400 text-sm">Sales trends and product performance insights</p>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <DashboardChart
-            data={generateChartData(7)}
-            type="area"
-            title="Revenue & Orders"
-            description="Last 7 days"
-            height={250}
-            dataKeys={[
-              { key: "revenue", color: "#10b981", name: "Revenue", isArea: true },
-              { key: "transactions", color: "#8b5cf6", name: "Orders", isArea: false },
-            ]}
+        {/* Key Metrics - Row 2 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <StatCard 
+            title="Products with QR" 
+            value={loading ? "..." : stats.productsWithQR.toLocaleString()} 
+            change={`${stats.totalProducts - stats.productsWithQR} without QR`} 
+            trend="up" 
+            icon={<QrCode className="h-6 w-6" />}
           />
-
-          <DashboardChart
-            data={generateChartData(7)}
-            type="line"
-            title="Product Performance"
-            description="Active products & shipments"
-            height={250}
-            dataKeys={[
-              { key: "users", color: "#3b82f6", name: "Products" },
-              { key: "transactions", color: "#f59e0b", name: "Shipments" },
-            ]}
+          <StatCard 
+            title="Total Batches" 
+            value={loading ? "..." : stats.totalBatches.toLocaleString()} 
+            change="Product batches" 
+            trend="up" 
+            icon={<Boxes className="h-6 w-6" />}
+          />
+          <StatCard 
+            title="Categories" 
+            value={loading ? "..." : stats.uniqueCategories.toLocaleString()} 
+            change="Unique categories" 
+            trend="up" 
+            icon={<FileText className="h-6 w-6" />}
+          />
+          <StatCard 
+            title="Genuine (30d)" 
+            value={loading ? "..." : stats.verificationBreakdown.genuine.toLocaleString()} 
+            change={`${stats.verificationBreakdown.suspicious} suspicious • ${stats.verificationBreakdown.fake} fake`} 
+            trend="up" 
+            icon={<Shield className="h-6 w-6" />}
           />
         </div>
-      </section>
 
-      {/* Business Reports Section */}
-      <section>
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-white mb-1">Business Reports</h3>
-            <p className="text-gray-400 text-sm">Generate insights and performance reports</p>
-          </div>
-          <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-gray-700 transition-all cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <FileCheck className="h-5 w-5 text-blue-400" />
-                </div>
-                <span className="text-xs text-gray-500">PDF</span>
-              </div>
-              <CardTitle className="text-white mt-4">Sales Report</CardTitle>
-              <CardDescription className="text-gray-400">Monthly revenue & orders</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-xs text-gray-500">Last updated: Today</span>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800 backdrop-blur-sm hover:border-gray-700 transition-all cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <Package className="h-5 w-5 text-green-400" />
-                </div>
-                <span className="text-xs text-gray-500">PDF</span>
-              </div>
-              <CardTitle className="text-white mt-4">Product Report</CardTitle>
-              <CardDescription className="text-gray-400">Inventory & shipments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-xs text-gray-500">Last updated: Today</span>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Notifications */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <NotificationPanel />
-        <QuickStatsPanel />
-      </section>
-
-      {/* Recent Activity Section */}
-      <section>
-        <RecentActivity />
+        {lastUpdated && (
+          <p className="text-xs text-gray-500 mt-2">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </p>
+        )}
       </section>
     </div>
   );
@@ -1475,6 +1266,384 @@ function DefaultDashboard() {
   return (
     <div className="text-center py-12">
       <p className="text-gray-400">Dashboard coming soon...</p>
+    </div>
+  );
+}
+
+// Company Dashboard - Focused on requested quick actions
+function CompanyDashboard() {
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    activeProducts: 0,
+    inactiveProducts: 0,
+    outOfStockProducts: 0,
+    pendingProducts: 0,
+    totalBatches: 0,
+    recentBatches: 0,
+    recentVerifications: 0,
+    totalVerifications: 0,
+    recentProducts: 0,
+    productsWithQR: 0,
+    productsInBatches: 0,
+    productsWithoutImages: 0,
+    uniqueCategories: 0,
+    verificationBreakdown: {
+      genuine: 0,
+      suspicious: 0,
+      fake: 0,
+    },
+  });
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Fetch company stats
+  const fetchStats = useCallback(async () => {
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        throw new Error("Failed to get authentication token");
+      }
+
+      const response = await fetch('/api/company/stats', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch stats");
+      }
+
+      const data = await response.json();
+      setStats(data.stats || {
+        totalProducts: 0,
+        activeProducts: 0,
+        inactiveProducts: 0,
+        outOfStockProducts: 0,
+        pendingProducts: 0,
+        totalBatches: 0,
+        recentBatches: 0,
+        recentVerifications: 0,
+        totalVerifications: 0,
+        recentProducts: 0,
+        productsWithQR: 0,
+        productsInBatches: 0,
+        productsWithoutImages: 0,
+        uniqueCategories: 0,
+        verificationBreakdown: {
+          genuine: 0,
+          suspicious: 0,
+          fake: 0,
+        },
+      });
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error("[Company Dashboard] Error fetching stats:", error);
+      // Set default values on error
+      setStats({
+        totalProducts: 0,
+        activeProducts: 0,
+        inactiveProducts: 0,
+        outOfStockProducts: 0,
+        pendingProducts: 0,
+        totalBatches: 0,
+        recentBatches: 0,
+        recentVerifications: 0,
+        totalVerifications: 0,
+        recentProducts: 0,
+        productsWithQR: 0,
+        productsInBatches: 0,
+        productsWithoutImages: 0,
+        uniqueCategories: 0,
+        verificationBreakdown: {
+          genuine: 0,
+          suspicious: 0,
+          fake: 0,
+        },
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
+
+  return (
+    <div className="space-y-8">
+      {/* Stats Info Cards */}
+      <section>
+        <div className="mb-6 flex items-center justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchStats()}
+            disabled={loading}
+            className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+        
+        {/* Stats Grid - Row 1 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Total Products Card */}
+          <Card className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-blue-500/20 rounded-lg">
+                  <Package className="h-5 w-5 text-blue-400" />
+                </div>
+                {loading ? (
+                  <div className="h-6 w-12 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  <TrendingUp className="h-4 w-4 text-green-400" />
+                )}
+              </div>
+              <CardTitle className="text-white mt-4 text-2xl font-bold">
+                {loading ? "..." : stats.totalProducts.toLocaleString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Total Products
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="pt-3 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  {stats.activeProducts} active • {stats.productsWithQR} with QR
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Products Card */}
+          <Card className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-green-500/20 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                </div>
+                {loading ? (
+                  <div className="h-6 w-12 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  <Activity className="h-4 w-4 text-green-400" />
+                )}
+              </div>
+              <CardTitle className="text-white mt-4 text-2xl font-bold">
+                {loading ? "..." : stats.activeProducts.toLocaleString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Active Products
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="pt-3 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  {stats.inactiveProducts} inactive • {stats.outOfStockProducts} out of stock
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Batches Card */}
+          <Card className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-purple-500/20 rounded-lg">
+                  <Boxes className="h-5 w-5 text-purple-400" />
+                </div>
+                {loading ? (
+                  <div className="h-6 w-12 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  <Activity className="h-4 w-4 text-purple-400" />
+                )}
+              </div>
+              <CardTitle className="text-white mt-4 text-2xl font-bold">
+                {loading ? "..." : stats.totalBatches.toLocaleString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Total Batches
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="pt-3 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  {stats.recentBatches} new (7d) • {stats.productsInBatches} products in batches
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Verifications Card */}
+          <Card className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-indigo-500/20 rounded-lg">
+                  <ShieldCheck className="h-5 w-5 text-indigo-400" />
+                </div>
+                {loading ? (
+                  <div className="h-6 w-12 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 text-indigo-400" />
+                )}
+              </div>
+              <CardTitle className="text-white mt-4 text-2xl font-bold">
+                {loading ? "..." : stats.totalVerifications.toLocaleString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Total Verifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="pt-3 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  {stats.recentVerifications} in last 30 days
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Stats Grid - Row 2 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Recent Products Card */}
+          <Card className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-orange-500/20 rounded-lg">
+                  <Clock className="h-5 w-5 text-orange-400" />
+                </div>
+                {loading ? (
+                  <div className="h-6 w-12 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  <TrendingUp className="h-4 w-4 text-orange-400" />
+                )}
+              </div>
+              <CardTitle className="text-white mt-4 text-2xl font-bold">
+                {loading ? "..." : stats.recentProducts.toLocaleString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                New Products (7d)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="pt-3 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  Added in last 7 days
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Products with QR Card */}
+          <Card className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-cyan-500/20 rounded-lg">
+                  <QrCode className="h-5 w-5 text-cyan-400" />
+                </div>
+                {loading ? (
+                  <div className="h-6 w-12 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 text-cyan-400" />
+                )}
+              </div>
+              <CardTitle className="text-white mt-4 text-2xl font-bold">
+                {loading ? "..." : stats.productsWithQR.toLocaleString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Products with QR
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="pt-3 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  {stats.productsWithoutImages} without images
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Categories Card */}
+          <Card className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-pink-500/20 rounded-lg">
+                  <FileText className="h-5 w-5 text-pink-400" />
+                </div>
+                {loading ? (
+                  <div className="h-6 w-12 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  <Database className="h-4 w-4 text-pink-400" />
+                )}
+              </div>
+              <CardTitle className="text-white mt-4 text-2xl font-bold">
+                {loading ? "..." : stats.uniqueCategories.toLocaleString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Product Categories
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="pt-3 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  Unique categories in use
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Verification Breakdown Card */}
+          <Card className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-900/90 border-gray-800 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-emerald-500/20 rounded-lg">
+                  <Shield className="h-5 w-5 text-emerald-400" />
+                </div>
+                {loading ? (
+                  <div className="h-6 w-12 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  <Activity className="h-4 w-4 text-emerald-400" />
+                )}
+              </div>
+              <CardTitle className="text-white mt-4 text-2xl font-bold">
+                {loading ? "..." : stats.verificationBreakdown.genuine.toLocaleString()}
+              </CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Genuine (30d)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="pt-3 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  {stats.verificationBreakdown.suspicious} suspicious • {stats.verificationBreakdown.fake} fake
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {lastUpdated && (
+          <p className="text-xs text-gray-500 mt-2">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </p>
+        )}
+      </section>
+
     </div>
   );
 }
@@ -2157,50 +2326,38 @@ function Sidebar({
       admin: [
         { label: "Registration Requests", icon: <FileText className="h-5 w-5" />, href: "/admin/registration-requests" },
         { label: "User Management", icon: <Users className="h-5 w-5" />, href: "/admin/users" },
-        { label: "Vendors", icon: <Building2 className="h-5 w-5" />, href: "/vendors" },
-        { label: "Products", icon: <Boxes className="h-5 w-5" />, href: "/products" },
-        { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
-        { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
-        { label: "QC Logs", icon: <ClipboardCheck className="h-5 w-5" />, href: "/qc-logs" },
-        { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
-        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
-        { label: "Reports", icon: <FileCheck className="h-5 w-5" />, href: "/reports" },
+        { label: "Companies & SMEs", icon: <Building2 className="h-5 w-5" />, href: "/companies-smes" },
       ],
       sme: [
         { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
-        { label: "New Product", icon: <Boxes className="h-5 w-5" />, href: "/products/new" },
-        { label: "Batch Import", icon: <FileDown className="h-5 w-5" />, href: "/products/batch-import" },
-        { label: "Verify Product", icon: <QrCode className="h-5 w-5" />, href: "/verify" },
-        { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
-        { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
-        { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
+        { label: "Seller Assign", icon: <Users className="h-5 w-5" />, href: "/sme/seller-assign" },
         { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
       ],
-      supplier: [
-        { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
-        { label: "New Product", icon: <Boxes className="h-5 w-5" />, href: "/products/new" },
-        { label: "Batch Import", icon: <FileDown className="h-5 w-5" />, href: "/products/batch-import" },
-        { label: "Verify Product", icon: <QrCode className="h-5 w-5" />, href: "/verify" },
-        { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
-        { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
-        { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
-        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
-      ],
-      warehouse: [
-        { label: "Products", icon: <Boxes className="h-5 w-5" />, href: "/products" },
-        { label: "Inbound", icon: <Truck className="h-5 w-5" />, href: "/movements?type=inbound" },
-        { label: "Outbound", icon: <Package className="h-5 w-5" />, href: "/movements?type=outbound" },
-        { label: "All Movements", icon: <Activity className="h-5 w-5" />, href: "/movements" },
-        { label: "QC Logs", icon: <ClipboardCheck className="h-5 w-5" />, href: "/qc-logs" },
-      ],
-      auditor: [
-        { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
-        { label: "Reports", icon: <FileCheck className="h-5 w-5" />, href: "/reports" },
-        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
-        { label: "Products", icon: <Search className="h-5 w-5" />, href: "/products" },
-        { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
+      company: [
+        { label: "Product + QR", icon: <QrCode className="h-5 w-5" />, href: "/products" },
+        { label: "SME Assign", icon: <Users className="h-5 w-5" />, href: "/company/sme-assign" },
+        { label: "Product History", icon: <FileText className="h-5 w-5" />, href: "/products/history" },
+        { label: "Profile", icon: <Building2 className="h-5 w-5" />, href: "/profile" },
       ],
     };
+
+    // For company users, only show Dashboard, role-specific items, and Settings (no Analytics)
+    if (userRole === "company") {
+      return [
+        { label: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/dashboard" },
+        ...(roleSpecificItems[userRole] || []),
+        { label: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
+      ];
+    }
+
+    // For SME users, only show Dashboard, role-specific items, and Settings
+    if (userRole === "sme") {
+      return [
+        { label: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/dashboard" },
+        ...(roleSpecificItems[userRole] || []),
+        { label: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
+      ];
+    }
 
     return [...(roleSpecificItems[userRole] || []), ...commonItems];
   };

@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
 import { decryptQRPayload, type QRPayload } from "@/lib/utils/qr/generator";
 import { getProduct } from "@/lib/firebase/products";
-import { getUserDocument } from "@/lib/firebase/firestore";
+import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
 import { createTransaction } from "@/lib/utils/transactions";
 import { uploadImageToCloudinarySigned } from "@/lib/utils/cloudinary";
 import { verifyImage } from "@/lib/services/ml/image-verification";
@@ -289,9 +289,10 @@ export async function POST(request: NextRequest) {
       );
     }
     const uid = decodedToken.uid;
+    const userEmail = decodedToken.email || undefined;
 
-    // Get user document
-    const userDoc = await getUserDocument(uid);
+    // Get user document (server-side)
+    const userDoc = await getUserDocumentServer(uid, userEmail);
     if (!userDoc) {
       return NextResponse.json(
         { error: "User not found" },

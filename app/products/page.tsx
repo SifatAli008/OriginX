@@ -8,6 +8,13 @@ import { getFirebaseAuth } from "@/lib/firebase/client";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Package,
@@ -30,6 +37,8 @@ import {
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
   Upload,
+  Loader2,
+  Layers,
 } from "lucide-react";
 
 interface Product {
@@ -64,6 +73,19 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showDeleteCategoryModal, setShowDeleteCategoryModal] = useState(false);
+  const [showAddToBatchModal, setShowAddToBatchModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
+  const [selectedCategoryToDelete, setSelectedCategoryToDelete] = useState<string>("");
+  const [batches, setBatches] = useState<Array<{ batchId: string; name: string }>>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("");
+  const [newBatchName, setNewBatchName] = useState("");
+  const [addingToBatch, setAddingToBatch] = useState(false);
   const itemsPerPage = 10;
 
   const fetchProducts = useCallback(async () => {
@@ -139,6 +161,304 @@ export default function ProductsPage() {
     }
   }, [currentPage, categoryFilter, statusFilter, searchTerm, itemsPerPage, addToast]);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) return;
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/categories', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.categories || []);
+        setCustomCategories(data.customCategories || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  }, []);
+
+  const fetchBatches = useCallback(async () => {
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) return;
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/batches', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setBatches(data.batches || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch batches:", error);
+    }
+  }, []);
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    // Normalize category name to check for duplicates
+    const normalizedName = newCategoryName.trim().toLowerCase().replace(/\s+/g, "_");
+    
+    // Client-side validation: check if category already exists
+    if (categories.some(cat => cat.toLowerCase().replace(/\s+/g, "_") === normalizedName)) {
+      addToast({
+        variant: "error",
+        title: "Category already exists",
+        description: "This category is already in the list. Please choose a different name.",
+      });
+      return;
+    }
+
+    setAddingCategory(true);
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: newCategoryName }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to add category";
+        
+        // Only log unexpected errors to console (5xx), not validation errors (4xx)
+        if (response.status >= 500) {
+          console.error("Failed to add category:", errorMessage);
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const responseData = await response.json().catch(() => ({}));
+      const addedCategoryName = responseData.category || newCategoryName.trim().toLowerCase().replace(/\s+/g, "_");
+      
+      // Optimistically add the category to the list
+      setCategories(prev => {
+        const updated = [...prev, addedCategoryName];
+        return [...new Set(updated)].sort();
+      });
+
+      // Fetch categories to ensure we have the latest from the server
+      await fetchCategories();
+      
+      addToast({
+        variant: "success",
+        title: "Success",
+        description: "Category added successfully",
+      });
+
+      setNewCategoryName("");
+      setShowAddCategoryModal(false);
+    } catch (error) {
+      // Only log unexpected errors (not validation errors)
+      if (error instanceof Error && !error.message.includes("already exists") && !error.message.includes("Category")) {
+        console.error("Failed to add category:", error);
+      }
+      addToast({
+        variant: "error",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add category",
+      });
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryName?: string) => {
+    const categoryToDelete = categoryName || selectedCategoryToDelete;
+    if (!categoryToDelete) return;
+
+    // Prevent deletion of default categories (client-side check)
+    const DEFAULT_CATEGORIES = [
+      "electronics",
+      "automotive",
+      "pharmaceuticals",
+      "food",
+      "textiles",
+      "machinery",
+      "chemicals",
+      "other",
+    ];
+    
+    const normalizedName = categoryToDelete.toLowerCase().replace(/\s+/g, "_");
+    if (DEFAULT_CATEGORIES.includes(normalizedName)) {
+      addToast({
+        variant: "error",
+        title: "Cannot delete",
+        description: "Default categories cannot be deleted",
+      });
+      return;
+    }
+
+    // Confirm deletion
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the category "${categoryToDelete.replace(/_/g, ' ')}"?`
+    );
+    
+    if (!confirmed) return;
+
+    setDeletingCategory(categoryToDelete);
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      // Use normalized name for the API call
+      const response = await fetch(`/api/categories?name=${encodeURIComponent(normalizedName)}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to delete category";
+        
+        // Only log unexpected errors to console (5xx), not validation errors (4xx)
+        if (response.status >= 500) {
+          console.error("Failed to delete category:", errorMessage);
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      // Optimistically remove the category from the list (normalize both for comparison)
+      setCategories(prev => prev.filter(cat => {
+        const normalizedCat = cat.toLowerCase().replace(/\s+/g, "_");
+        return normalizedCat !== normalizedName;
+      }));
+      setCustomCategories(prev => prev.filter(cat => {
+        const normalizedCat = cat.toLowerCase().replace(/\s+/g, "_");
+        return normalizedCat !== normalizedName;
+      }));
+
+      // Fetch categories to ensure we have the latest from the server
+      await fetchCategories();
+      
+      addToast({
+        variant: "success",
+        title: "Success",
+        description: "Category deleted successfully",
+      });
+
+      // If the deleted category was selected, reset to "all"
+      if (categoryFilter === normalizedName) {
+        setCategoryFilter("all");
+      }
+    } catch (error) {
+      // Only log unexpected errors (not validation errors)
+      if (error instanceof Error && !error.message.includes("Cannot delete") && !error.message.includes("not found")) {
+        console.error("Failed to delete category:", error);
+      }
+      addToast({
+        variant: "error",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete category",
+      });
+    } finally {
+      setDeletingCategory(null);
+    }
+  };
+
+  const handleAddToBatch = async () => {
+    if (!selectedProducts.length) {
+      addToast({
+        variant: "error",
+        title: "No products selected",
+        description: "Please select products to add to batch",
+      });
+      return;
+    }
+
+    if (!selectedBatchId && !newBatchName.trim()) {
+      addToast({
+        variant: "error",
+        title: "Batch required",
+        description: "Please select an existing batch or enter a new batch name",
+      });
+      return;
+    }
+
+    setAddingToBatch(true);
+    try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) {
+        throw new Error("Not authenticated");
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/batches/add-products', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productIds: selectedProducts,
+          batchId: selectedBatchId || undefined,
+          batchName: newBatchName.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || "Failed to add products to batch";
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      
+      addToast({
+        variant: "success",
+        title: "Success",
+        description: `Added ${selectedProducts.length} product(s) to batch successfully`,
+      });
+
+      setSelectedProducts([]);
+      setShowAddToBatchModal(false);
+      setSelectedBatchId("");
+      setNewBatchName("");
+      
+      // Refresh products and batches
+      await fetchProducts();
+      await fetchBatches();
+    } catch (error) {
+      console.error("Failed to add products to batch:", error);
+      addToast({
+        variant: "error",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add products to batch",
+      });
+    } finally {
+      setAddingToBatch(false);
+    }
+  };
+
   useEffect(() => {
     if (authState.status === "unauthenticated") {
       router.push("/login");
@@ -146,9 +466,10 @@ export default function ProductsPage() {
     }
 
     if (authState.status === "authenticated") {
-    fetchProducts();
+      fetchCategories();
+      fetchProducts();
     }
-  }, [authState.status, router, fetchProducts]);
+  }, [authState.status, router, fetchProducts, fetchCategories]);
 
   const handleSort = (field: "name" | "price" | "quantity") => {
     if (sortBy === field) {
@@ -292,7 +613,7 @@ export default function ProductsPage() {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            {user?.role === "warehouse" && (
+            {user?.role === "company" && (
               <>
                 <Link href="/products/batch-import">
                   <Button
@@ -303,6 +624,41 @@ export default function ProductsPage() {
                     Batch Import
                   </Button>
                 </Link>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddCategoryModal(true)}
+                  className="border-gray-800 text-white hover:bg-gray-800/50 backdrop-blur-sm transition-all"
+                >
+                  <Tag className="h-4 w-4 mr-2" />
+                  Add Category
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteCategoryModal(true)}
+                  className="border-gray-800 text-white hover:bg-red-900/20 hover:border-red-800 backdrop-blur-sm transition-all"
+                  disabled={customCategories.length === 0}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Category
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (selectedProducts.length === 0) {
+                      addToast({
+                        variant: "info",
+                        title: "Select products",
+                        description: "Please select products from the list to add them to a batch",
+                      });
+                    } else {
+                      setShowAddToBatchModal(true);
+                    }
+                  }}
+                  className="border-gray-800 text-white hover:bg-gray-800/50 backdrop-blur-sm transition-all"
+                >
+                  <Layers className="h-4 w-4 mr-2" />
+                  Add to Batch
+                </Button>
                 <Link href="/products/new">
                   <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/20 transition-all duration-200">
                     <Plus className="h-4 w-4 mr-2" />
@@ -418,8 +774,17 @@ export default function ProductsPage() {
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete
               </Button>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAddToBatchModal(true)}
+                className="border-blue-600 text-blue-400 hover:bg-blue-500/10"
+              >
+                <Layers className="h-4 w-4 mr-1" />
+                Add to Batch
+              </Button>
             </div>
+          </div>
         )}
 
         {/* Filters */}
@@ -447,34 +812,48 @@ export default function ProductsPage() {
             </div>
           
           <div className="flex gap-2">
-            <select
-              value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"
-            >
-              <option value="all">All Categories</option>
-              <option value="electronics">Electronics</option>
-              <option value="clothing">Clothing</option>
-              <option value="food">Food & Beverage</option>
-              <option value="other">Other</option>
-            </select>
+            <div className="relative">
+              <Select
+                value={categoryFilter}
+                onValueChange={(v) => {
+                  setCategoryFilter(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="min-w-48 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 text-white">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-gray-800 text-white">
+                  <SelectItem value="all"><div className="flex items-center gap-2"><span className="text-gray-300">All Categories</span></div></SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-blue-400" />
+                        <span className="capitalize">{cat.replace(/_/g, ' ')}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <select
+            <Select
               value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
+              onValueChange={(v) => {
+                setStatusFilter(v);
                 setCurrentPage(1);
               }}
-              className="px-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="out_of_stock">Out of Stock</option>
-            </select>
+              <SelectTrigger className="min-w-40 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 text-white">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-800 text-white">
+                <SelectItem value="all"><div className="flex items-center gap-2"><span className="text-gray-300">All Status</span></div></SelectItem>
+                <SelectItem value="active"><div className="flex items-center gap-2"><Check className="h-4 w-4 text-green-400" /><span>Active</span></div></SelectItem>
+                <SelectItem value="inactive"><div className="flex items-center gap-2"><X className="h-4 w-4 text-gray-400" /><span>Inactive</span></div></SelectItem>
+                <SelectItem value="out_of_stock"><div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-yellow-400" /><span>Out of Stock</span></div></SelectItem>
+              </SelectContent>
+            </Select>
             
             <Button
               variant="outline"
@@ -629,18 +1008,21 @@ export default function ProductsPage() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Link href={`/products/edit/${product.id}`}>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-gray-700 text-white hover:bg-gray-800"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </Link>
+                              {user?.role === "company" && (
+                                <Link href={`/products/edit/${product.id}`}>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-gray-700 text-white hover:bg-gray-800"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"
+                                onClick={() => router.push(`/products/${product.id}`)}
                                 className="border-gray-700 text-blue-400 hover:bg-blue-500/10"
                               >
                                 <QrCode className="h-4 w-4" />
@@ -794,24 +1176,332 @@ export default function ProductsPage() {
                 )}
 
                 <div className="flex gap-3 pt-4 border-t border-gray-800">
-                  <Link href={`/products/edit/${selectedProduct.id}`} className="flex-1">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Product
-                    </Button>
-                </Link>
+                  {user?.role === "company" && (
+                    <Link href={`/products/edit/${selectedProduct.id}`} className="flex-1">
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Product
+                      </Button>
+                    </Link>
+                  )}
                   <Button
                     variant="outline"
-                    className="border-gray-700 text-blue-400 hover:bg-blue-500/10"
+                    onClick={() => router.push(`/products/${selectedProduct.id}`)}
+                    className={`border-gray-700 text-blue-400 hover:bg-blue-500/10 ${user?.role === "company" ? "" : "w-full"}`}
                   >
                     <QrCode className="h-4 w-4 mr-2" />
-                    Generate QR
+                    View QR Code
                   </Button>
                 </div>
             </div>
             </CardContent>
           </Card>
             </div>
+        )}
+
+        {/* Add Category Modal */}
+        {showAddCategoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-900/95 border border-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
+              <div className="flex items-center justify-between p-6 border-b border-gray-800">
+                <h2 className="text-xl font-bold text-white">Add New Category</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowAddCategoryModal(false);
+                    setNewCategoryName("");
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Category Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !addingCategory) {
+                        handleAddCategory();
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    placeholder="Enter category name (e.g., Furniture)"
+                    autoFocus
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Category will be converted to lowercase with underscores (e.g., "Food & Beverage" → "food_beverage")
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-800">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddCategoryModal(false);
+                    setNewCategoryName("");
+                  }}
+                  disabled={addingCategory}
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddCategory}
+                  disabled={addingCategory || !newCategoryName.trim()}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                >
+                  {addingCategory ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Category
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Category Modal */}
+        {showDeleteCategoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-900/95 border border-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
+              <div className="flex items-center justify-between p-6 border-b border-gray-800">
+                <h2 className="text-xl font-bold text-white">Delete Category</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowDeleteCategoryModal(false);
+                    setSelectedCategoryToDelete("");
+                  }}
+                  className="text-gray-400 hover:text-white"
+                  disabled={!!deletingCategory}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                {customCategories.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Tag className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-400">No custom categories available to delete</p>
+                    <p className="text-sm text-gray-500 mt-2">Default categories cannot be deleted</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">
+                        Select Category to Delete
+                      </label>
+                      <Select
+                        value={selectedCategoryToDelete}
+                        onValueChange={setSelectedCategoryToDelete}
+                        disabled={!!deletingCategory}
+                      >
+                        <SelectTrigger className="w-full bg-gray-800/50 border-gray-700 text-white">
+                          <SelectValue placeholder="Choose a category..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-900 border-gray-800 text-white">
+                          {customCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              <div className="flex items-center gap-2">
+                                <Tag className="h-4 w-4 text-blue-400" />
+                                <span className="capitalize">{cat.replace(/_/g, ' ')}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Only custom categories can be deleted. Default categories are protected.
+                      </p>
+                    </div>
+                    {selectedCategoryToDelete && (
+                      <div className="bg-red-900/20 border border-red-800/50 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-red-400 mb-1">Warning</p>
+                            <p className="text-xs text-gray-400">
+                              Deleting this category will not affect existing products that use it, but you won't be able to select it for new products.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-800">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteCategoryModal(false);
+                    setSelectedCategoryToDelete("");
+                  }}
+                  disabled={!!deletingCategory}
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleDeleteCategory()}
+                  disabled={!!deletingCategory || !selectedCategoryToDelete}
+                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                >
+                  {deletingCategory ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Category
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add to Batch Modal */}
+        {showAddToBatchModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-900/95 border border-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
+              <div className="flex items-center justify-between p-6 border-b border-gray-800">
+                <h2 className="text-xl font-bold text-white">Add Products to Batch</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowAddToBatchModal(false);
+                    setSelectedBatchId("");
+                    setNewBatchName("");
+                  }}
+                  className="text-gray-400 hover:text-white"
+                  disabled={!!addingToBatch}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <p className="text-sm text-gray-400 mb-4">
+                    {selectedProducts.length} product(s) will be added to the batch
+                  </p>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Select Existing Batch
+                    </label>
+                    <Select
+                      value={selectedBatchId}
+                      onValueChange={(value) => {
+                        setSelectedBatchId(value);
+                        setNewBatchName(""); // Clear new batch name when selecting existing
+                      }}
+                      disabled={!!addingToBatch || !!newBatchName.trim()}
+                    >
+                      <SelectTrigger className="w-full bg-gray-800/50 border-gray-700 text-white">
+                        <SelectValue placeholder="Choose an existing batch..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-900 border-gray-800 text-white">
+                        {batches.length === 0 ? (
+                          <SelectItem value="__none__" disabled>
+                            No batches available
+                          </SelectItem>
+                        ) : (
+                          batches.map((batch) => (
+                            <SelectItem key={batch.batchId} value={batch.batchId}>
+                              {batch.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-700"></span>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-gray-900 px-2 text-gray-500">Or</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Create New Batch
+                    </label>
+                    <input
+                      type="text"
+                      value={newBatchName}
+                      onChange={(e) => {
+                        setNewBatchName(e.target.value);
+                        setSelectedBatchId(""); // Clear selected batch when entering new name
+                      }}
+                      disabled={!!addingToBatch || !!selectedBatchId}
+                      className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                      placeholder="Enter new batch name"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-800">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddToBatchModal(false);
+                    setSelectedBatchId("");
+                    setNewBatchName("");
+                  }}
+                  disabled={!!addingToBatch}
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddToBatch}
+                  disabled={!!addingToBatch || (!selectedBatchId && !newBatchName.trim())}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                >
+                  {addingToBatch ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Layers className="h-4 w-4 mr-2" />
+                      Add to Batch
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </DashboardLayout>

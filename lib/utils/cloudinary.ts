@@ -88,8 +88,12 @@ export async function uploadImageToCloudinarySigned(
   file: File | Buffer,
   folder: string = "products"
 ): Promise<CloudinaryUploadResult> {
-  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
-    throw new Error("Cloudinary configuration is incomplete. Need cloud name, API key, and secret.");
+  if (!CLOUDINARY_CLOUD_NAME) {
+    throw new Error("Cloudinary configuration is incomplete. CLOUDINARY_CLOUD_NAME is missing.");
+  }
+  
+  if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    throw new Error("Cloudinary configuration is incomplete. CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are required for signed uploads.");
   }
 
   const formData = new FormData();

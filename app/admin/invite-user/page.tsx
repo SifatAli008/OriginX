@@ -22,10 +22,8 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
-  { value: "sme", label: "SME / Supplier" },
-  { value: "supplier", label: "Supplier" },
-  { value: "warehouse", label: "Warehouse" },
-  { value: "auditor", label: "Auditor" },
+  { value: "sme", label: "SME" },
+  { value: "company", label: "Company" },
 ];
 
 export default function InviteUserPage() {
@@ -277,7 +275,7 @@ export default function InviteUserPage() {
               <h3 className="font-semibold mb-2">How it works:</h3>
               <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
                 <li>Enter the user&apos;s Gmail address</li>
-                <li>Select their role (SME/Supplier, Warehouse, or Auditor)</li>
+                <li>Select their role (Company or SME)</li>
                 <li>Click &quot;Send Invitation&quot;</li>
                 <li>The user signs in with Google using that email</li>
                 <li>They automatically get access to their role-specific dashboard</li>

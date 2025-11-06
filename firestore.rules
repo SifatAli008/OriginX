@@ -70,8 +70,11 @@ service cloud.firestore {
       // Allow reads to authenticated users
       allow get: if isAuthenticated();
       allow list: if isAuthenticated();
-      // Only warehouse users can create; enforce manufacturerId is the creator
-      allow create: if isAuthenticated() && userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'warehouse' && request.resource.data.manufacturerId == request.auth.uid;
+      // Only company/SME users can create; enforce manufacturerId is the creator
+      allow create: if isAuthenticated() && userDocExists() && (
+        let r = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+        (r == 'sme' || r == 'company')
+      ) && request.resource.data.manufacturerId == request.auth.uid;
       // No updates by users (immutable product meta after creation)
       allow update: if false;
       // Deletion only by admin
@@ -95,7 +98,10 @@ service cloud.firestore {
       allow get: if isAuthenticated() || request.auth == null;
       allow list: if isAuthenticated() || request.auth == null;
       allow create: if isAuthenticated() || request.auth == null;
-      allow update: if isAuthenticated() && userDocExists() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'warehouse' || isAdmin());
+      allow update: if isAuthenticated() && userDocExists() && (
+        let r = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+        (r == 'sme' || r == 'company' || isAdmin())
+      );
       allow delete: if isAdmin();
     }
 
@@ -153,7 +159,14 @@ service cloud.firestore {
 
     // Reports collection
     match /reports/{reportId} {
-      allow get: if isAuthenticated() && (isAdmin() || (userDocExists() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'auditor') || (resource.data.reporterId != null && request.auth.uid == resource.data.reporterId));
+      allow get: if isAuthenticated() && (
+        isAdmin() ||
+        (userDocExists() && (
+          let r = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+          (r == 'sme' || r == 'company')
+        )) ||
+        (resource.data.reporterId != null && request.auth.uid == resource.data.reporterId)
+      );
       allow list: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAdmin();

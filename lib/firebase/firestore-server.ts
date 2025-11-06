@@ -34,22 +34,20 @@ export async function getUserDocumentServer(uid: string, email?: string): Promis
 		const userRef = db.collection('users').doc(uid);
 		const userSnap = await userRef.get();
 
-		if (userSnap.exists) {
+    if (userSnap.exists) {
 			return userSnap.data() as UserDocument;
 		}
 
 		// If user document doesn't exist and we have email, try to create a basic one
 		// This handles cases where user authenticated but document wasn't created yet
 		if (email) {
-			const isAdmin = email.toLowerCase() === "admin@originx.com";
+      const isAdmin = email.toLowerCase() === "admin@originx.com";
 			const basicUserDoc: UserDocument = {
 				uid,
 				email,
 				displayName: null,
 				photoURL: null,
 				role: isAdmin ? "admin" : "sme",
-				orgId: null, // Will be set during company registration
-				orgName: undefined,
 				mfaEnabled: false,
 				status: isAdmin ? "active" : "pending",
 				createdAt: Date.now(),

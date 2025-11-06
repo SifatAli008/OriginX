@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 /**
  * API Route: Product Registration
  * POST /api/products - Register a single product
@@ -9,7 +10,7 @@ import { verifyIdToken } from "@/lib/auth/verify-token";
 import { uploadImageToCloudinarySigned } from "@/lib/utils/cloudinary";
 import { generateProductQRCode } from "@/lib/utils/qr/generator";
 import { createProductRegisterTransaction } from "@/lib/utils/transactions";
-import type { ProductCategory, ProductStatus, ProductFilters } from "@/lib/types/products";
+import type { ProductCategory, ProductStatus, ProductFilters, ProductListResponse, ProductDocument } from "@/lib/types/products";
 import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
@@ -35,9 +36,10 @@ export async function POST(request: NextRequest) {
       );
     }
     const uid = decodedToken.uid;
+    const email = decodedToken.email as string | undefined;
 
-    // Get user document for role check (server-side)
-    const userDoc = await getUserDocumentServer(uid, decodedToken.email);
+    // Get user document to verify role
+    const userDoc = await getUserDocumentServer(uid, email);
     if (!userDoc) {
       return NextResponse.json(
         { error: "User record not found" },
@@ -45,10 +47,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Only warehouse users can create products
-    if (userDoc.role !== "warehouse") {
+    // Only company/SME users (or admin) can create products
+    if (userDoc.role !== "company" && userDoc.role !== "sme" && userDoc.role !== "admin") {
       return NextResponse.json(
-        { error: "Only warehouse users can create products" },
+        { error: "Only company, SME, or admin users can create products" },
         { status: 403 }
       );
     }
@@ -72,8 +74,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate category
-    const validCategories: ProductCategory[] = [
+    // Validate category - check if it's a default category or a custom category
+    const defaultCategories: ProductCategory[] = [
       "electronics",
       "automotive",
       "pharmaceuticals",
@@ -83,11 +85,26 @@ export async function POST(request: NextRequest) {
       "chemicals",
       "other",
     ];
-    if (!validCategories.includes(category)) {
-      return NextResponse.json(
-        { error: `Invalid category. Must be one of: ${validCategories.join(", ")}` },
-        { status: 400 }
-      );
+    
+    // Get Firestore instance for category validation and product creation
+    const adminDb = getAdminFirestore();
+    
+    // Check if it's a default category
+    if (defaultCategories.includes(category as ProductCategory)) {
+      // Valid default category
+    } else {
+      // Check if it's a custom category
+      const customCategory = await adminDb.collection("categories")
+        .where("name", "==", category)
+        .limit(1)
+        .get();
+      
+      if (customCategory.empty) {
+        return NextResponse.json(
+          { error: `Invalid category. Category "${category}" does not exist.` },
+          { status: 400 }
+        );
+      }
     }
 
     let imgUrl: string | undefined;
@@ -105,30 +122,44 @@ export async function POST(request: NextRequest) {
         const result = await uploadImageToCloudinarySigned(buffer, "products");
         imgUrl = result.secureUrl;
       } catch (error) {
-        console.error("Failed to upload image:", error);
-        return NextResponse.json(
-          { error: "Failed to upload image to Cloudinary" },
-          { status: 500 }
-        );
+        console.error("Failed to upload image to Cloudinary:", error);
+        // If Cloudinary is not configured, allow product creation without image
+        // Don't fail the entire request - just log the error and continue without image
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes("configuration") || errorMessage.includes("API key") || errorMessage.includes("Unknown API key")) {
+          console.warn("Cloudinary not configured - creating product without image");
+          // Continue without image - imgUrl remains undefined
+        } else {
+          // For other errors, still allow product creation without image
+          console.warn("Image upload failed - creating product without image");
+        }
       }
     }
 
     // Create product document (Admin Firestore)
-    const db = getAdminFirestore();
-    const productRef = await db.collection("products").add({
+    // Build document data, excluding undefined values (Firestore doesn't allow undefined)
+    const productData: any = {
       name,
-      description: description || undefined,
       sku,
       category: category as ProductCategory,
-      imgUrl,
       qrHash: "", // Will be set after QR generation
-      qrDataUrl: undefined,
       status: "active" as ProductStatus,
       manufacturerId: uid,
       manufacturerName: userDoc.displayName || userDoc.email,
       metadata: metadata || {},
       createdAt: Date.now(),
-    });
+    };
+    
+    // Only include optional fields if they have values
+    if (description) {
+      productData.description = description;
+    }
+    
+    if (imgUrl) {
+      productData.imgUrl = imgUrl;
+    }
+    
+    const productRef = await adminDb.collection("products").add(productData);
 
     const productId = productRef.id;
 
@@ -142,10 +173,16 @@ export async function POST(request: NextRequest) {
     );
 
     // Update product with QR hash (Admin)
-    await productRef.update({
+    const updateData: any = {
       qrHash: qrResult.encrypted,
-      qrDataUrl: qrResult.dataUrl,
-    });
+    };
+    
+    // Only include qrDataUrl if it exists (Firestore doesn't allow undefined)
+    if (qrResult.dataUrl) {
+      updateData.qrDataUrl = qrResult.dataUrl;
+    }
+    
+    await productRef.update(updateData);
 
     // Create immutable PRODUCT_REGISTER transaction (orgId omitted)
     const transaction = await createProductRegisterTransaction(
@@ -206,13 +243,18 @@ export async function GET(request: NextRequest) {
     }
 
     const uid = decodedToken.uid;
+    const email = decodedToken.email as string | undefined;
 
-    // Get user document (server-side)
-    const userDoc = await getUserDocumentServer(uid, decodedToken.email);
+    // Get user document
+    const userDoc = await getUserDocumentServer(uid, email);
     if (!userDoc) {
+      // Gracefully handle users without a Firestore document yet
+      const searchParams = request.nextUrl.searchParams;
+      const page = parseInt(searchParams.get("page") || "1");
+      const pageSize = parseInt(searchParams.get("pageSize") || "20");
       return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
+        { items: [], total: 0, page, pageSize },
+        { status: 200 }
       );
     }
 
@@ -225,9 +267,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const batchId = searchParams.get("batchId");
 
-    // Build filters (non-admin users can only see their org's products)
+    // Build filters (non-admin users can only see their own products)
     const filters: ProductFilters = {
-      orgId: userDoc.role === "admin" ? undefined : (userDoc.orgId || undefined),
       page,
       pageSize,
     };
@@ -244,17 +285,74 @@ export async function GET(request: NextRequest) {
     if (batchId) {
       filters.batchId = batchId;
     }
+    // Admin can query by manufacturerId; non-admins see their own
+    const manufacturerId = searchParams.get("manufacturerId");
     if (userDoc.role === "admin") {
-      const manufacturerId = searchParams.get("manufacturerId");
       if (manufacturerId) {
         filters.manufacturerId = manufacturerId;
       }
+    } else {
+      filters.manufacturerId = uid;
     }
 
-    // Use client library for listing (it reads with user auth on the client normally).
-    // For server listing you may want a dedicated admin listing; keeping as-is for now.
-    const { getProducts } = await import("@/lib/firebase/products");
-    const result = await getProducts(filters);
+    // Use Admin Firestore for server-side product listing
+    const db = getAdminFirestore();
+    let productsQuery: any = db.collection("products");
+    
+    // Apply filters - Firestore Admin SDK uses where() method
+    // Note: We avoid orderBy() with where() to prevent index requirements
+    if (filters.manufacturerId) {
+      productsQuery = productsQuery.where("manufacturerId", "==", filters.manufacturerId);
+    }
+    if (filters.category) {
+      productsQuery = productsQuery.where("category", "==", filters.category);
+    }
+    if (filters.status) {
+      productsQuery = productsQuery.where("status", "==", filters.status);
+    }
+    if (filters.batchId) {
+      productsQuery = productsQuery.where("batchId", "==", filters.batchId);
+    }
+    
+    // Get all matching documents (without orderBy to avoid index requirement)
+    // We'll sort in memory instead
+    const snapshot = await productsQuery.get();
+    let items = snapshot.docs.map((doc: any) => ({
+      productId: doc.id,
+      ...doc.data(),
+    })) as ProductDocument[];
+    
+    // Sort by creation date (newest first) in memory
+    items.sort((a, b) => {
+      const aTime = a.createdAt || 0;
+      const bTime = b.createdAt || 0;
+      return bTime - aTime; // Descending order
+    });
+    
+    // Apply search filter if provided (client-side filtering)
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      items = items.filter(
+        (item) =>
+          item.name?.toLowerCase().includes(searchLower) ||
+          item.sku?.toLowerCase().includes(searchLower) ||
+          item.description?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply pagination (client-side after filtering and sorting)
+    const total = items.length;
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedItems = items.slice(startIndex, endIndex);
+    
+    const result: ProductListResponse = {
+      items: paginatedItems,
+      total,
+      page,
+      pageSize,
+      hasMore: endIndex < total,
+    };
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {

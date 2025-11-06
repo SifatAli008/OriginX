@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/components/ui/toast";
 import { getFirebaseAuth } from "@/lib/firebase/client";
@@ -280,8 +287,7 @@ export default function UserManagementPage() {
     const displayName = u.displayName || '';
     const matchesSearch = 
       displayName.toLowerCase().includes(searchLower) ||
-      u.email.toLowerCase().includes(searchLower) ||
-      (u.orgName || '').toLowerCase().includes(searchLower);
+      u.email.toLowerCase().includes(searchLower);
     
     const matchesRole = roleFilter === "all" || u.role === roleFilter;
     const matchesStatus = statusFilter === "all" || u.status === statusFilter;
@@ -303,9 +309,7 @@ export default function UserManagementPage() {
     switch (role) {
       case "admin": return "text-purple-400 bg-purple-500/10 border-purple-500/20";
       case "sme": return "text-blue-400 bg-blue-500/10 border-blue-500/20";
-      case "supplier": return "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
-      case "warehouse": return "text-orange-400 bg-orange-500/10 border-orange-500/20";
-      case "auditor": return "text-green-400 bg-green-500/10 border-green-500/20";
+      case "company": return "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
       default: return "text-gray-400 bg-gray-500/10 border-gray-500/20";
     }
   };
@@ -410,7 +414,7 @@ export default function UserManagementPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, email, or organization..."
+              placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"
@@ -418,30 +422,73 @@ export default function UserManagementPage() {
           </div>
           
           <div className="flex gap-2">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"
-            >
-              <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="sme">SME</option>
-              <option value="supplier">Supplier</option>
-              <option value="warehouse">Warehouse</option>
-              <option value="auditor">Auditor</option>
-            </select>
-            
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="inactive">Inactive</option>
-              <option value="suspended">Suspended</option>
-            </select>
+            <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v)}>
+              <SelectTrigger className="min-w-44 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 text-white">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-800 text-white">
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-300">All Roles</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="admin">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-purple-400" />
+                    <span>Admin</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="company">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-cyan-400" />
+                    <span>Company</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="sme">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-400" />
+                    <span>SME</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+              <SelectTrigger className="min-w-44 bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 text-white">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border-gray-800 text-white">
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-300">All Status</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="pending">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-yellow-400" />
+                    <span>Pending</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="active">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Active</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="suspended">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-red-400" />
+                    <span>Suspended</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="inactive">
+                  <div className="flex items-center gap-2">
+                    <X className="h-4 w-4 text-gray-400" />
+                    <span>Inactive</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
             
             <Button
               variant="outline"
@@ -483,9 +530,7 @@ export default function UserManagementPage() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Role
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Organization
-                      </th>
+                      
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                         Status
                       </th>
@@ -512,9 +557,7 @@ export default function UserManagementPage() {
                             {u.role.toUpperCase()}
                           </span>
                         </td>
-                        <td className="px-4 py-4">
-                          <p className="text-gray-300">{u.orgName || "N/A"}</p>
-                        </td>
+                        
                         <td className="px-4 py-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border ${getStatusColor(u.status)}`}>
                             {u.status.charAt(0).toUpperCase() + u.status.slice(1)}
@@ -636,9 +679,7 @@ export default function UserManagementPage() {
                     className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   >
                     <option value="sme">SME</option>
-                    <option value="supplier">Supplier</option>
-                    <option value="warehouse">Warehouse</option>
-                    <option value="auditor">Auditor</option>
+                    <option value="company">Company</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>

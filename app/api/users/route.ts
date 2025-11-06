@@ -218,9 +218,7 @@ export async function GET(request: NextRequest) {
         byRole: {
           admin: users.filter(u => u.role === "admin").length,
           sme: users.filter(u => u.role === "sme").length,
-          supplier: users.filter(u => u.role === "supplier").length,
-          warehouse: users.filter(u => u.role === "warehouse").length,
-          auditor: users.filter(u => u.role === "auditor").length,
+          company: users.filter(u => u.role === "company").length,
         },
         // Return full users list for admin management
         users: users,
@@ -258,9 +256,7 @@ export async function GET(request: NextRequest) {
           byRole: {
             admin: users.filter(u => u.role === "admin").length,
             sme: users.filter(u => u.role === "sme").length,
-            supplier: users.filter(u => u.role === "supplier").length,
-            warehouse: users.filter(u => u.role === "warehouse").length,
-            auditor: users.filter(u => u.role === "auditor").length,
+            company: users.filter(u => u.role === "company").length,
           },
           // Return full users list for admin management
           users: users,

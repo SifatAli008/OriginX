@@ -1,25 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useAppSelector } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, ChevronRight, Home, Save, X, Upload } from "lucide-react";
+import { Package, ChevronRight, Home, Save, X, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { getFirebaseAuth } from "@/lib/firebase/client";
-import type { ProductCategory } from "@/lib/types/products";
-import { uploadImageToCloudinary } from "@/lib/utils/cloudinary";
+import { getProduct } from "@/lib/firebase/products";
+import type { ProductCategory, ProductDocument } from "@/lib/types/products";
 
-export default function NewProductPage() {
+export default function EditProductPage() {
   const router = useRouter();
+  const params = useParams();
+  const productId = params.id as string;
   const authState = useAppSelector((state) => state.auth);
   const user = authState.user;
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [qrPreview, setQrPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -34,6 +36,7 @@ export default function NewProductPage() {
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
+  const [product, setProduct] = useState<ProductDocument | null>(null);
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {
@@ -70,6 +73,51 @@ export default function NewProductPage() {
     }
   }, [authState.status]);
 
+  // Load product data
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!productId) return;
+      
+      setLoading(true);
+      try {
+        const productData = await getProduct(productId);
+        if (!productData) {
+          setError("Product not found");
+          return;
+        }
+        
+        setProduct(productData);
+        
+        // Populate form with existing data
+        setFormData({
+          name: productData.name || "",
+          sku: productData.sku || "",
+          category: (productData.category as ProductCategory) || "",
+          description: productData.description || "",
+          brand: productData.metadata?.brand || "",
+          model: productData.metadata?.model || "",
+          serialNumber: productData.metadata?.serialNumber || "",
+          manufacturingDate: productData.metadata?.manufacturingDate || "",
+          expiryDate: productData.metadata?.expiryDate || "",
+        });
+        
+        // Set image preview if exists
+        if (productData.imgUrl) {
+          setImagePreview(productData.imgUrl);
+        }
+      } catch (err) {
+        console.error("Failed to load product:", err);
+        setError("Failed to load product");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (productId && authState.status === "authenticated") {
+      loadProduct();
+    }
+  }, [productId, authState.status]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -84,7 +132,7 @@ export default function NewProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError(null);
 
     try {
@@ -143,9 +191,12 @@ export default function NewProductPage() {
         description: formData.description || undefined,
       };
 
-      // Send base64 image to server - server will handle Cloudinary upload
+      // Send base64 image to server if new image selected
       if (imageBase64) {
         body.image = imageBase64;
+      } else if (product?.imgUrl) {
+        // Keep existing image
+        body.image = { url: product.imgUrl };
       }
 
       if (formData.brand || formData.model || formData.serialNumber || formData.manufacturingDate || formData.expiryDate) {
@@ -158,9 +209,9 @@ export default function NewProductPage() {
         };
       }
 
-      // Call API
-      const response = await fetch("/api/products", {
-        method: "POST",
+      // Call API - use PATCH method for update
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -171,23 +222,16 @@ export default function NewProductPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create product");
+        throw new Error(data.error || "Failed to update product");
       }
 
-      // Show QR code preview
-      if (data.qr?.pngDataUrl) {
-        setQrPreview(data.qr.pngDataUrl);
-      }
-
-      // Success - redirect after 2 seconds
-      setTimeout(() => {
-        router.push("/products");
-      }, 2000);
+      // Success - redirect to products page
+      router.push("/products");
     } catch (error) {
-      console.error("Failed to create product:", error);
-      setError(error instanceof Error ? error.message : "Failed to create product");
+      console.error("Failed to update product:", error);
+      setError(error instanceof Error ? error.message : "Failed to update product");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -199,6 +243,37 @@ export default function NewProductPage() {
     );
   }
 
+  if (loading) {
+    return (
+      <DashboardLayout userRole={user.role} userName={user.displayName || user.email}>
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error && !product) {
+    return (
+      <DashboardLayout userRole={user.role} userName={user.displayName || user.email}>
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
+            <CardContent className="p-6">
+              <div className="text-center py-8">
+                <p className="text-red-400 mb-4">{error}</p>
+                <Button onClick={() => router.push("/products")} variant="outline">
+                  Back to Products
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout userRole={user.role} userName={user.displayName || user.email}>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -207,15 +282,15 @@ export default function NewProductPage() {
           <ChevronRight className="h-3 w-3" />
           <span onClick={() => router.push("/products")} className="cursor-pointer hover:text-white">Products</span>
           <ChevronRight className="h-3 w-3" />
-          <span className="text-white font-medium">New Product</span>
+          <span className="text-white font-medium">Edit Product</span>
         </nav>
 
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Package className="h-8 w-8 text-blue-400" />
-            <h1 className="text-4xl font-bold text-white">Add New Product</h1>
+            <h1 className="text-4xl font-bold text-white">Edit Product</h1>
           </div>
-          <p className="text-gray-400">Create a new product entry</p>
+          <p className="text-gray-400">Update product information</p>
         </div>
 
         <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
@@ -310,7 +385,7 @@ export default function NewProductPage() {
                 </div>
 
                 <div>
-                  <label className="block text sm font-medium text-gray-400 mb-2">Expiry Date</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Expiry Date</label>
                   <input
                     type="date"
                     value={formData.expiryDate}
@@ -376,24 +451,14 @@ export default function NewProductPage() {
                 </div>
               )}
 
-              {qrPreview && (
-                <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg">
-                  <p className="text-green-400 text-sm mb-2">Product created successfully! QR Code:</p>
-                  <div className="flex justify-center">
-                    <Image src={qrPreview} alt="QR Code" width={192} height={192} className="w-48 h-48" unoptimized />
-                  </div>
-                  <p className="text-gray-400 text-xs mt-2 text-center">Redirecting to products page...</p>
-                </div>
-              )}
-
               <div className="flex gap-4 pt-4">
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={saving}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {loading ? "Creating..." : "Create Product"}
+                  {saving ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button
                   type="button"
@@ -412,3 +477,4 @@ export default function NewProductPage() {
     </DashboardLayout>
   );
 }
+

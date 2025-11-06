@@ -10,7 +10,7 @@ import { getFirebaseAuth } from "@/lib/firebase/client";
 import type { ExtendedAuthUser, UserRole } from "@/lib/types/user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Building2, Package, Warehouse, FileCheck, ShieldCheck, LogOut, ArrowRight } from "lucide-react";
+import { Loader2, Building2, ShieldCheck, LogOut, ArrowRight } from "lucide-react";
 import { motion, Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 import HeroVectors from "@/components/visuals/HeroVectors";
@@ -24,27 +24,15 @@ const ROLE_OPTIONS: {
 }[] = [
   {
     value: "sme",
-    label: "SME / Supplier",
+    label: "SME",
     description: "Register products, manage inventory, and track shipments",
     icon: <Building2 className="h-8 w-8" />,
   },
   {
-    value: "supplier",
-    label: "Supplier",
-    description: "Similar to SME - register products and manage your supply chain",
-    icon: <Package className="h-8 w-8" />,
-  },
-  {
-    value: "warehouse",
-    label: "Warehouse",
-    description: "Manage inbound/outbound shipments, QC logs, and inventory",
-    icon: <Warehouse className="h-8 w-8" />,
-  },
-  {
-    value: "auditor",
-    label: "Auditor",
-    description: "View verifications, compliance reports, and audit trails (read-only)",
-    icon: <FileCheck className="h-8 w-8" />,
+    value: "company",
+    label: "Company",
+    description: "Manage your organization, products, shipments, and reports",
+    icon: <Building2 className="h-8 w-8" />,
   },
 ];
 
@@ -98,22 +86,18 @@ export default function SelectRolePage() {
         router.push("/dashboard");
         return;
       }
-      // User already has a specific role that's not the default sme/supplier
-      // If they have warehouse or auditor role, they've already selected and should go to dashboard
+      // User has already selected a supported role
       // (Admin case is already handled above)
-      if (user.role === "warehouse" || user.role === "auditor") {
-        router.push("/dashboard");
-        return;
+      if (user.role === "company" || user.role === "sme") {
+        // allow to confirm/change role if needed below
       }
-      // Note: sme and supplier are valid roles users can select, but they can also be defaults
-      // So we allow them to stay on this page to confirm/change their role if needed
       // User doesn't have an org yet, they need to register
-      if (!user.orgId || user.status === "pending") {
+      if (user.status === "pending") {
         router.push("/register-company");
         return;
       }
-      // User has orgId and is active, but still has default role - show role selection
-      if (user.orgId && user.status === "active" && (user.role === "sme" || user.role === "supplier")) {
+      // User has orgId and is active, show role selection for supported roles
+      if (user.status === "active" && (user.role === "sme" || user.role === "company")) {
         // Allow them to stay on this page to select role
         setLoading(false);
         return;
@@ -196,9 +180,7 @@ export default function SelectRolePage() {
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            role: updatedUserDoc.role, // New role (sme, supplier, warehouse, or auditor)
-            orgId: updatedUserDoc.orgId,
-            orgName: updatedUserDoc.orgName,
+            role: updatedUserDoc.role,
             mfaEnabled: updatedUserDoc.mfaEnabled,
             status: updatedUserDoc.status, // Should be "active"
           };

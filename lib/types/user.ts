@@ -2,10 +2,8 @@
  * User roles in the OriginX system
  */
 export type UserRole = 
-  | "sme"           // Small/Medium Enterprise (Supplier/Manufacturer)
-  | "warehouse"     // Warehouse Manager
-  | "supplier"      // Supplier (similar to SME but distinct)
-  | "auditor"       // Auditor (read-only access)
+  | "sme"           // Small/Medium Enterprise
+  | "company"       // Company (buyer/organization)
   | "admin";        // System Administrator
 
 /**
@@ -38,8 +36,8 @@ export interface UserDocument {
   displayName: string | null;
   photoURL: string | null;
   role: UserRole;
-  orgId: string | null;           // Organization ID (for multi-tenant)
-  orgName?: string;               // Organization name (denormalized)
+  orgId?: string | null;          // Organization ID (for company/SME users)
+  orgName?: string;                // Organization name
   mfaEnabled: boolean;
   mfaConfig?: MFAConfig;
   status: UserStatus;
@@ -61,8 +59,6 @@ export interface ExtendedAuthUser {
   photoURL: string | null;
   // Firestore user data
   role: UserRole;
-  orgId: string | null;
-  orgName?: string;
   mfaEnabled: boolean;
   status: UserStatus;
 }
@@ -106,7 +102,7 @@ export function getRolePermissions(role: UserRole): RolePermissions {
 
   switch (role) {
     case "sme":
-    case "supplier":
+    case "company":
       return {
         ...basePermissions,
         canReadProducts: true,
@@ -118,29 +114,6 @@ export function getRolePermissions(role: UserRole): RolePermissions {
         canReadTransactions: true,
         canReadAnalytics: true,
         canCreateReports: true,
-      };
-    
-    case "warehouse":
-      return {
-        ...basePermissions,
-        canReadProducts: true,
-        canReadMovements: true,
-        canCreateMovements: true,
-        canReadVerifications: true,
-        canVerify: true,
-        canReadTransactions: true,
-        canReadAnalytics: true,
-      };
-    
-    case "auditor":
-      return {
-        ...basePermissions,
-        canReadProducts: true,
-        canReadMovements: true,
-        canReadVerifications: true,
-        canReadTransactions: true,
-        canReadAnalytics: true,
-        canReadReports: true,
       };
     
     case "admin":

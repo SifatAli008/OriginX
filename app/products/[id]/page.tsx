@@ -88,61 +88,65 @@ export default function ProductDetailPage() {
 
   return (
     <AuthGuard>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl bg-black min-h-screen">
         <div className="mb-6">
           <Link href="/products">
-            <Button variant="ghost" className="mb-4">
+            <Button variant="ghost" className="mb-4 text-white hover:bg-gray-800">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Products
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Package className="h-8 w-8" />
-            {product.name}
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <Package className="h-8 w-8 text-blue-400" />
+            <h1 className="text-4xl font-bold text-white">
+              {product.name}
+            </h1>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Product Info */}
           <div className="lg:col-span-2 space-y-6">
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Product Information</h2>
+            <Card className="p-6 bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
+              <h2 className="text-xl font-semibold mb-4 text-white">Product Information</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">SKU</label>
-                  <p className="text-base font-mono">{product.sku}</p>
+                  <label className="text-sm font-medium text-gray-400">SKU</label>
+                  <p className="text-base font-mono text-white">{product.sku}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Category</label>
-                  <p className="text-base capitalize">{product.category}</p>
+                  <label className="text-sm font-medium text-gray-400">Category</label>
+                  <p className="text-base capitalize text-white">{product.category.replace(/_/g, ' ')}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <label className="text-sm font-medium text-gray-400">Status</label>
                   <span
-                    className={`inline-block px-3 py-1 text-sm rounded ${
+                    className={`inline-block px-3 py-1 text-sm rounded-full ${
                       product.status === "active"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
+                        ? "bg-green-500/20 text-green-400 border border-green-500/50"
+                        : product.status === "inactive"
+                        ? "bg-gray-500/20 text-gray-400 border border-gray-500/50"
+                        : "bg-red-500/20 text-red-400 border border-red-500/50"
                     }`}
                   >
-                    {product.status}
+                    {product.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
                 </div>
                 {product.description && (
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Description</label>
-                    <p className="text-base">{product.description}</p>
+                    <label className="text-sm font-medium text-gray-400">Description</label>
+                    <p className="text-base text-white">{product.description}</p>
                   </div>
                 )}
                 {product.batchId && (
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Batch ID</label>
-                    <p className="text-base font-mono">{product.batchId}</p>
+                    <label className="text-sm font-medium text-gray-400">Batch ID</label>
+                    <p className="text-base font-mono text-white">{product.batchId}</p>
                   </div>
                 )}
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Created</label>
-                  <p className="text-base">
+                  <label className="text-sm font-medium text-gray-400">Created</label>
+                  <p className="text-base text-white">
                     {new Date(product.createdAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -151,15 +155,15 @@ export default function ProductDetailPage() {
 
             {/* Metadata */}
             {product.metadata && Object.keys(product.metadata).length > 0 && (
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Additional Information</h2>
+              <Card className="p-6 bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
+                <h2 className="text-xl font-semibold mb-4 text-white">Additional Information</h2>
                 <div className="grid grid-cols-2 gap-4">
                   {Object.entries(product.metadata).map(([key, value]) => (
                     <div key={key}>
-                      <label className="text-sm font-medium text-muted-foreground capitalize">
+                      <label className="text-sm font-medium text-gray-400 capitalize">
                         {key.replace(/([A-Z])/g, " $1").trim()}
                       </label>
-                      <p className="text-base">{String(value)}</p>
+                      <p className="text-base text-white">{String(value)}</p>
                     </div>
                   ))}
                 </div>
@@ -168,13 +172,13 @@ export default function ProductDetailPage() {
 
             {/* Product Image */}
             {product.imgUrl && (
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Product Image</h2>
+              <Card className="p-6 bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
+                <h2 className="text-xl font-semibold mb-4 text-white">Product Image</h2>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={product.imgUrl}
                   alt={product.name}
-                  className="w-full max-w-md rounded-lg border"
+                  className="w-full max-w-md rounded-lg border border-gray-700"
                 />
               </Card>
             )}
@@ -182,10 +186,10 @@ export default function ProductDetailPage() {
 
           {/* QR Code Sidebar */}
           <div className="space-y-6">
-            <Card className="p-6">
+            <Card className="p-6 bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
               <div className="flex items-center gap-2 mb-4">
-                <QrCode className="h-5 w-5" />
-                <h2 className="text-xl font-semibold">QR Code</h2>
+                <QrCode className="h-5 w-5 text-blue-400" />
+                <h2 className="text-xl font-semibold text-white">QR Code</h2>
               </div>
               {product.qrDataUrl ? (
                 <div className="space-y-4">
@@ -197,11 +201,11 @@ export default function ProductDetailPage() {
                       className="border rounded-lg max-w-full"
                     />
                   </div>
-                  <Button onClick={handleDownloadQR} className="w-full" variant="outline">
+                  <Button onClick={handleDownloadQR} className="w-full border-gray-700 text-white hover:bg-gray-800" variant="outline">
                     <Download className="mr-2 h-4 w-4" />
                     Download QR Code
                   </Button>
-                  <p className="text-xs text-center text-muted-foreground">
+                  <p className="text-xs text-center text-gray-500">
                     Print this QR code and attach it to your product for verification
                   </p>
                 </div>
@@ -213,19 +217,19 @@ export default function ProductDetailPage() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="p-6">
-              <h3 className="font-semibold mb-4">Quick Actions</h3>
+            <Card className="p-6 bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
+              <h3 className="font-semibold mb-4 text-white">Quick Actions</h3>
               <div className="space-y-2">
-                <Button variant="outline" className="w-full" onClick={() => router.push(`/verify?qr=${product.qrHash}`)}>
+                <Button variant="outline" className="w-full border-gray-700 text-white hover:bg-gray-800" onClick={() => router.push(`/verify?qr=${product.qrHash}`)}>
                   Verify Product
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => router.push(`/movements/new?product=${product.productId}`)}>
+                <Button variant="outline" className="w-full border-gray-700 text-white hover:bg-gray-800" onClick={() => router.push(`/movements/new?product=${product.productId}`)}>
                   Create Movement
                 </Button>
                 {product.batchId && (
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full border-gray-700 text-white hover:bg-gray-800"
                     onClick={() => router.push(`/batches/${product.batchId}`)}
                   >
                     View Batch

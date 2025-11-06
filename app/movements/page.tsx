@@ -155,7 +155,9 @@ function MovementsContent() {
       return;
     }
 
+    if (authState.status === "authenticated") {
     fetchMovements();
+    }
   }, [authState.status, router, fetchMovements]);
 
   const filteredMovements = movements.filter(movement => {
@@ -512,7 +514,7 @@ function MovementsContent() {
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        {(user.role === "warehouse" || user.role === "admin") && (
+                        {(user.role === "company" || user.role === "sme" || user.role === "admin") && (
                           <>
                             <Button
                               size="sm"

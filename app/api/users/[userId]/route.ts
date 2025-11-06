@@ -149,7 +149,7 @@ export async function PUT(
     // Validate allowed fields
     const allowedFields: Partial<UserDocument> = {};
     if (role !== undefined) {
-      const validRoles = ["admin", "sme", "supplier", "warehouse", "auditor"];
+      const validRoles = ["admin", "sme", "company"];
       if (!validRoles.includes(role)) {
         return NextResponse.json(
           { error: `Invalid role. Must be one of: ${validRoles.join(", ")}` },

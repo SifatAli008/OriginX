@@ -21,9 +21,9 @@ import {
   ClipboardCheck,
   Activity,
   FileCheck,
-  Search,
   Package,
   ShieldCheck,
+  QrCode,
 } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import type { UserRole } from "@/lib/types/user";
@@ -66,40 +66,38 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
       admin: [
         { label: "Registration Requests", icon: <FileText className="h-5 w-5" />, href: "/admin/registration-requests" },
         { label: "User Management", icon: <Users className="h-5 w-5" />, href: "/admin/users" },
-        { label: "Vendors", icon: <Building2 className="h-5 w-5" />, href: "/vendors" },
-        { label: "Products", icon: <Boxes className="h-5 w-5" />, href: "/products" },
-        { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
-        { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
-        { label: "QC Logs", icon: <ClipboardCheck className="h-5 w-5" />, href: "/qc-logs" },
-        { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
-        { label: "Reports", icon: <FileCheck className="h-5 w-5" />, href: "/reports" },
+        { label: "Companies & SMEs", icon: <Building2 className="h-5 w-5" />, href: "/companies-smes" },
       ],
       sme: [
         { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
-        { label: "New Product", icon: <Boxes className="h-5 w-5" />, href: "/products/new" },
-        { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
-        { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
+        { label: "Seller Assign", icon: <Users className="h-5 w-5" />, href: "/sme/seller-assign" },
+        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
       ],
-      supplier: [
-        { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
-        { label: "New Product", icon: <Boxes className="h-5 w-5" />, href: "/products/new" },
-        { label: "Shipments", icon: <Truck className="h-5 w-5" />, href: "/movements" },
-        { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
-      ],
-      warehouse: [
-        { label: "Products", icon: <Boxes className="h-5 w-5" />, href: "/products" },
-        { label: "Inbound", icon: <Truck className="h-5 w-5" />, href: "/movements?type=inbound" },
-        { label: "Outbound", icon: <Package className="h-5 w-5" />, href: "/movements?type=outbound" },
-        { label: "All Movements", icon: <Activity className="h-5 w-5" />, href: "/movements" },
-        { label: "QC Logs", icon: <ClipboardCheck className="h-5 w-5" />, href: "/qc-logs" },
-      ],
-      auditor: [
-        { label: "Verifications", icon: <Shield className="h-5 w-5" />, href: "/verifications" },
-        { label: "Reports", icon: <FileCheck className="h-5 w-5" />, href: "/reports" },
-        { label: "Products", icon: <Search className="h-5 w-5" />, href: "/products" },
-        { label: "Blockchain", icon: <Activity className="h-5 w-5" />, href: "/blockchain" },
+      company: [
+        { label: "Product + QR", icon: <QrCode className="h-5 w-5" />, href: "/products" },
+        { label: "SME Assign", icon: <Users className="h-5 w-5" />, href: "/company/sme-assign" },
+        { label: "Product History", icon: <FileText className="h-5 w-5" />, href: "/products/history" },
+        { label: "Profile", icon: <Building2 className="h-5 w-5" />, href: "/profile" },
       ],
     };
+
+    // For company users, only show Dashboard, role-specific items, and Settings (no Analytics)
+    if (userRole === "company") {
+      return [
+        { label: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/dashboard" },
+        ...(roleSpecificItems[userRole] || []),
+        { label: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
+      ];
+    }
+
+    // For SME users, only show Dashboard, role-specific items, and Settings
+    if (userRole === "sme") {
+      return [
+        { label: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/dashboard" },
+        ...(roleSpecificItems[userRole] || []),
+        { label: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
+      ];
+    }
 
     return [...commonItems.slice(0, 1), ...(roleSpecificItems[userRole] || []), ...commonItems.slice(1)];
   };
