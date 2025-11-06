@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/auth/verify-token";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,27 +40,27 @@ export async function GET(request: NextRequest) {
     const manufacturerId = userDoc.role === "admin" ? null : decoded.uid;
 
     // 1. Total Products
-    let productsQuery: any = db.collection("products");
+    let productsQuery = db.collection("products");
     if (manufacturerId) {
-      productsQuery = productsQuery.where("manufacturerId", "==", manufacturerId);
+      productsQuery = productsQuery.where("manufacturerId", "==", manufacturerId) as typeof productsQuery;
     }
     const productsSnapshot = await productsQuery.get();
     const totalProducts = productsSnapshot.size;
     
     // Active products
     const activeProducts = productsSnapshot.docs.filter(
-      (doc: any) => doc.data().status === "active"
+      (doc: QueryDocumentSnapshot) => doc.data().status === "active"
     ).length;
 
     // Products with QR codes
-    const productsWithQR = productsSnapshot.docs.filter((doc: any) => {
+    const productsWithQR = productsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
       const data = doc.data();
       return data.qrDataUrl || data.qrCode;
     }).length;
 
     // Recent products (last 7 days)
     const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    const recentProducts = productsSnapshot.docs.filter((doc: any) => {
+    const recentProducts = productsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
       const createdAt = doc.data().createdAt || 0;
       return createdAt >= sevenDaysAgo;
     }).length;
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
     let totalVerificationsCount = 0;
     
     if (manufacturerId) {
-      const orgProductIds = productsSnapshot.docs.map((doc: any) => doc.id);
+      const orgProductIds = productsSnapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id);
       if (orgProductIds.length > 0) {
         const allVerifications30d = await db.collection("verifications")
           .where("createdAt", ">=", thirtyDaysAgo)
@@ -78,16 +79,16 @@ export async function GET(request: NextRequest) {
         
         const allVerifications = await db.collection("verifications").get();
         
-        allVerifications30d.docs.forEach((doc: any) => {
+        allVerifications30d.docs.forEach((doc: QueryDocumentSnapshot) => {
           const data = doc.data();
-          if (orgProductIds.includes(data.productId)) {
+          if (orgProductIds.includes(data.productId as string)) {
             recentVerificationsCount++;
           }
         });
 
-        allVerifications.docs.forEach((doc: any) => {
+        allVerifications.docs.forEach((doc: QueryDocumentSnapshot) => {
           const data = doc.data();
-          if (orgProductIds.includes(data.productId)) {
+          if (orgProductIds.includes(data.productId as string)) {
             totalVerificationsCount++;
           }
         });
@@ -108,15 +109,15 @@ export async function GET(request: NextRequest) {
     let fake = 0;
 
     if (manufacturerId) {
-      const orgProductIds = productsSnapshot.docs.map((doc: any) => doc.id);
+      const orgProductIds = productsSnapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id);
       if (orgProductIds.length > 0) {
         const allVerifications30d = await db.collection("verifications")
           .where("createdAt", ">=", thirtyDaysAgo)
           .get();
         
-        allVerifications30d.docs.forEach((doc: any) => {
+        allVerifications30d.docs.forEach((doc: QueryDocumentSnapshot) => {
           const data = doc.data();
-          if (orgProductIds.includes(data.productId)) {
+          if (orgProductIds.includes(data.productId as string)) {
             if (data.verdict === "GENUINE") genuine++;
             else if (data.verdict === "SUSPICIOUS") suspicious++;
             else if (data.verdict === "FAKE") fake++;
@@ -144,21 +145,21 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Total Batches
-    let batchesQuery: any = db.collection("batches");
+    let batchesQuery = db.collection("batches");
     if (userDoc.orgId) {
-      batchesQuery = batchesQuery.where("orgId", "==", userDoc.orgId);
+      batchesQuery = batchesQuery.where("orgId", "==", userDoc.orgId) as typeof batchesQuery;
     } else if (userDoc.role !== "admin") {
-      batchesQuery = batchesQuery.where("createdBy", "==", decoded.uid);
+      batchesQuery = batchesQuery.where("createdBy", "==", decoded.uid) as typeof batchesQuery;
     }
     const batchesSnapshot = await batchesQuery.get();
     const totalBatches = batchesSnapshot.size;
 
     // Unique categories
     const categoriesSet = new Set<string>();
-    productsSnapshot.docs.forEach((doc: any) => {
+    productsSnapshot.docs.forEach((doc: QueryDocumentSnapshot) => {
       const category = doc.data().category;
       if (category) {
-        categoriesSet.add(category);
+        categoriesSet.add(category as string);
       }
     });
     const uniqueCategories = categoriesSet.size;

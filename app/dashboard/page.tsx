@@ -1689,7 +1689,8 @@ const formatCellValue = (value: unknown): React.ReactNode => {
   return "-";
 };
 
-function DataTable({ title, columns, data, loading = false }: DataTableProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _DataTable({ title, columns, data, loading = false }: DataTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");

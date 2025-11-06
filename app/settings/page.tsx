@@ -20,7 +20,7 @@ export default function SettingsPage() {
   const user = authState.user;
 
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState({});
+  const [settings] = useState({});
 
   useEffect(() => {
     if (authState.status === "unauthenticated") {

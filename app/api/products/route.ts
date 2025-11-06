@@ -13,6 +13,7 @@ import { createProductRegisterTransaction } from "@/lib/utils/transactions";
 import type { ProductCategory, ProductStatus, ProductFilters, ProductListResponse, ProductDocument } from "@/lib/types/products";
 import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
 import { getAdminFirestore } from "@/lib/firebase/admin";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 const QR_AES_SECRET = process.env.QR_AES_SECRET || "default-secret-key-change-in-production";
 
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     // Create product document (Admin Firestore)
     // Build document data, excluding undefined values (Firestore doesn't allow undefined)
-    const productData: any = {
+    const productData: Record<string, unknown> = {
       name,
       sku,
       category: category as ProductCategory,
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Update product with QR hash (Admin)
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       qrHash: qrResult.encrypted,
     };
     
@@ -277,7 +278,7 @@ export async function GET(request: NextRequest) {
       filters.category = category as ProductCategory;
     }
     if (status) {
-      filters.status = status as any;
+      filters.status = status as ProductStatus;
     }
     if (search) {
       filters.search = search;
@@ -297,27 +298,27 @@ export async function GET(request: NextRequest) {
 
     // Use Admin Firestore for server-side product listing
     const db = getAdminFirestore();
-    let productsQuery: any = db.collection("products");
+    let productsQuery = db.collection("products");
     
     // Apply filters - Firestore Admin SDK uses where() method
     // Note: We avoid orderBy() with where() to prevent index requirements
     if (filters.manufacturerId) {
-      productsQuery = productsQuery.where("manufacturerId", "==", filters.manufacturerId);
+      productsQuery = productsQuery.where("manufacturerId", "==", filters.manufacturerId) as typeof productsQuery;
     }
     if (filters.category) {
-      productsQuery = productsQuery.where("category", "==", filters.category);
+      productsQuery = productsQuery.where("category", "==", filters.category) as typeof productsQuery;
     }
     if (filters.status) {
-      productsQuery = productsQuery.where("status", "==", filters.status);
+      productsQuery = productsQuery.where("status", "==", filters.status) as typeof productsQuery;
     }
     if (filters.batchId) {
-      productsQuery = productsQuery.where("batchId", "==", filters.batchId);
+      productsQuery = productsQuery.where("batchId", "==", filters.batchId) as typeof productsQuery;
     }
     
     // Get all matching documents (without orderBy to avoid index requirement)
     // We'll sort in memory instead
     const snapshot = await productsQuery.get();
-    let items = snapshot.docs.map((doc: any) => ({
+    let items = snapshot.docs.map((doc: QueryDocumentSnapshot) => ({
       productId: doc.id,
       ...doc.data(),
     })) as ProductDocument[];

@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
     let productsSnapshot;
     try {
       productsSnapshot = await getDocs(productsQuery);
-    } catch (_permError) {
+    } catch {
       // Gracefully handle missing/insufficient permissions by returning empty analytics
       const empty: AnalyticsData = {
         kpis: {

@@ -132,7 +132,7 @@ export async function PATCH(
     }
 
     // Build update data, excluding undefined values
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       name,
       sku,
       category: category as ProductCategory,
