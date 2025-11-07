@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
         // Create product
         const productId = await createProduct(productData);
 
-        // Generate QR code
+        // Generate QR code with public URL (new approach)
         const qrSecret = QR_AES_SECRET;
         const qrResult = await generateProductQRCode(
           productId,
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
           { size: 400 }
         );
 
-        // Update product with QR hash
+        // Update product with QR hash, URL, and data URL
         const { updateDoc, doc, getFirestore } = await import("firebase/firestore");
         const { getFirebaseApp } = await import("@/lib/firebase/client");
         const app = getFirebaseApp();
@@ -251,8 +251,9 @@ export async function POST(request: NextRequest) {
           const db = getFirestore(app);
           const productRef = doc(db, "products", productId);
           await updateDoc(productRef, {
-            qrHash: qrResult.encrypted,
-            qrDataUrl: qrResult.dataUrl,
+            qrHash: qrResult.encrypted,  // Encrypted payload (for verification)
+            qrUrl: qrResult.qrUrl,       // Public URL (new field)
+            qrDataUrl: qrResult.dataUrl, // QR code image
           });
         }
 

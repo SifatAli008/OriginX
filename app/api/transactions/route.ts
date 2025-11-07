@@ -260,22 +260,26 @@ export async function GET(request: NextRequest) {
       q = buildQuery(q, buildWhere("createdAt", "<=", endDate));
     }
 
-    // Order by creation date (newest first)
-    q = buildQuery(q, buildOrderBy("createdAt", "desc"));
-
-    // Get all matching transactions
-    // Note: productId and movementId are now filtered at query level (above) for efficiency
-    // Older transactions without top-level productId/movementId fields won't match these queries
-    // but can still be queried by refId or payload (for backward compatibility)
+    // IMPORTANT: Don't use orderBy with where() to avoid Firestore index requirements
+    // Instead, fetch all matching documents and sort in memory
+    // This avoids the need for composite indexes while maintaining functionality
     const allDocs = await getDocs(q);
-    const items: Array<Record<string, unknown>> = allDocs.docs.map((doc) => {
+    let items: Array<Record<string, unknown>> = allDocs.docs.map((doc) => {
       const data = doc.data() as Record<string, unknown>;
       return {
         ...data,
+        id: doc.id,
       };
     });
 
-    // Pagination (client-side after productId filter)
+    // Sort by creation date (newest first) in memory
+    items.sort((a, b) => {
+      const aTime = (a.createdAt as number) || 0;
+      const bTime = (b.createdAt as number) || 0;
+      return bTime - aTime;
+    });
+
+    // Pagination (client-side after sorting)
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedItems = items.slice(startIndex, endIndex);

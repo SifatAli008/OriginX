@@ -88,6 +88,18 @@ export async function generateQRCodeDataUrl(
 
 /**
  * Generate QR code for a product
+ * 
+ * NEW APPROACH: Encodes a public URL instead of encrypted data
+ * URL format: https://domain.com/qr/[productId]
+ * 
+ * This allows anyone scanning the QR code to:
+ * - Automatically open the product verification page
+ * - View complete product information
+ * - See all transaction hashes
+ * - Access movement history
+ * 
+ * The encrypted payload is still generated and stored for backward compatibility
+ * and advanced verification features.
  */
 export async function generateProductQRCode(
   productId: string,
@@ -99,6 +111,7 @@ export async function generateProductQRCode(
   encrypted: string;
   dataUrl: string;
   payload: QRPayload;
+  qrUrl: string; // Public URL for QR code
 }> {
   const payload: QRPayload = {
     productId,
@@ -107,13 +120,30 @@ export async function generateProductQRCode(
     ts: Date.now(),
   };
 
+  // Generate encrypted payload (for backward compatibility and advanced verification)
   const encrypted = encryptQRPayload(payload, secret);
-  const dataUrl = await generateQRCodeDataUrl(encrypted, options);
+
+  // Generate public URL for QR code
+  // Use environment variable for base URL, fallback to default
+  // For server-side: use env var or default domain
+  // For client-side: use current origin
+  let baseUrl = 'https://originx.com'; // Default fallback
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  } else if (typeof window !== 'undefined') {
+    baseUrl = window.location.origin;
+  }
+  const qrUrl = `${baseUrl}/qr/${productId}`;
+
+  // Generate QR code image from URL (not encrypted data)
+  // This makes QR codes scannable and automatically open the product page
+  const dataUrl = await generateQRCodeDataUrl(qrUrl, options);
 
   return {
-    encrypted,
-    dataUrl,
+    encrypted, // Still included for backward compatibility
+    dataUrl,   // QR code image (contains URL)
     payload,
+    qrUrl,     // The public URL encoded in the QR code
   };
 }
 

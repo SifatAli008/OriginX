@@ -169,7 +169,8 @@ export async function POST(request: NextRequest) {
 
     const productId = productRef.id;
 
-    // Generate encrypted QR code (use global scope since there's no orgId)
+    // Generate QR code with public URL (new approach)
+    // QR code will contain: https://domain.com/qr/[productId]
     const qrResult = await generateProductQRCode(
       productId,
       uid,
@@ -178,9 +179,11 @@ export async function POST(request: NextRequest) {
       { size: 400 }
     );
 
-    // Update product with QR hash (Admin)
+    // Update product with QR hash and data URL (Admin)
+    // Store both encrypted hash (for verification) and QR image (for display)
     const updateData: Record<string, unknown> = {
-      qrHash: qrResult.encrypted,
+      qrHash: qrResult.encrypted, // Encrypted payload (for backward compatibility)
+      qrUrl: qrResult.qrUrl,     // Public URL (new field)
     };
     
     // Only include qrDataUrl if it exists (Firestore doesn't allow undefined)
@@ -206,8 +209,9 @@ export async function POST(request: NextRequest) {
       {
         productId,
         qr: {
-          encrypted: qrResult.encrypted,
-          pngDataUrl: qrResult.dataUrl,
+          encrypted: qrResult.encrypted,      // Encrypted payload (for verification)
+          pngDataUrl: qrResult.dataUrl,       // QR code image
+          url: qrResult.qrUrl,                // Public URL (what's encoded in QR)
         },
         transaction: {
           txHash: transaction.txHash,

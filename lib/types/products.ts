@@ -33,7 +33,8 @@ export interface ProductDocument {
   quantity?: number;              // Available quantity (inventory count)
   batchId?: string;               // Batch ID (if part of a batch)
   imgUrl?: string;                // Product image URL
-  qrHash: string;                 // Encrypted QR code hash/data
+  qrHash: string;                 // Encrypted QR code hash/data (for verification)
+  qrUrl?: string;                // Public QR code URL (what's encoded in QR)
   qrDataUrl?: string;            // QR code image data URL (for display)
   status: ProductStatus;          // Product status
   manufacturerId: string;         // User ID who created the product
