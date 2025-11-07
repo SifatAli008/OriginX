@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { getFirebaseAuth } from "@/lib/firebase/client";
-import { Users, Package, ArrowRight, RefreshCw, Search, Plus, Minus, AlertCircle, CheckCircle2, X } from "lucide-react";
+import { Users, Package, ArrowRight, RefreshCw, Search, Plus, Minus, AlertCircle, X } from "lucide-react";
 
 interface SmeItem {
   uid: string;

@@ -336,12 +336,15 @@ export async function GET(request: NextRequest) {
         const fromValues = toValues;
 
         // 1) Movements TO this SME - calculate net quantity received
+        interface MovementDoc {
+          data: () => { productId?: string; createdAt?: number; quantity?: number };
+        }
         const toSnap = toValues.length > 0
           ? await db.collection("movements").where("to", "in", toValues).get()
-          : { docs: [] } as any;
+          : { docs: [] as MovementDoc[] };
         const netQuantityByProduct = new Map<string, number>();
         const lastToByProduct = new Map<string, number>();
-        toSnap.docs.forEach((m: any) => {
+        toSnap.docs.forEach((m: MovementDoc) => {
           const d = m.data() as { productId?: string; createdAt?: number; quantity?: number };
           if (!d.productId) return;
           const qty = typeof d.quantity === "number" && d.quantity > 0 ? d.quantity : 1;
@@ -354,9 +357,9 @@ export async function GET(request: NextRequest) {
         // 2) Movements FROM this SME (transferred out) - subtract from net quantity
         const fromSnap = fromValues.length > 0
           ? await db.collection("movements").where("from", "in", fromValues).get()
-          : { docs: [] } as any;
+          : { docs: [] as MovementDoc[] };
         const lastFromByProduct = new Map<string, number>();
-        fromSnap.docs.forEach((m: any) => {
+        fromSnap.docs.forEach((m: MovementDoc) => {
           const d = m.data() as { productId?: string; createdAt?: number; quantity?: number };
           if (!d.productId) return;
           const qty = typeof d.quantity === "number" && d.quantity > 0 ? d.quantity : 1;
@@ -381,7 +384,7 @@ export async function GET(request: NextRequest) {
           const lastFrom = lastFromByProduct.get(p.productId) || 0;
           return lastTo > 0 && lastTo >= lastFrom;
         });
-      } catch (e) {
+      } catch {
         // Fallback: only show products created by the SME
         items = items.filter((p) => p.manufacturerId === uid);
       }

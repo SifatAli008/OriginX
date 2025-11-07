@@ -11,7 +11,6 @@ import {
   ChevronRight,
   LogOut,
   Settings,
-  BarChart3,
   Users,
   FileText,
   Building2,

@@ -82,7 +82,7 @@ export default function ProductHistoryPage() {
         sku: (p.sku as string) || undefined,
       }));
       setSuggestions(items);
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, []);

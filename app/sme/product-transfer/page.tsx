@@ -35,7 +35,7 @@ export default function SmeProductTransferPage() {
   const user = authState.user;
   const { addToast } = useToast();
 
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [smes, setSmes] = useState<SmeItem[]>([]);
   const [smeSearch, setSmeSearch] = useState("");
   const [selectedSmeId, setSelectedSmeId] = useState<string>("");

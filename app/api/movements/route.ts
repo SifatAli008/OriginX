@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
       // Quantity sync
       try {
         const productRef = adb.collection("products").doc(productId);
-        await adb.runTransaction(async (t: any) => {
+        await adb.runTransaction(async (t) => {
           const snap = await t.get(productRef);
           const current = (snap.exists && typeof snap.get("quantity") === "number") ? (snap.get("quantity") as number) : 0;
           let newQty = current;
@@ -399,7 +399,7 @@ export async function POST(request: NextRequest) {
             .limit(100)
             .get();
           let maxBlock = 1000;
-          recentSnap.docs.forEach((doc: any) => {
+          recentSnap.docs.forEach((doc) => {
             const tx = doc.data();
             const blockNum = tx.blockNumber as number;
             if (blockNum && blockNum > maxBlock) {
@@ -434,7 +434,7 @@ export async function POST(request: NextRequest) {
         // Update product quantity
         try {
           const productRef = adb.collection("products").doc(productId);
-          await adb.runTransaction(async (t: any) => {
+          await adb.runTransaction(async (t) => {
             const snap = await t.get(productRef);
             const current = (snap.exists && typeof snap.get("quantity") === "number") ? (snap.get("quantity") as number) : 0;
             let newQty = current;
@@ -677,7 +677,7 @@ export async function POST(request: NextRequest) {
     const productRef = adminDb.collection("products").doc(productId);
 
     // Use transaction to avoid race conditions and to clamp at 0
-    await adminDb.runTransaction(async (t: any) => {
+    await adminDb.runTransaction(async (t) => {
       const snap = await t.get(productRef);
       const current = (snap.exists && typeof snap.get("quantity") === "number") ? (snap.get("quantity") as number) : 0;
       let newQty = current;
@@ -813,7 +813,7 @@ export async function GET(request: NextRequest) {
         if (status) ref = ref.where("status", "==", status);
         if (productId) ref = ref.where("productId", "==", productId);
         const snap = await ref.orderBy("createdAt", "desc").limit(pageSize).get();
-        const items = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         return NextResponse.json({ items, total: items.length, page, pageSize }, { status: 200 });
       } catch (fallbackErr) {
         console.error("[Movements GET] Admin fallback failed:", fallbackErr);
@@ -830,9 +830,14 @@ export async function GET(request: NextRequest) {
         if (type) ref = ref.where("type", "==", type);
         if (status) ref = ref.where("status", "==", status);
         const snap = await ref.get();
-        const all = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        interface MovementItem {
+          id: string;
+          createdAt?: number;
+          [key: string]: unknown;
+        }
+        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as MovementItem[];
         // Sort newest first without requiring Firestore composite index
-        all.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         const items = all.slice(0, pageSize);
         return NextResponse.json({ items, total: all.length, page, pageSize }, { status: 200 });
       } catch (adminErr) {
