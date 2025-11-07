@@ -10,6 +10,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import type { ProductDocument } from "@/lib/types/products";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 interface PublicProductResponse {
   product: ProductDocument | null;
@@ -92,7 +93,7 @@ export async function GET(
         .limit(100)
         .get();
       
-      transactions = transactionsSnap.docs.map((doc) => {
+      transactions = transactionsSnap.docs.map((doc: QueryDocumentSnapshot) => {
         const data = doc.data();
         return {
           txHash: data.txHash || doc.id,
@@ -120,7 +121,7 @@ export async function GET(
         .limit(100)
         .get();
       
-      movements = movementsSnap.docs.map((doc) => {
+      movements = movementsSnap.docs.map((doc: QueryDocumentSnapshot) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -151,7 +152,7 @@ export async function GET(
         .limit(20)
         .get();
       
-      verifications = verificationsSnap.docs.map((doc) => {
+      verifications = verificationsSnap.docs.map((doc: QueryDocumentSnapshot) => {
         const data = doc.data();
         return {
           id: doc.id,
