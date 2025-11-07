@@ -30,6 +30,7 @@ export interface ProductDocument {
   description?: string;            // Product description
   sku: string;                    // Stock Keeping Unit
   category: ProductCategory;      // Product category
+  quantity?: number;              // Available quantity (inventory count)
   batchId?: string;               // Batch ID (if part of a batch)
   imgUrl?: string;                // Product image URL
   qrHash: string;                 // Encrypted QR code hash/data
@@ -76,6 +77,7 @@ export interface ProductRegistrationForm {
   description?: string;
   sku: string;
   category: ProductCategory;
+  quantity?: number;              // Initial quantity
   image?: File | string;         // Image file or URL
   metadata?: {
     brand?: string;

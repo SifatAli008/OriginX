@@ -1,5 +1,6 @@
 /**
- * Transaction utilities for creating immutable blockchain transactions
+ * Transaction utilities for creating simulated blockchain-style transfer records
+ * Note: This is a simulation - not a real blockchain network
  */
 
 import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";

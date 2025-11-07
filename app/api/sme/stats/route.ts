@@ -36,31 +36,52 @@ export async function GET(request: NextRequest) {
 
     const db = getAdminFirestore();
 
-    // For SME users, products are filtered by manufacturerId (their uid)
-    const manufacturerId = userDoc.role === "admin" ? null : decoded.uid;
+    // For SME users, products include ones created by them AND ones transferred to them
+    const isAdmin = userDoc.role === "admin";
+    const manufacturerId = isAdmin ? null : decoded.uid;
 
     // 1. Total Products
     let productsQuery = db.collection("products");
-    if (manufacturerId) {
-      productsQuery = productsQuery.where("manufacturerId", "==", manufacturerId) as typeof productsQuery;
+    const baseProductsSnapshot = await productsQuery.get();
+    let productDocs: QueryDocumentSnapshot[] = baseProductsSnapshot.docs as QueryDocumentSnapshot[];
+
+    if (!isAdmin) {
+      // Start with products created by the SME
+      const createdBySme = baseProductsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => doc.data().manufacturerId === manufacturerId);
+
+      // Also include products transferred to this SME via movements
+      const toValues = [userDoc.displayName, userDoc.email].filter(Boolean) as string[];
+      let movedInProductIds = new Set<string>();
+      if (toValues.length > 0) {
+        const movSnap = await db.collection("movements").where("to", "in", toValues).get();
+        movSnap.forEach((m: QueryDocumentSnapshot) => {
+          const data = m.data() as { productId?: string };
+          if (data.productId) movedInProductIds.add(data.productId);
+        });
+      }
+
+      const movedInDocs = baseProductsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => movedInProductIds.has(doc.id));
+      const mergedMap = new Map<string, QueryDocumentSnapshot>();
+      [...createdBySme, ...movedInDocs].forEach((d) => mergedMap.set(d.id, d));
+      productDocs = Array.from(mergedMap.values());
     }
-    const productsSnapshot = await productsQuery.get();
-    const totalProducts = productsSnapshot.size;
+
+    const totalProducts = productDocs.length;
     
     // Active products
-    const activeProducts = productsSnapshot.docs.filter(
+    const activeProducts = productDocs.filter(
       (doc: QueryDocumentSnapshot) => doc.data().status === "active"
     ).length;
 
     // Products with QR codes
-    const productsWithQR = productsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
+    const productsWithQR = productDocs.filter((doc: QueryDocumentSnapshot) => {
       const data = doc.data();
       return data.qrDataUrl || data.qrCode;
     }).length;
 
     // Recent products (last 7 days)
     const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    const recentProducts = productsSnapshot.docs.filter((doc: QueryDocumentSnapshot) => {
+    const recentProducts = productDocs.filter((doc: QueryDocumentSnapshot) => {
       const createdAt = doc.data().createdAt || 0;
       return createdAt >= sevenDaysAgo;
     }).length;
@@ -70,8 +91,8 @@ export async function GET(request: NextRequest) {
     let recentVerificationsCount = 0;
     let totalVerificationsCount = 0;
     
-    if (manufacturerId) {
-      const orgProductIds = productsSnapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id);
+    if (!isAdmin) {
+      const orgProductIds = productDocs.map((doc: QueryDocumentSnapshot) => doc.id);
       if (orgProductIds.length > 0) {
         const allVerifications30d = await db.collection("verifications")
           .where("createdAt", ">=", thirtyDaysAgo)
@@ -108,8 +129,8 @@ export async function GET(request: NextRequest) {
     let suspicious = 0;
     let fake = 0;
 
-    if (manufacturerId) {
-      const orgProductIds = productsSnapshot.docs.map((doc: QueryDocumentSnapshot) => doc.id);
+    if (!isAdmin) {
+      const orgProductIds = productDocs.map((doc: QueryDocumentSnapshot) => doc.id);
       if (orgProductIds.length > 0) {
         const allVerifications30d = await db.collection("verifications")
           .where("createdAt", ">=", thirtyDaysAgo)
@@ -156,7 +177,7 @@ export async function GET(request: NextRequest) {
 
     // Unique categories
     const categoriesSet = new Set<string>();
-    productsSnapshot.docs.forEach((doc: QueryDocumentSnapshot) => {
+    productDocs.forEach((doc: QueryDocumentSnapshot) => {
       const category = doc.data().category;
       if (category) {
         categoriesSet.add(category as string);

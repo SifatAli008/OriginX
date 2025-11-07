@@ -1,6 +1,8 @@
+export const runtime = 'nodejs';
 /**
- * API Route: Blockchain Transactions
- * GET /api/transactions - List transactions with filters
+ * API Route: Simulated Blockchain-Style Transfer Records
+ * GET /api/transactions - List transfer records with filters
+ * Note: This is a simulation - not a real blockchain network
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -150,25 +152,67 @@ export async function GET(request: NextRequest) {
     } = await getFirestoreUtils();
 
     if (!app) {
-      console.error("Firebase app initialization failed - config may be missing");
-      // In development with test token, return empty transactions
-      if (process.env.NODE_ENV === 'development' && uid === 'test-user-123') {
+      // Fallback to Admin SDK on server (no NEXT_PUBLIC_ variables needed)
+      try {
+        const { getAdminFirestore } = await import("@/lib/firebase/admin");
+        const adb = getAdminFirestore();
+        let ref = adb.collection("transactions");
+        // When productId is provided, show full lifecycle across orgs
+        if (!productId && userDoc.role !== "admin" && userDoc.orgId) ref = ref.where("orgId", "==", userDoc.orgId);
+        if (type) ref = ref.where("type", "==", type);
+        if (refType) ref = ref.where("refType", "==", refType);
+        if (refId) ref = ref.where("refId", "==", refId);
+        if (movementId) ref = ref.where("movementId", "==", movementId);
+        if (productId) ref = ref.where("productId", "==", productId);
+        if (status) ref = ref.where("status", "==", status);
+        if (startDate) ref = ref.where("createdAt", ">=", startDate);
+        if (endDate) ref = ref.where("createdAt", "<=", endDate);
+        const snap = await ref.orderBy("createdAt", "desc").get();
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
         return NextResponse.json({
-          items: [],
-          total: 0,
+          items: all.slice(startIndex, endIndex),
+          total: all.length,
           page,
           pageSize,
-          hasMore: false,
-          warning: "Firebase not configured - returning mock data",
+          hasMore: endIndex < all.length,
         }, { status: 200 });
+      } catch (fallbackErr) {
+        console.error("[Transactions] Admin fallback failed:", fallbackErr);
+        return NextResponse.json({ error: "Database not configured" }, { status: 500 });
       }
-      return NextResponse.json(
-        { 
-          error: "Firebase not configured. Please set Firebase environment variables.",
-          hint: "For development, create .env.local with NEXT_PUBLIC_FIREBASE_* variables"
-        },
-        { status: 500 }
-      );
+    }
+
+    // When productId is provided, use Admin SDK to avoid index/security rule issues
+    if (productId) {
+      try {
+        const { getAdminFirestore } = await import("@/lib/firebase/admin");
+        const adb = getAdminFirestore();
+        let ref = adb.collection("transactions").where("productId", "==", productId);
+        if (type) ref = ref.where("type", "==", type);
+        if (refType) ref = ref.where("refType", "==", refType);
+        if (refId) ref = ref.where("refId", "==", refId);
+        if (movementId) ref = ref.where("movementId", "==", movementId);
+        if (status) ref = ref.where("status", "==", status);
+        if (startDate) ref = ref.where("createdAt", ">=", startDate);
+        if (endDate) ref = ref.where("createdAt", "<=", endDate);
+        const snap = await ref.get();
+        const all = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        all.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        return NextResponse.json({
+          items: all.slice(startIndex, endIndex),
+          total: all.length,
+          page,
+          pageSize,
+          hasMore: endIndex < all.length,
+        }, { status: 200 });
+      } catch (adminErr) {
+        console.error("[Transactions] Admin SDK query failed:", adminErr);
+        // Fall through to client SDK path
+      }
     }
 
     const db = getFirestore(app);
@@ -176,8 +220,8 @@ export async function GET(request: NextRequest) {
     let q = buildQuery(transactionsRef);
 
     // Apply filters
-    if (userDoc.role !== "admin" && userDoc.orgId) {
-      // Non-admin users can only see their org's transactions
+    // Non-admin users: restrict to org, EXCEPT when querying a specific productId (show full lifecycle)
+    if (!productId && userDoc.role !== "admin" && userDoc.orgId) {
       q = buildQuery(q, buildWhere("orgId", "==", userDoc.orgId));
     }
 

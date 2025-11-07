@@ -28,7 +28,7 @@ export default function ArchitectureDiagram() {
       title: "Data Layer",
       icon: Database,
       color: "from-orange-500 to-orange-600",
-      items: ["Firestore Database", "Cloud Storage", "Blockchain Ledger"]
+      items: ["Firestore Database", "Cloud Storage", "Simulated Ledger"]
     },
     {
       title: "Security",

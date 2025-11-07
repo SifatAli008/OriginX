@@ -436,7 +436,7 @@ function VerifyContent() {
                 {/* Transaction Info */}
                 {verificationResult.transaction && (
                   <div className="p-4 bg-gray-800/50 rounded-lg">
-                    <p className="text-sm font-medium text-gray-400 mb-2">Blockchain Transaction</p>
+                    <p className="text-sm font-medium text-gray-400 mb-2">Transfer Record</p>
                     <div className="space-y-1 text-sm">
                       <p className="text-white font-mono text-xs break-all">
                         <span className="text-gray-400">Hash:</span> {verificationResult.transaction.txHash}

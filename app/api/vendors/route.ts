@@ -84,7 +84,13 @@ export async function GET(request: NextRequest) {
         role: (typeof f.role === "object" && f.role?.stringValue) || (typeof f.role === "string" ? f.role : "sme") || "sme",
         orgId: (typeof f.orgId === "object" && f.orgId?.stringValue) ?? (typeof f.orgId === "string" ? f.orgId : null) ?? null,
         orgName: (typeof f.orgName === "object" && f.orgName?.stringValue) ?? (typeof f.orgName === "string" ? f.orgName : undefined) ?? undefined,
-        mfaEnabled: !!(typeof f.mfaEnabled === "object" && f.mfaEnabled?.booleanValue ?? (typeof f.mfaEnabled === "boolean" ? f.mfaEnabled : false) ?? false),
+        mfaEnabled: (
+          typeof f.mfaEnabled === "object"
+            ? !!(f as any).mfaEnabled?.booleanValue
+            : typeof f.mfaEnabled === "boolean"
+              ? (f.mfaEnabled as boolean)
+              : false
+        ),
         status: (typeof f.status === "object" && f.status?.stringValue) || (typeof f.status === "string" ? f.status : "pending") || "pending",
         createdAt: (typeof f.createdAt === "object" && f.createdAt?.integerValue ? parseInt(f.createdAt.integerValue) : Date.now()),
         updatedAt: (typeof f.updatedAt === "object" && f.updatedAt?.integerValue ? parseInt(f.updatedAt.integerValue) : Date.now()),

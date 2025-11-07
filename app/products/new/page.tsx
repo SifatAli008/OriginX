@@ -25,6 +25,7 @@ export default function NewProductPage() {
     sku: "",
     category: "" as ProductCategory | "",
     description: "",
+    quantity: "",
     brand: "",
     model: "",
     serialNumber: "",
@@ -126,6 +127,7 @@ export default function NewProductPage() {
         name: string;
         sku: string;
         category: ProductCategory;
+        quantity?: number;
         description?: string;
         image?: string | { url: string };
         metadata?: {
@@ -141,6 +143,12 @@ export default function NewProductPage() {
         category,
         description: formData.description || undefined,
       };
+
+      // Quantity: include if provided and valid (>= 0)
+      const qtyNum = Number(formData.quantity);
+      if (!Number.isNaN(qtyNum) && Number.isFinite(qtyNum) && qtyNum >= 0) {
+        body.quantity = Math.floor(qtyNum);
+      }
 
       // Send base64 image to server - server will handle Cloudinary upload
       if (imageBase64) {
@@ -317,6 +325,19 @@ export default function NewProductPage() {
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Quantity</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  placeholder="e.g., 100"
+                />
               </div>
 
               <div>

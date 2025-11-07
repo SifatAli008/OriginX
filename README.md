@@ -1,13 +1,148 @@
 # OriginX - Anti-Counterfeit Platform
 
-A Next.js platform for supply chain management and product authentication using blockchain simulation and QR code encryption.
+A Next.js platform for supply chain management and product authentication using **blockchain-style simulation** and QR code encryption.
+
+---
+
+## 🔗 Blockchain-Style Product Transfer & Tracking System
+
+> **Note:** Simulation-based — no real blockchain or payment involved
+
+### 🧩 Overview
+
+This system **simulates blockchain principles** to provide **secure and transparent product tracking** between **Companies** and **SMEs**.
+
+It creates a **chain-like record** of product ownership using **SHA-256 hashes** and **AES-256 encryption**, but **does not use any real blockchain or cryptocurrency transactions**.
+
+---
+
+### ⚙️ Core Mechanism
+
+* Each **product creation** generates an **initial record (block-like entry)**.
+
+* Every **ownership transfer** (Company → SME → new SME) adds a **new simulated block**.
+
+* The blocks are **not stored on a blockchain network**, but instead within a **central database**, maintaining a **chain of ownership history**.
+
+---
+
+### 🔐 Hashing & Security
+
+* **Algorithm:** SHA-256 for unique owner hashes
+
+* **Encryption:** AES-256 for product information security
+
+* **Purpose:** Ensure authenticity and traceability of ownership
+
+Each simulated "block" includes:
+
+```json
+{
+  previous_hash,
+  sender_hash,
+  receiver_hash,
+  product_hash,
+  timestamp,
+  remarks: "transfer_record"
+}
+```
+
+---
+
+## 🏢 Database Schemas
+
+### Company
+
+| Field           | Description                                |
+| --------------- | ------------------------------------------ |
+| name            | Company name                               |
+| tin_number      | Tax Identification Number                  |
+| registration_id | Government registration ID                 |
+| company_id      | Unique company identifier                  |
+| user_id         | Linked user account                        |
+| products        | List of product IDs created by the company |
+| description     | Company description                        |
+| phone           | Contact number                             |
+| address         | Company address                            |
+
+### 📦 Product
+
+| Field             | Description                                       |
+| ----------------- | ------------------------------------------------- |
+| name              | Product name                                      |
+| description       | Product details                                   |
+| product_image     | Image of the product                              |
+| product_id        | Unique identifier                                 |
+| manufacturer_data | Manufacturing or batch information                |
+| expiry_date       | Product expiry date                               |
+| product_hash      | AES-256 encrypted hash of product data            |
+| owner_hash        | SHA-256 hash of current owner (Company or SME)    |
+| new_sme_hash      | SHA-256 hash of next SME (for transfer)           |
+| qr                | QR code for product verification and traceability |
+
+### 🧾 SME
+
+| Field           | Description                           |
+| --------------- | ------------------------------------- |
+| name            | SME name                              |
+| tin_number      | Tax Identification Number             |
+| registration_id | Government registration ID            |
+| company_id      | Unique identifier                     |
+| products        | List of product IDs owned or received |
+| description     | SME description                       |
+| phone           | Contact number                        |
+| address         | Business address                      |
+
+### 👤 User
+
+| Field          | Description                      |
+| -------------- | -------------------------------- |
+| email          | Login email                      |
+| password       | Secure (hashed) password         |
+| role           | Role type: `COMPANY` or `SME`    |
+| created_at     | Account creation date            |
+| display_name   | Display name                     |
+| last_login     | Last login timestamp             |
+| photo_url      | Profile image URL                |
+| update_details | Editable user info               |
+| status         | Account status (active/inactive) |
+
+---
+
+## 🚫 Rules & Restrictions
+
+* Only **Companies** can **create** products.
+
+* Companies **cannot edit** or **update** product details once created.
+
+* Companies can **transfer** products to SMEs.
+
+* SMEs can **receive** and **transfer** products to other SMEs.
+
+* Each transfer creates a **new simulated block** (database entry) linking sender and receiver.
+
+* No **payment**, **crypto**, or **real blockchain network** is involved — only a **secure record trail** within the system database.
+
+---
+
+## 🧠 Summary
+
+| Concept     | Real Blockchain Equivalent | In This System                       |
+| ----------- | -------------------------- | ------------------------------------ |
+| Block       | Database entry             | Simulated record                     |
+| Hash        | SHA-256                    | Used for owner and transfer security |
+| Chain       | Linked blocks              | Sequential product ownership records |
+| Transaction | Payment or trade           | Simple transfer update only          |
+| Ledger      | Distributed storage        | Centralized database                 |
+
+---
 
 ## Features
 
 - **Product Management**: Register products, generate encrypted QR codes, batch imports
 - **Movement Tracking**: Track shipments and transfers with handover records
 - **Verification System**: QR code verification with AI-powered counterfeit detection
-- **Blockchain Ledger**: Immutable transaction history
+- **Blockchain-Style Ledger**: Immutable transaction history (simulated)
 - **Analytics Dashboard**: KPIs and insights for supply chain monitoring
 - **Role-Based Access**: Admin, Company, and SME user roles
 

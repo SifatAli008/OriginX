@@ -138,7 +138,7 @@ export default function ProductsPage() {
         sku: (item.sku as string) || "",
         category: (item.category as string) || "other",
         supplier: (item.manufacturerName as string) || "Unknown",
-        quantity: 1, // Products don't have quantity in API response
+        quantity: typeof item.quantity === "number" ? (item.quantity as number) : 0,
         price: 0, // Products don't have price in API response
         status: (item.status as "active" | "inactive" | "out_of_stock") || "active",
         description: (item.description as string) || "",
@@ -659,12 +659,14 @@ export default function ProductsPage() {
                   <Layers className="h-4 w-4 mr-2" />
                   Add to Batch
                 </Button>
+                {user?.role !== "sme" && (
                 <Link href="/products/new">
                   <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/20 transition-all duration-200">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Product
                   </Button>
                 </Link>
+                )}
               </>
             )}
           </div>
@@ -883,7 +885,7 @@ export default function ProductsPage() {
                 ? "Try adjusting your filters"
                     : "Add your first product to get started"}
             </p>
-                {!searchTerm && categoryFilter === "all" && statusFilter === "all" && (
+                {!searchTerm && categoryFilter === "all" && statusFilter === "all" && user?.role !== "sme" && (
               <Link href="/products/new">
                     <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                       <Plus className="h-4 w-4 mr-2" />

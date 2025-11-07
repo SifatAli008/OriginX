@@ -1,5 +1,6 @@
 /**
- * Firestore utilities for blockchain transactions
+ * Firestore utilities for simulated blockchain-style transfer records
+ * Note: This is a simulation - not a real blockchain network
  */
 
 "use client";

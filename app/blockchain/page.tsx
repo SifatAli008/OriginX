@@ -1,6 +1,8 @@
 "use client";
 
 import { getUserDocument } from "@/lib/firebase/firestore";
+import { getProduct } from "@/lib/firebase/products";
+import type { ProductDocument } from "@/lib/types/products";
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -20,6 +22,7 @@ import {
   CheckCircle,
   Box,
   X,
+  Package,
 } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { useToast } from "@/components/ui/toast";
@@ -50,6 +53,7 @@ export default function BlockchainPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedTransaction, setSelectedTransaction] = useState<BlockchainTransaction | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [productInfoMap, setProductInfoMap] = useState<Record<string, ProductDocument>>({});
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -95,14 +99,41 @@ export default function BlockchainPage() {
       }
 
       const data = await response.json();
-      setTransactions(data.items || []);
+      const txs = data.items || [];
+      setTransactions(txs);
+
+      // Fetch product info for product-related transactions
+      const productIds = new Set<string>();
+      txs.forEach((tx: BlockchainTransaction) => {
+        if (tx.refType === "product") {
+          productIds.add(tx.refId);
+        } else if (tx.payload?.productId) {
+          productIds.add(tx.payload.productId as string);
+        }
+      });
+
+      // Fetch product details for all unique product IDs
+      const productMap: Record<string, ProductDocument> = {};
+      await Promise.all(
+        Array.from(productIds).map(async (productId) => {
+          try {
+            const product = await getProduct(productId);
+            if (product) {
+              productMap[productId] = product;
+            }
+          } catch (err) {
+            console.error(`Failed to fetch product ${productId}:`, err);
+          }
+        })
+      );
+      setProductInfoMap(productMap);
     } catch (error) {
-      console.error("Failed to fetch blockchain transactions:", error);
+      console.error("Failed to fetch transfer records:", error);
       setTransactions([]);
       addToast({
         variant: "error",
         title: "Failed to fetch transactions",
-        description: error instanceof Error ? error.message : "An error occurred while loading blockchain transactions",
+        description: error instanceof Error ? error.message : "An error occurred while loading transfer records",
       });
     } finally {
       setLoading(false);
@@ -222,15 +253,15 @@ export default function BlockchainPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-400 mb-6">
           <Home className="h-4 w-4" />
           <ChevronRight className="h-3 w-3" />
-          <span className="text-white font-medium">Blockchain</span>
+          <span className="text-white font-medium">Transfer History</span>
         </nav>
 
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Activity className="h-8 w-8 text-blue-400" />
-            <h1 className="text-4xl font-bold text-white">Blockchain Transactions</h1>
+            <h1 className="text-4xl font-bold text-white">Transfer History</h1>
           </div>
-          <p className="text-gray-400">Immutable product transaction records on the blockchain</p>
+          <p className="text-gray-400">Simulated blockchain-style transaction records (not a real blockchain)</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -267,7 +298,7 @@ export default function BlockchainPage() {
           
           <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-400">Last Block</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-400">Last Record</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-blue-400">
@@ -320,16 +351,16 @@ export default function BlockchainPage() {
             {loading ? (
               <div className="text-center py-12">
                 <RefreshCw className="h-12 w-12 text-gray-600 mx-auto mb-3 animate-spin" />
-                <p className="text-gray-400">Loading blockchain transactions...</p>
+                <p className="text-gray-400">Loading transfer records...</p>
               </div>
             ) : filteredTransactions.length === 0 ? (
               <div className="text-center py-12">
                 <Activity className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 text-lg mb-2">No blockchain transactions found</p>
+                <p className="text-gray-400 text-lg mb-2">No transfer records found</p>
                 <p className="text-gray-500 text-sm">
                   {searchTerm || typeFilter !== "all"
                     ? "Try adjusting your filters" 
-                    : "Blockchain transactions will appear here"}
+                    : "Transfer records will appear here"}
                 </p>
               </div>
             ) : (
@@ -406,13 +437,48 @@ export default function BlockchainPage() {
 
                             {(productName !== "N/A" || productId) && (
                               <div className="sm:col-span-2">
-                                <p className="text-xs text-gray-400 mb-1">Product</p>
-                                <p className="text-white text-sm">{productName}</p>
-                                {productId && (
-                                  <p className="text-gray-500 text-xs font-mono truncate" title={productId}>
-                                    {productId}
-                                  </p>
-                                )}
+                                <div className="p-3 bg-gray-900/50 rounded-lg border border-gray-800">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Package className="h-4 w-4 text-blue-400" />
+                                    <p className="text-xs font-medium text-gray-400 uppercase">Product Info</p>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <div>
+                                      <p className="text-xs text-gray-500">Name</p>
+                                      <p className="text-white text-sm font-medium">{productName}</p>
+                                    </div>
+                                    {productId && (
+                                      <div>
+                                        <p className="text-xs text-gray-500">Product ID</p>
+                                        <p className="text-gray-400 text-xs font-mono truncate" title={productId}>
+                                          {productId}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {productInfoMap[productId] && (
+                                      <>
+                                        {productInfoMap[productId].sku && (
+                                          <div>
+                                            <p className="text-xs text-gray-500">SKU</p>
+                                            <p className="text-gray-400 text-xs">{productInfoMap[productId].sku}</p>
+                                          </div>
+                                        )}
+                                        {productInfoMap[productId].category && (
+                                          <div>
+                                            <p className="text-xs text-gray-500">Category</p>
+                                            <p className="text-gray-400 text-xs capitalize">{productInfoMap[productId].category}</p>
+                                          </div>
+                                        )}
+                                        {typeof productInfoMap[productId].quantity === "number" && (
+                                          <div>
+                                            <p className="text-xs text-gray-500">Quantity</p>
+                                            <p className="text-blue-400 text-sm font-semibold">{productInfoMap[productId].quantity}</p>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             )}
 
@@ -525,6 +591,60 @@ export default function BlockchainPage() {
                     </div>
                   )}
                 </div>
+                {(() => {
+                  const payload = selectedTransaction.payload as Record<string, unknown> | undefined;
+                  const productName = (payload?.productName as string) || "N/A";
+                  const productId = selectedTransaction.refType === "product" 
+                    ? selectedTransaction.refId 
+                    : (payload?.productId as string) || selectedTransaction.refId;
+                  const productInfo = productInfoMap[productId];
+                  
+                  if (productName !== "N/A" || productId) {
+                    return (
+                      <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Package className="h-5 w-5 text-blue-400" />
+                          <p className="text-sm font-medium text-gray-300 uppercase">Product Info</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Name</p>
+                            <p className="text-white text-sm font-medium">{productName}</p>
+                          </div>
+                          {productId && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Product ID</p>
+                              <p className="text-gray-400 text-xs font-mono break-all">{productId}</p>
+                            </div>
+                          )}
+                          {productInfo && (
+                            <>
+                              {productInfo.sku && (
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">SKU</p>
+                                  <p className="text-gray-400 text-sm">{productInfo.sku}</p>
+                                </div>
+                              )}
+                              {productInfo.category && (
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Category</p>
+                                  <p className="text-gray-400 text-sm capitalize">{productInfo.category}</p>
+                                </div>
+                              )}
+                              {typeof productInfo.quantity === "number" && (
+                                <div className="col-span-2">
+                                  <p className="text-xs text-gray-500 mb-1">Quantity</p>
+                                  <p className="text-blue-400 text-lg font-bold">{productInfo.quantity}</p>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 {selectedTransaction.payload && Object.keys(selectedTransaction.payload).length > 0 && (
                   <div>
                     <p className="text-xs text-gray-400 mb-2">Payload</p>

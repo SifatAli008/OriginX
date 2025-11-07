@@ -95,7 +95,7 @@ export default function LandingPage() {
     },
     {
       title: "Transactions",
-      body: "Review an append-only ledger with hash, block, and status to mirror blockchain governance.",
+      body: "Review a simulated blockchain-style ledger with hash, block, and status (not a real blockchain network).",
       tag: "Ledger",
       icon: Blocks,
     },
@@ -662,7 +662,7 @@ export default function LandingPage() {
             {[
               { 
                 title: "Low-Cost Implementation", 
-                desc: "No expensive hardware or blockchain nodes required. Works with existing smartphones and infrastructure.",
+                desc: "No expensive hardware or blockchain nodes required. Simulated blockchain-style tracking works with existing smartphones and infrastructure.",
                 icon: TrendingUp
               },
               { 
@@ -867,7 +867,7 @@ export default function LandingPage() {
             { module: "QR System", desc: "Generate and bind tamper-evident QR codes", points: ["AES-256 encrypted payloads", "Print-ready assets", "Duplicate detection"] },
             { module: "Verification", desc: "AI-powered authenticity checks with scoring", points: ["Explainable results", "Escalation workflows", "Geo/time consistency checks"] },
             { module: "Movements", desc: "Track shipments and handovers across locations", points: ["Digital signatures", "Inbound/Outbound/Transfer", "Audit trail per item"] },
-            { module: "Blockchain", desc: "Immutable transaction log with hash verification", points: ["Append-only ledger", "Tamper checks", "Anchor to external chain (optional)"] },
+            { module: "Transfer History", desc: "Simulated blockchain-style transaction log with hash verification (not a real blockchain)", points: ["Append-only ledger", "Tamper checks", "Centralized database storage"] },
             { module: "Analytics", desc: "Real-time KPIs and performance dashboards", points: ["Fraud hotspots", "Supplier scorecards", "Export charts/CSV"] },
             { module: "Reports", desc: "Generate compliance and audit reports", points: ["PDF export", "Custom templates", "Scheduled emails"] },
             { module: "API", desc: "Integrate with your existing systems", points: ["REST endpoints", "Webhooks", "API keys & rate limits"] },

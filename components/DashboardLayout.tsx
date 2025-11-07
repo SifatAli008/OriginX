@@ -47,7 +47,6 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
   const getNavItems = () => {
     const commonItems = [
       { label: "Dashboard", icon: <Home className="h-5 w-5" />, href: "/dashboard" },
-      { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
       { label: "Settings", icon: <Settings className="h-5 w-5" />, href: "/settings" },
     ];
 
@@ -64,14 +63,13 @@ export default function DashboardLayout({ children, userRole, userName }: Dashbo
       ],
       sme: [
         { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
-        { label: "Seller Assign", icon: <Users className="h-5 w-5" />, href: "/sme/seller-assign" },
-        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
+        { label: "Product Transfer", icon: <Users className="h-5 w-5" />, href: "/sme/product-transfer" },
+        { label: "Product History", icon: <FileText className="h-5 w-5" />, href: "/products/history" },
       ],
       company: [
         { label: "Product + QR", icon: <QrCode className="h-5 w-5" />, href: "/products" },
-        { label: "SME Assign", icon: <Users className="h-5 w-5" />, href: "/company/sme-assign" },
+        { label: "Product Transfer", icon: <Users className="h-5 w-5" />, href: "/company/sme-assign" },
         { label: "Product History", icon: <FileText className="h-5 w-5" />, href: "/products/history" },
-        { label: "Profile", icon: <Building2 className="h-5 w-5" />, href: "/profile" },
       ],
     };
 

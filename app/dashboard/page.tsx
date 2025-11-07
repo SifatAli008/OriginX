@@ -1224,8 +1224,8 @@ function AuditorDashboard({ permissions: _permissions }: { permissions: ReturnTy
                   <Activity className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-white">Blockchain Audit</CardTitle>
-                  <CardDescription>View immutable audit trails</CardDescription>
+                  <CardTitle className="text-white">Transfer History</CardTitle>
+                  <CardDescription>View simulated blockchain-style audit trails</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -2331,14 +2331,14 @@ function Sidebar({
       ],
       sme: [
         { label: "Products", icon: <Package className="h-5 w-5" />, href: "/products" },
-        { label: "Seller Assign", icon: <Users className="h-5 w-5" />, href: "/sme/seller-assign" },
-        { label: "Analytics", icon: <BarChart3 className="h-5 w-5" />, href: "/analytics" },
+        { label: "Product Transfer", icon: <Users className="h-5 w-5" />, href: "/sme/product-transfer" },
+        { label: "Product History", icon: <FileText className="h-5 w-5" />, href: "/products/history" },
       ],
       company: [
         { label: "Product + QR", icon: <QrCode className="h-5 w-5" />, href: "/products" },
-        { label: "SME Assign", icon: <Users className="h-5 w-5" />, href: "/company/sme-assign" },
+        { label: "Product Transfer", icon: <Users className="h-5 w-5" />, href: "/company/sme-assign" },
         { label: "Product History", icon: <FileText className="h-5 w-5" />, href: "/products/history" },
-        { label: "Profile", icon: <Building2 className="h-5 w-5" />, href: "/profile" },
+        
       ],
     };
 

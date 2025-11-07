@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       description,
       sku,
       category,
+      quantity,
       image, // Can be base64 data URL or { url: string }
       metadata,
     } = body;
@@ -158,6 +159,10 @@ export async function POST(request: NextRequest) {
     
     if (imgUrl) {
       productData.imgUrl = imgUrl;
+    }
+    // Quantity: only include if valid number (>=0)
+    if (typeof quantity === "number" && Number.isFinite(quantity) && quantity >= 0) {
+      productData.quantity = Math.floor(quantity);
     }
     
     const productRef = await adminDb.collection("products").add(productData);
@@ -268,7 +273,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const batchId = searchParams.get("batchId");
 
-    // Build filters (non-admin users can only see their own products)
+    // Build filters (non-admin users can only see relevant products)
     const filters: ProductFilters = {
       page,
       pageSize,
@@ -286,13 +291,13 @@ export async function GET(request: NextRequest) {
     if (batchId) {
       filters.batchId = batchId;
     }
-    // Admin can query by manufacturerId; non-admins see their own
+    // Admin can query by manufacturerId; company users see their own; SMEs will be resolved later
     const manufacturerId = searchParams.get("manufacturerId");
     if (userDoc.role === "admin") {
       if (manufacturerId) {
         filters.manufacturerId = manufacturerId;
       }
-    } else {
+    } else if (userDoc.role === "company") {
       filters.manufacturerId = uid;
     }
 
@@ -322,6 +327,65 @@ export async function GET(request: NextRequest) {
       productId: doc.id,
       ...doc.data(),
     })) as ProductDocument[];
+
+    // SME visibility: include products transferred TO this SME (by name or email) or created by SME
+    if (userDoc.role === "sme") {
+      try {
+        // Identify SME by name and email
+        const toValues = [userDoc.displayName, userDoc.email].filter(Boolean) as string[];
+        const fromValues = toValues;
+
+        // 1) Movements TO this SME - calculate net quantity received
+        const toSnap = toValues.length > 0
+          ? await db.collection("movements").where("to", "in", toValues).get()
+          : { docs: [] } as any;
+        const netQuantityByProduct = new Map<string, number>();
+        const lastToByProduct = new Map<string, number>();
+        toSnap.docs.forEach((m: any) => {
+          const d = m.data() as { productId?: string; createdAt?: number; quantity?: number };
+          if (!d.productId) return;
+          const qty = typeof d.quantity === "number" && d.quantity > 0 ? d.quantity : 1;
+          const current = netQuantityByProduct.get(d.productId) || 0;
+          netQuantityByProduct.set(d.productId, current + qty);
+          const ts = typeof d.createdAt === "number" ? d.createdAt : 0;
+          lastToByProduct.set(d.productId, Math.max(lastToByProduct.get(d.productId) || 0, ts));
+        });
+
+        // 2) Movements FROM this SME (transferred out) - subtract from net quantity
+        const fromSnap = fromValues.length > 0
+          ? await db.collection("movements").where("from", "in", fromValues).get()
+          : { docs: [] } as any;
+        const lastFromByProduct = new Map<string, number>();
+        fromSnap.docs.forEach((m: any) => {
+          const d = m.data() as { productId?: string; createdAt?: number; quantity?: number };
+          if (!d.productId) return;
+          const qty = typeof d.quantity === "number" && d.quantity > 0 ? d.quantity : 1;
+          const current = netQuantityByProduct.get(d.productId) || 0;
+          netQuantityByProduct.set(d.productId, Math.max(0, current - qty));
+          const ts = typeof d.createdAt === "number" ? d.createdAt : 0;
+          lastFromByProduct.set(d.productId, Math.max(lastFromByProduct.get(d.productId) || 0, ts));
+        });
+
+        // 3) Current ownership logic - show products if:
+        //    - Created by SME, OR
+        //    - Has net quantity > 0 (received more than transferred out), OR
+        //    - Last movement was TO the SME (even if quantity is 0, for visibility of recent transfers)
+        items = items.filter((p) => {
+          // Products originally created by the SME always visible
+          if (p.manufacturerId === uid) return true;
+          const netQty = netQuantityByProduct.get(p.productId) || 0;
+          // If net quantity > 0, SME still owns some of this product
+          if (netQty > 0) return true;
+          // Otherwise, show if last movement was TO the SME (for visibility of recent transfers)
+          const lastTo = lastToByProduct.get(p.productId) || 0;
+          const lastFrom = lastFromByProduct.get(p.productId) || 0;
+          return lastTo > 0 && lastTo >= lastFrom;
+        });
+      } catch (e) {
+        // Fallback: only show products created by the SME
+        items = items.filter((p) => p.manufacturerId === uid);
+      }
+    }
     
     // Sort by creation date (newest first) in memory
     items.sort((a, b) => {
