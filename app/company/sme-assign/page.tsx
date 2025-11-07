@@ -74,8 +74,14 @@ export default function SmeAssignPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!prodResp.ok) throw new Error("Failed to load products");
-      const prodData = await prodResp.json();
-      const mapped: ProductListItem[] = (prodData.items || []).map((p: any) => ({
+      const prodData = await prodResp.json() as { items?: Array<{
+        productId: string;
+        name?: string;
+        sku?: string;
+        createdAt?: number;
+        quantity?: number;
+      }> };
+      const mapped: ProductListItem[] = (prodData.items || []).map((p) => ({
         productId: p.productId,
         name: p.name || "Unnamed Product",
         sku: p.sku,
@@ -158,7 +164,7 @@ export default function SmeAssignPage() {
 
   const handleTransferExecute = async () => {
     if (!validation.ok) {
-      addToast({ variant: "error", title: "Cannot transfer", description: (validation as any).reason });
+      addToast({ variant: "error", title: "Cannot transfer", description: validation.reason });
       return;
     }
     const selectedProductList = filteredProducts.filter((p) => selectedProductIds[p.productId]);
@@ -217,7 +223,7 @@ export default function SmeAssignPage() {
 
   const handleTransfer = () => {
     if (!validation.ok) {
-      const reason = (validation as any).reason as string | undefined;
+      const reason = validation.reason;
       setInlineError(reason || "Fix validation issues");
       addToast({ variant: "error", title: "Cannot transfer", description: reason || "Validation error" });
       return;

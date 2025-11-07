@@ -44,7 +44,6 @@ function initAdminApp(): any {
 	let adminAppModule: any;
 	try {
 		// Use eval('require') to prevent bundlers from resolving at build time
-		// eslint-disable-next-line no-eval
 		const req = eval('require');
 		adminAppModule = req('firebase-admin/app');
 	} catch {
@@ -217,7 +216,6 @@ export function getAdminFirestore() {
 		throw new Error('Firebase Admin app not initialized');
 	}
 	// Lazy require main firebase-admin to avoid subpath resolution issues
-	// eslint-disable-next-line no-eval, @typescript-eslint/no-require-imports
 	const req = eval('require');
 	const admin = req('firebase-admin');
 	// Use legacy accessor which binds to the default app initialized above

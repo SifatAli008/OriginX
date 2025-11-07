@@ -73,8 +73,14 @@ export default function SmeProductTransferPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (prodResp.ok) {
-        const data = await prodResp.json();
-        const mapped: ProductListItem[] = (data.items || []).map((p: any) => ({
+        const data = await prodResp.json() as { items?: Array<{
+          productId: string;
+          name?: string;
+          sku?: string;
+          createdAt?: number;
+          quantity?: number;
+        }> };
+        const mapped: ProductListItem[] = (data.items || []).map((p) => ({
           productId: p.productId,
           name: p.name || "Unnamed Product",
           sku: p.sku,
@@ -137,7 +143,7 @@ export default function SmeProductTransferPage() {
   }, [selectedSmeId, selectedProductIds, selectedQuantities]);
 
   const handleTransfer = async () => {
-    if (!validation.ok) { addToast({ variant: "error", title: "Cannot transfer", description: (validation as any).reason }); return; }
+    if (!validation.ok) { addToast({ variant: "error", title: "Cannot transfer", description: validation.reason }); return; }
     const auth = getFirebaseAuth();
     if (!auth?.currentUser) return;
     const token = await auth.currentUser.getIdToken();

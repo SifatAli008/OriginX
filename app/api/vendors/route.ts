@@ -69,6 +69,10 @@ export async function GET(request: NextRequest) {
     }
     const usersData = await usersResp.json();
 
+    interface FirestoreBooleanField {
+      booleanValue?: boolean;
+    }
+
     interface FirestoreDocument {
       name: string;
       fields?: Record<string, { stringValue?: string; integerValue?: string; booleanValue?: boolean } | string | number | boolean>;
@@ -86,9 +90,9 @@ export async function GET(request: NextRequest) {
         orgName: (typeof f.orgName === "object" && f.orgName?.stringValue) ?? (typeof f.orgName === "string" ? f.orgName : undefined) ?? undefined,
         mfaEnabled: (
           typeof f.mfaEnabled === "object"
-            ? !!(f as any).mfaEnabled?.booleanValue
+            ? !!(f.mfaEnabled as FirestoreBooleanField)?.booleanValue
             : typeof f.mfaEnabled === "boolean"
-              ? (f.mfaEnabled as boolean)
+              ? f.mfaEnabled
               : false
         ),
         status: (typeof f.status === "object" && f.status?.stringValue) || (typeof f.status === "string" ? f.status : "pending") || "pending",

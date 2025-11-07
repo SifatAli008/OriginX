@@ -10,6 +10,7 @@ import { verifyIdToken } from "@/lib/auth/verify-token";
 import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import type { UserDocument } from "@/lib/types/user";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     const snapshot = await queryRef.get();
-    let items: Array<Pick<UserDocument, "uid" | "email" | "displayName" | "photoURL" | "orgId" | "orgName" | "status">> = snapshot.docs.map((d: any) => {
+    let items: Array<Pick<UserDocument, "uid" | "email" | "displayName" | "photoURL" | "orgId" | "orgName" | "status">> = snapshot.docs.map((d: QueryDocumentSnapshot) => {
       const data = d.data() as UserDocument;
       return {
         uid: data.uid || d.id,
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
           .where("email", "==", q)
           .limit(5)
           .get();
-        const extra = exactSnap.docs.map((d: any) => {
+        const extra = exactSnap.docs.map((d: QueryDocumentSnapshot) => {
           const data = d.data() as UserDocument;
           return {
             uid: data.uid || d.id,
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
           };
         });
         // Only add if not already included
-        extra.forEach((e: any) => {
+        extra.forEach((e) => {
           if (!items.find((x) => x.uid === e.uid)) items.push(e);
         });
       } catch (e) {

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const manufacturerId = isAdmin ? null : decoded.uid;
 
     // 1. Total Products
-    let productsQuery = db.collection("products");
+    const productsQuery = db.collection("products");
     const baseProductsSnapshot = await productsQuery.get();
     let productDocs: QueryDocumentSnapshot[] = baseProductsSnapshot.docs as QueryDocumentSnapshot[];
 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
       // Also include products transferred to this SME via movements
       const toValues = [userDoc.displayName, userDoc.email].filter(Boolean) as string[];
-      let movedInProductIds = new Set<string>();
+      const movedInProductIds = new Set<string>();
       if (toValues.length > 0) {
         const movSnap = await db.collection("movements").where("to", "in", toValues).get();
         movSnap.forEach((m: QueryDocumentSnapshot) => {
