@@ -96,10 +96,10 @@ export async function GET(request: NextRequest) {
           };
         });
         // Only add if not already included
-        extra.forEach((e) => {
+        extra.forEach((e: Pick<UserDocument, "uid" | "email" | "displayName" | "photoURL" | "orgId" | "orgName" | "status">) => {
           if (!items.find((x) => x.uid === e.uid)) items.push(e);
         });
-      } catch (e) {
+      } catch (e: unknown) {
         // ignore fallback errors to avoid blocking primary response
         console.warn("[GET /api/sme/list] fallback email lookup failed", e);
       }

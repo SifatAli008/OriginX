@@ -13,7 +13,7 @@ import { getAdminFirestore } from "@/lib/firebase/admin";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authHeader = request.headers.get("authorization");
@@ -27,7 +27,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
     }
 
-    const productId = params.id;
+    const awaited = await params;
+    const productId = awaited.id;
     if (!productId) {
       return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
     }

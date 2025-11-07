@@ -659,14 +659,12 @@ export default function ProductsPage() {
                   <Layers className="h-4 w-4 mr-2" />
                   Add to Batch
                 </Button>
-                {user?.role !== "sme" && (
                 <Link href="/products/new">
                   <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/20 transition-all duration-200">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Product
                   </Button>
                 </Link>
-                )}
               </>
             )}
           </div>

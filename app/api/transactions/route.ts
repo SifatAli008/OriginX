@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
         if (startDate) ref = ref.where("createdAt", ">=", startDate);
         if (endDate) ref = ref.where("createdAt", "<=", endDate);
         const snap = await ref.orderBy("createdAt", "desc").get();
-        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const all = snap.docs.map((d: { id: string; data: () => Record<string, unknown> }) => ({ id: d.id, ...d.data() }));
         const startIndex = (page - 1) * pageSize;
         const endIndex = startIndex + pageSize;
         return NextResponse.json({
@@ -203,11 +203,11 @@ export async function GET(request: NextRequest) {
           createdAt?: number;
           [key: string]: unknown;
         }
-        const all = snap.docs.map((d) => {
+        const all = snap.docs.map((d: { id: string; data: () => Record<string, unknown> }) => {
           const data = d.data() as Record<string, unknown>;
           return { id: d.id, ...data } as TransactionItem;
         });
-        all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        all.sort((a: TransactionItem, b: TransactionItem) => (b.createdAt || 0) - (a.createdAt || 0));
         const startIndex = (page - 1) * pageSize;
         const endIndex = startIndex + pageSize;
         return NextResponse.json({
