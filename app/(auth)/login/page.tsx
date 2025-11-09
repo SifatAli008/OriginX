@@ -835,8 +835,18 @@ export default function LoginPage() {
           await signInWithEmailAndPassword(auth, normalizedEmail, password);
         } catch (err) {
           // Enhanced error handling
-          const error = err as { code?: string; message?: string };
-          if (error.code === "auth/invalid-email") {
+          const error = err as { code?: string; message?: string; customData?: { httpError?: { status?: number } } };
+          const errorMessage = error.message || "";
+          
+          // Check for HTTP 400 errors specifically
+          if (error.customData?.httpError?.status === 400 || errorMessage.includes("400") || errorMessage.includes("Bad Request")) {
+            setError("Authentication configuration error. Please ensure Email/Password authentication is enabled in Firebase Console and the API key is valid.");
+            console.error("Firebase 400 Error Details:", {
+              code: error.code,
+              message: errorMessage,
+              suggestion: "Check Firebase Console → Authentication → Sign-in method → Enable Email/Password"
+            });
+          } else if (error.code === "auth/invalid-email") {
             setError("Invalid email address format");
           } else if (error.code === "auth/user-disabled") {
             setError("This account has been disabled");
@@ -847,15 +857,11 @@ export default function LoginPage() {
           } else if (error.code === "auth/too-many-requests") {
             setError("Too many failed attempts. Please try again later.");
           } else if (error.code === "auth/operation-not-allowed") {
-            setError("Email/Password authentication is not enabled. Please contact support.");
+            setError("Email/Password authentication is not enabled. Please enable it in Firebase Console → Authentication → Sign-in method.");
+          } else if (errorMessage.includes("INVALID_PASSWORD") || errorMessage.includes("INVALID_EMAIL")) {
+            setError("Invalid email or password. Please check your credentials.");
           } else {
-            // For 400 errors, provide more specific message
-            const errorMessage = error.message || "Authentication failed";
-            if (errorMessage.includes("INVALID_PASSWORD") || errorMessage.includes("INVALID_EMAIL")) {
-              setError("Invalid email or password. Please check your credentials.");
-            } else {
-              setError(getFirebaseAuthErrorMessage(err));
-            }
+            setError(getFirebaseAuthErrorMessage(err));
           }
           setLoading(false);
           return;
