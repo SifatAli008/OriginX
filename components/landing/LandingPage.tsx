@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import HeroParticles from "@/components/visuals/HeroParticles";
 import HeroVectors from "@/components/visuals/HeroVectors";
@@ -231,7 +232,7 @@ export default function LandingPage() {
           
         </div>
         
-        <div className="relative mx-auto max-w-6xl px-4 pt-24 sm:pt-32 pb-20 sm:pb-28">
+        <div className="relative mx-auto max-w-7xl px-4 pt-24 sm:pt-32 pb-20 sm:pb-28">
           {/* Cursor spotlight */}
           <motion.div
             aria-hidden="true"
@@ -245,146 +246,186 @@ export default function LandingPage() {
             }}
           />
 
-          <motion.div
-            className="flex flex-col items-center text-center will-change-transform"
-            animate={{ rotateX: (pointer.y || 0) * (reduced ? 0 : -4), rotateY: (pointer.x || 0) * (reduced ? 0 : 6) }}
-            transition={{ type: "spring", stiffness: 60, damping: 20 }}
-          >
-            <motion.div 
-              initial={{ opacity: 0, y: -20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15 border border-primary/30 px-5 py-2.5 text-sm font-medium backdrop-blur-md shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:scale-105 hover:border-primary/40 group"
+          {/* Two-column grid layout: content left, image right */}
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left Column: Content */}
+            <motion.div
+              className="flex flex-col items-start text-left will-change-transform"
+              animate={{ rotateX: (pointer.y || 0) * (reduced ? 0 : -4), rotateY: (pointer.x || 0) * (reduced ? 0 : 6) }}
+              transition={{ type: "spring", stiffness: 60, damping: 20 }}
             >
-              <motion.div
-                animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            >
-                <Sparkles className="h-4 w-4 text-primary" />
-              </motion.div>
-              <span className="text-foreground font-medium group-hover:text-primary transition-colors duration-300 whitespace-nowrap">
-                AI-Powered Anti-Counterfeit Platform
-              </span>
-            </motion.div>
-            
-            <motion.div className="relative">
-            {/* Scrim behind the heading for readability */}
-            <span aria-hidden className="pointer-events-none absolute -inset-x-6 -inset-y-3 rounded-xl bg-gradient-to-b from-background/40 to-transparent blur-md"></span>
-            <motion.h1 
-              id="hero-heading" 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="mt-8 max-w-5xl text-4xl leading-tight sm:text-6xl md:text-7xl font-bold tracking-tight shimmer-text"
-            >
-              Stop Counterfeits.<br/>
-              Protect Your Brand.
-            </motion.h1>
-            </motion.div>
-            
-            <motion.p 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="mt-6 sm:mt-8 text-muted-foreground text-lg sm:text-xl leading-relaxed max-w-3xl font-light"
-            >
-              Enterprise-grade supply chain security for Bangladesh SMEs. Register products, generate encrypted QR codes, track movements, and verify authenticity with AI—all in one platform.
-            </motion.p>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center gap-4"
-            >
-              <div className="relative">
-                {/* Pulse ring behind CTA */}
-                <motion.span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 -z-10 rounded-lg shadow-[0_0_0_0_rgba(59,130,246,0.4)]"
-                  animate={reduced ? {} : { boxShadow: [
-                    "0 0 0 0 rgba(59,130,246,0.35)",
-                    "0 0 0 12px rgba(59,130,246,0)",
-                    "0 0 0 0 rgba(59,130,246,0.0)"
-                  ]}}
-                  transition={{ duration: 2.2, repeat: Infinity }}
-                />
-              <Button 
-                asChild
-                size="lg" 
-                className={cn(
-                  "font-semibold px-8 text-base shadow-lg",
-                  "hover:shadow-xl hover:shadow-primary/25",
-                  "transition-all duration-300 hover:scale-105",
-                  "relative overflow-hidden",
-                  "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/10 before:to-primary/0",
-                  "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
-                )}
+              <motion.div 
+                initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15 border border-primary/30 px-5 py-2.5 text-sm font-medium backdrop-blur-md shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:scale-105 hover:border-primary/40 group"
               >
-                <Link href="/login">
-                  <span className="relative z-10 flex items-center gap-2">
-                Get started free
-                    <ArrowRight className="h-5 w-5" />
-                  </span>
-                </Link>
-              </Button>
-              </div>
-              <Button 
-                asChild
-                variant="outline"
-                size="lg" 
-                className={cn(
-                  "font-medium px-8 text-base border-2",
-                  "hover:bg-accent hover:border-primary/50",
-                  "transition-all duration-300 hover:scale-105",
-                  "relative overflow-hidden group",
-                  "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/5 before:to-primary/0",
-                  "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-500"
-                )}
-              >
-                <Link href="#features" className="relative z-10 flex items-center gap-2">
-                See how it works
-                  <motion.span
-                    animate={{ x: [0, 4, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    <ArrowRight className="h-5 w-5" />
-                  </motion.span>
-                </Link>
-              </Button>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm"
-            >
-              {[
-                { text: "No credit card required", delay: 0 },
-                { text: "Free for 100 products", delay: 0.1 },
-                { text: "Setup in minutes", delay: 0.2 }
-              ].map((item) => (
                 <motion.div
-                  key={item.text}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.8 + item.delay }}
-                  className="flex items-center gap-2.5 group"
+                  animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <motion.div
-                    whileHover={{ scale: 1.2, rotate: 360 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <CheckCircle2 className="h-5 w-5 text-primary group-hover:text-primary/80 transition-colors" />
-                  </motion.div>
-                  <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">
-                    {item.text}
-                  </span>
+                  <Sparkles className="h-4 w-4 text-primary" />
                 </motion.div>
-              ))}
+                <span className="text-foreground font-medium group-hover:text-primary transition-colors duration-300 whitespace-nowrap">
+                  AI-Powered Anti-Counterfeit Platform
+                </span>
+              </motion.div>
+              
+              <motion.div className="relative w-full">
+                {/* Scrim behind the heading for readability */}
+                <span aria-hidden className="pointer-events-none absolute -inset-x-6 -inset-y-3 rounded-xl bg-gradient-to-b from-background/40 to-transparent blur-md"></span>
+                <motion.h1 
+                  id="hero-heading" 
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="mt-8 text-4xl leading-tight sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight shimmer-text"
+                >
+                  Stop Counterfeits.<br/>
+                  Protect Your Brand.
+                </motion.h1>
+              </motion.div>
+              
+              <motion.p 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="mt-6 sm:mt-8 text-muted-foreground text-lg sm:text-xl leading-relaxed max-w-2xl font-light"
+              >
+                Enterprise-grade supply chain security for Bangladesh SMEs. Register products, generate encrypted QR codes, track movements, and verify authenticity with AI—all in one platform.
+              </motion.p>
+              
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-start gap-4"
+              >
+                <div className="relative">
+                  {/* Pulse ring behind CTA */}
+                  <motion.span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 -z-10 rounded-lg shadow-[0_0_0_0_rgba(59,130,246,0.4)]"
+                    animate={reduced ? {} : { boxShadow: [
+                      "0 0 0 0 rgba(59,130,246,0.35)",
+                      "0 0 0 12px rgba(59,130,246,0)",
+                      "0 0 0 0 rgba(59,130,246,0.0)"
+                    ]}}
+                    transition={{ duration: 2.2, repeat: Infinity }}
+                  />
+                  <Button 
+                    asChild
+                    size="lg" 
+                    className={cn(
+                      "font-semibold px-8 text-base shadow-lg",
+                      "hover:shadow-xl hover:shadow-primary/25",
+                      "transition-all duration-300 hover:scale-105",
+                      "relative overflow-hidden",
+                      "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/10 before:to-primary/0",
+                      "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700"
+                    )}
+                  >
+                    <Link href="/login">
+                      <span className="relative z-10 flex items-center gap-2">
+                        Get started free
+                        <ArrowRight className="h-5 w-5" />
+                      </span>
+                    </Link>
+                  </Button>
+                </div>
+                <Button 
+                  asChild
+                  variant="outline"
+                  size="lg" 
+                  className={cn(
+                    "font-medium px-8 text-base border-2",
+                    "hover:bg-accent hover:border-primary/50",
+                    "transition-all duration-300 hover:scale-105",
+                    "relative overflow-hidden group",
+                    "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/0 before:via-primary/5 before:to-primary/0",
+                    "before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-500"
+                  )}
+                >
+                  <Link href="#features" className="relative z-10 flex items-center gap-2">
+                    See how it works
+                    <motion.span
+                      animate={{ x: [0, 4, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <ArrowRight className="h-5 w-5" />
+                    </motion.span>
+                  </Link>
+                </Button>
+              </motion.div>
+              
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.8 }}
+                className="mt-12 flex flex-wrap items-center gap-6 sm:gap-8 text-sm"
+              >
+                {[
+                  { text: "No credit card required", delay: 0 },
+                  { text: "Free for 100 products", delay: 0.1 },
+                  { text: "Setup in minutes", delay: 0.2 }
+                ].map((item) => (
+                  <motion.div
+                    key={item.text}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.8 + item.delay }}
+                    className="flex items-center gap-2.5 group"
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.2, rotate: 360 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <CheckCircle2 className="h-5 w-5 text-primary group-hover:text-primary/80 transition-colors" />
+                    </motion.div>
+                    <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                      {item.text}
+                    </span>
+                  </motion.div>
+                ))}
+              </motion.div>
             </motion.div>
-          </motion.div>
+
+            {/* Right Column: Image */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="relative w-full flex items-center justify-center lg:justify-end"
+            >
+              <div className="relative w-full max-w-md lg:max-w-lg h-auto">
+                <motion.div
+                  animate={{ 
+                    y: [0, -15, 0],
+                    rotate: [0, 2, -2, 0]
+                  }}
+                  transition={{ 
+                    duration: 6, 
+                    repeat: Infinity, 
+                    ease: "easeInOut" 
+                  }}
+                  className="relative w-full"
+                >
+                  <Image
+                    src="/assets/Clean and Modern App Portfolio Mockup Presentation.png"
+                    alt="OriginX Anti-Counterfeit Platform App Mockup"
+                    width={600}
+                    height={600}
+                    className="w-full h-auto max-h-[500px] sm:max-h-[600px] lg:max-h-[550px] object-contain rounded-2xl shadow-2xl"
+                    priority
+                    quality={90}
+                    unoptimized
+                  />
+                  {/* Glow effect behind image */}
+                  <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent rounded-2xl blur-3xl opacity-50"></div>
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -567,23 +608,32 @@ export default function LandingPage() {
             <h2 id="roles-heading" className="text-3xl sm:text-4xl font-bold tracking-tight mt-4 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
               Built for every stakeholder
             </h2>
-            <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
-              Tailored experiences for each role in your supply chain ecosystem.
-            </p>
           </motion.div>
           <motion.div 
-            className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+            className="mt-12 grid sm:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto"
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
             variants={staggerContainer}
           >
             {[
-              { role: "SME/Supplier", desc: "Register products, print QR, manage batches." },
-              { role: "Warehouse", desc: "Inbound/outbound, transfers, QC, handovers." },
-              { role: "Auditor", desc: "Journey visualization and verification history." },
-              { role: "Admin", desc: "Users, roles, suppliers, policies, analytics." },
-            ].map((r) => (
+              { 
+                role: "Companions", 
+                desc: "Partners and collaborators in the supply chain ecosystem. Manage vendor relationships, coordinate logistics, and facilitate seamless communication between stakeholders. Access collaborative tools for supply chain optimization and partnership management." 
+              },
+              { 
+                role: "SMEs", 
+                desc: "Small and medium enterprises managing products and batches. Register products, generate encrypted QR codes, track inventory, and manage batch operations. Access comprehensive product management tools and real-time inventory tracking." 
+              },
+              { 
+                role: "Consumers", 
+                desc: "End-users verifying product authenticity and scanning QR codes. Scan QR codes to instantly verify product authenticity, view detailed product information, and access verification history. Simple, user-friendly interface for quick authentication." 
+              },
+              { 
+                role: "Admin", 
+                desc: "System administrators managing users, roles, and policies. Configure system settings, manage user access, monitor platform analytics, and oversee security policies. Full administrative control with comprehensive dashboard and reporting tools." 
+              },
+            ].map((r, index) => (
               <motion.div key={r.role} variants={fadeInUp}>
                 <Card 
                   tabIndex={0} 
@@ -605,14 +655,143 @@ export default function LandingPage() {
                     e.currentTarget.style.setProperty('--mouse-y', '50%');
                   }}
                 >
-                  <CardContent className="p-5 relative z-10">
-                  <h3 className="font-semibold text-foreground text-base group-hover:text-primary transition-colors duration-300">{r.role}</h3>
-                    <p className="text-muted-foreground text-sm mt-2 leading-6 group-hover:text-foreground/90 transition-colors duration-300">{r.desc}</p>
+                  <CardContent className="p-8 relative z-10 min-h-[180px] flex flex-col justify-between">
+                  <h3 className="font-semibold text-foreground text-xl group-hover:text-primary transition-colors duration-300 mb-4">{r.role}</h3>
+                    <p className="text-muted-foreground text-base mt-auto leading-relaxed group-hover:text-foreground/90 transition-colors duration-300">{r.desc}</p>
                   </CardContent>
               </Card>
               </motion.div>
             ))}
           </motion.div>
+        </div>
+      </section>
+
+      {/* Consumer Based Authentication System */}
+      <section className="relative py-20 sm:py-28 overflow-hidden bg-white dark:bg-white">
+        <div className="relative mx-auto max-w-7xl px-4 z-10">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left Column: Image */}
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="relative w-full flex items-center justify-center lg:justify-start order-2 lg:order-1"
+            >
+              <div className="relative w-full max-w-xl lg:max-w-2xl h-auto">
+                <div className="relative w-full">
+                  <Image
+                    src="/assets/App User.png"
+                    alt="Consumer Based Authentication System"
+                    width={900}
+                    height={900}
+                    className="w-full h-auto max-h-[700px] sm:max-h-[800px] lg:max-h-[750px] object-contain"
+                    priority
+                    quality={90}
+                    unoptimized
+                  />
+                  {/* Glow effect behind image */}
+                  <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent rounded-2xl blur-3xl opacity-50"></div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Right Column: Content */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="flex flex-col items-start text-left order-1 lg:order-2"
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                <Badge variant="secondary" className="mb-6 gap-1.5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider hover:scale-105 transition-transform duration-300 bg-gray-100 dark:bg-gray-100 text-gray-700 dark:text-gray-700 border-gray-200 dark:border-gray-200">
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-gray-700 dark:text-gray-700" />
+                  </motion.div>
+                  Consumer System
+                </Badge>
+              </motion.div>
+              
+              <motion.h2 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-gray-900 mb-1 leading-tight"
+              >
+                Consumer Based<br/>
+                <span className="bg-gradient-to-r from-primary via-primary/90 to-primary/80 bg-clip-text text-transparent">
+                  Authentication System
+                </span>
+              </motion.h2>
+              
+              <motion.p 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="text-gray-600 dark:text-gray-600 text-lg sm:text-xl leading-relaxed max-w-2xl mb-10 font-normal"
+              >
+                Empower consumers to verify product authenticity instantly. Our consumer-facing authentication system allows end-users to scan QR codes and get real-time verification results, building trust and protecting your brand reputation.
+              </motion.p>
+              
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                className="grid sm:grid-cols-1 gap-5 w-full max-w-2xl"
+              >
+                {[
+                  { 
+                    title: "Instant Verification", 
+                    desc: "Scan QR codes with any smartphone to instantly verify product authenticity and get detailed product information."
+                  },
+                  { 
+                    title: "User-Friendly Interface", 
+                    desc: "Simple, intuitive design that works for consumers of all technical levels with clear verification results."
+                  },
+                  { 
+                    title: "Counterfeit Report", 
+                    desc: "Get immediate feedback on product authenticity with AI-powered analysis and detailed verification reports."
+                  }
+                ].map((feature, index) => (
+                  <motion.div
+                    key={feature.title}
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.7 + index * 0.1 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="group relative flex items-start gap-5 p-6 rounded-xl bg-gray-50 dark:bg-gray-50 border border-gray-200 dark:border-gray-200 hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white dark:bg-white border border-gray-200 dark:border-gray-200 group-hover:bg-primary/5 group-hover:border-primary/30 transition-colors duration-300">
+                        <CheckCircle2 className="h-5 w-5 text-gray-700 dark:text-gray-700 group-hover:text-primary transition-colors duration-300" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-900 mb-2 text-base leading-tight group-hover:text-primary transition-colors duration-300">
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-600 leading-relaxed">
+                        {feature.desc}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </motion.div>
+          </div>
         </div>
       </section>
 

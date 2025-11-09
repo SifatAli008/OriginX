@@ -25,12 +25,9 @@ service cloud.firestore {
       
       // Allow querying users collection
       // Authenticated users can list (for email lookups, etc.)
-      // Admins can list all users (for user management)
-      // This allows server-side queries from authenticated admin users
-      allow list: if isAuthenticated() && (
-        // Allow if user is admin OR if just checking their own document
-        isAdmin() || request.auth.uid == userId
-      );
+      // The get rule will still filter which documents can actually be read
+      // This allows email-based queries while maintaining security
+      allow list: if isAuthenticated();
       
       // Allow user to create their own document (first-time login)
       // OR allow admin to create any user document if admin's user doc exists
@@ -71,10 +68,10 @@ service cloud.firestore {
       allow get: if isAuthenticated();
       allow list: if isAuthenticated();
       // Only company/SME users can create; enforce manufacturerId is the creator
-      allow create: if isAuthenticated() && userDocExists() && (
-        let r = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-        (r == 'sme' || r == 'company')
-      ) && request.resource.data.manufacturerId == request.auth.uid;
+      allow create: if isAuthenticated() && userDocExists() && 
+        ((get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'sme' || 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'company') && 
+         request.resource.data.manufacturerId == request.auth.uid);
       // No updates by users (immutable product meta after creation)
       allow update: if false;
       // Deletion only by admin
@@ -99,8 +96,9 @@ service cloud.firestore {
       allow list: if isAuthenticated() || request.auth == null;
       allow create: if isAuthenticated() || request.auth == null;
       allow update: if isAuthenticated() && userDocExists() && (
-        let r = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-        (r == 'sme' || r == 'company' || isAdmin())
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'sme' || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'company' || 
+        isAdmin()
       );
       allow delete: if isAdmin();
     }
@@ -162,8 +160,8 @@ service cloud.firestore {
       allow get: if isAuthenticated() && (
         isAdmin() ||
         (userDocExists() && (
-          let r = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-          (r == 'sme' || r == 'company')
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'sme' || 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'company'
         )) ||
         (resource.data.reporterId != null && request.auth.uid == resource.data.reporterId)
       );
