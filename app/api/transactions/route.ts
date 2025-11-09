@@ -72,12 +72,36 @@ export async function GET(request: NextRequest) {
       const { getUserDocumentServer } = await import("@/lib/firebase/firestore-server");
       userDoc = await getUserDocumentServer(uid, userEmail);
     } catch (error) {
-      console.error("[Transactions] Error fetching user document:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("[Transactions] Error fetching user document:", errorMessage);
+      
+      // Check if it's a Firebase Admin configuration error
+      if (errorMessage.includes('not installed') || 
+          errorMessage.includes('Cannot find module') || 
+          errorMessage.includes('Could not load the default credentials') ||
+          errorMessage.includes('credentials') ||
+          errorMessage.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
+        return NextResponse.json(
+          { 
+            error: "Firebase Admin SDK not configured. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables.",
+            items: [],
+            total: 0,
+            page: 1,
+            pageSize: 25,
+            hasMore: false
+          },
+          { status: 503 }
+        );
+      }
+      
       return NextResponse.json(
         { 
-          error: "Failed to fetch user information",
-          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+          error: "Failed to fetch user information. Please ensure your account is properly set up.",
+          items: [],
+          total: 0,
+          page: 1,
+          pageSize: 25,
+          hasMore: false
         },
         { status: 500 }
       );

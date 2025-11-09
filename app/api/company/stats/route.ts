@@ -24,22 +24,34 @@ export async function GET(request: NextRequest) {
     }
 
     const userEmail = decoded.email || undefined;
-    let userDoc = await getUserDocumentServer(decoded.uid, userEmail);
+    let userDoc: UserDocument | null;
     
-    // If user document doesn't exist, try to create it
-    if (!userDoc && userEmail) {
-      try {
-        // getUserDocumentServer should auto-create, but if it doesn't, we'll handle it
-        // Try one more time after a brief delay
-        userDoc = await getUserDocumentServer(decoded.uid, userEmail);
-      } catch (createError) {
-        console.warn(`[Company Stats] Failed to create user document for ${decoded.uid}:`, createError);
+    try {
+      userDoc = await getUserDocumentServer(decoded.uid, userEmail);
+    } catch (docError) {
+      const errorMsg = docError instanceof Error ? docError.message : String(docError);
+      console.error(`[Company Stats] Error fetching user document for ${decoded.uid}:`, errorMsg);
+      
+      // Check if it's a Firebase Admin configuration error
+      if (errorMsg.includes('not installed') || 
+          errorMsg.includes('Cannot find module') || 
+          errorMsg.includes('Could not load the default credentials') ||
+          errorMsg.includes('credentials') ||
+          errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
+        return NextResponse.json({ 
+          error: "Firebase Admin SDK not configured. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables."
+        }, { status: 503 });
       }
+      
+      return NextResponse.json({ 
+        error: "Failed to fetch user information. Please ensure your account is properly set up."
+      }, { status: 500 });
     }
     
     if (!userDoc) {
+      console.warn(`[Company Stats] User document not found for ${decoded.uid}, email: ${userEmail || 'N/A'}`);
       return NextResponse.json({ 
-        error: "User not found. Please ensure your account is properly set up." 
+        error: "User not found. Please ensure your account is properly set up in the system."
       }, { status: 404 });
     }
 
@@ -48,7 +60,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden - Company access only" }, { status: 403 });
     }
 
-    const db = getAdminFirestore();
+    let db;
+    try {
+      db = getAdminFirestore();
+    } catch (adminError) {
+      const errorMsg = adminError instanceof Error ? adminError.message : String(adminError);
+      console.error("[Company Stats] Firebase Admin error:", errorMsg);
+      if (errorMsg.includes('not installed') || 
+          errorMsg.includes('Cannot find module') || 
+          errorMsg.includes('Could not load the default credentials') ||
+          errorMsg.includes('credentials') ||
+          errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
+        return NextResponse.json({ 
+          error: "Firebase Admin SDK not configured. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables."
+        }, { status: 503 });
+      }
+      throw adminError;
+    }
 
     // Get organization filter
     // For products: company users' products are filtered by manufacturerId (their uid)

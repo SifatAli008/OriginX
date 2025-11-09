@@ -29,9 +29,41 @@ export async function GET(request: NextRequest) {
 
     const uid = decoded.uid;
     const email = decoded.email as string | undefined;
-    const userDoc = await getUserDocumentServer(uid, email);
+    
+    let userDoc: UserDocument | null;
+    try {
+      userDoc = await getUserDocumentServer(uid, email);
+    } catch (docError) {
+      const errorMsg = docError instanceof Error ? docError.message : String(docError);
+      console.error(`[GET /api/sme/list] Error fetching user document for ${uid}:`, errorMsg);
+      
+      // Check if it's a Firebase Admin configuration error
+      if (errorMsg.includes('not installed') || 
+          errorMsg.includes('Cannot find module') || 
+          errorMsg.includes('Could not load the default credentials') ||
+          errorMsg.includes('credentials') ||
+          errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
+        return NextResponse.json({ 
+          error: "Firebase Admin SDK not configured. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables.",
+          items: [],
+          total: 0
+        }, { status: 503 });
+      }
+      
+      return NextResponse.json({ 
+        error: "Failed to fetch user information. Please ensure your account is properly set up.",
+        items: [],
+        total: 0
+      }, { status: 500 });
+    }
+    
     if (!userDoc) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      console.warn(`[GET /api/sme/list] User document not found for ${uid}, email: ${email || 'N/A'}`);
+      return NextResponse.json({ 
+        error: "User not found. Please ensure your account is properly set up in the system.",
+        items: [],
+        total: 0
+      }, { status: 404 });
     }
 
     // Only company/SME/admin can list SMEs; company and SME are restricted to their org

@@ -35,8 +35,12 @@ export async function getUserDocumentServer(uid: string, email?: string): Promis
 		const userSnap = await userRef.get();
 
     if (userSnap.exists) {
-			return userSnap.data() as UserDocument;
+			const data = userSnap.data() as UserDocument;
+			console.log(`[Firestore Server] Found user document for ${uid}, role: ${data.role}`);
+			return data;
 		}
+
+		console.log(`[Firestore Server] User document not found for ${uid}, email: ${email || 'N/A'}`);
 
 		// If user document doesn't exist and we have email, try to create a basic one
 		// This handles cases where user authenticated but document wasn't created yet
@@ -56,17 +60,40 @@ export async function getUserDocumentServer(uid: string, email?: string): Promis
 
 			try {
 				await userRef.set(basicUserDoc, { merge: false });
-				console.log(`[Firestore Server] Created user document for ${uid}`);
+				console.log(`[Firestore Server] Created user document for ${uid} with role: ${basicUserDoc.role}`);
 				return basicUserDoc;
 			} catch (createError) {
-				console.warn(`[Firestore Server] Could not auto-create user document for ${uid}:`, createError);
+				const errorMsg = createError instanceof Error ? createError.message : String(createError);
+				console.error(`[Firestore Server] Could not auto-create user document for ${uid}:`, errorMsg);
+				console.error(`[Firestore Server] Full error:`, createError);
+				// Don't return null immediately - check if it's a Firebase Admin error
+				if (errorMsg.includes('not installed') || 
+						errorMsg.includes('Cannot find module') || 
+						errorMsg.includes('Could not load the default credentials') ||
+						errorMsg.includes('credentials') ||
+						errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
+					console.error(`[Firestore Server] Firebase Admin SDK not properly configured. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables.`);
+				}
 				return null;
 			}
 		}
 
+		console.warn(`[Firestore Server] User document not found for ${uid} and no email provided`);
 		return null;
 	} catch (error) {
-		console.error("[Firestore Server] Error getting user document:", error);
+		const errorMsg = error instanceof Error ? error.message : String(error);
+		console.error("[Firestore Server] Error getting user document:", errorMsg);
+		console.error("[Firestore Server] Full error:", error);
+		
+		// Check if it's a Firebase Admin configuration error
+		if (errorMsg.includes('not installed') || 
+				errorMsg.includes('Cannot find module') || 
+				errorMsg.includes('Could not load the default credentials') ||
+				errorMsg.includes('credentials') ||
+				errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
+			console.error(`[Firestore Server] Firebase Admin SDK not properly configured. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables.`);
+		}
+		
 		return null;
 	}
 }
