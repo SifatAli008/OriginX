@@ -78,7 +78,7 @@ export default function SmeAssignPage() {
       
       // Log for debugging
       if (smeData.items && smeData.items.length === 0) {
-        console.log("[SME Assign] No SMEs found. User role:", user?.role || "N/A");
+        console.log("[SME Assign] No SMEs found");
       }
 
       // Load products for the current manufacturer (company user)

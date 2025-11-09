@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch all SMEs from Firebase (no orgId filter)
     // Company users and admins can see all SMEs
-    let queryRef = db.collection("users").where("role", "==", "sme");
+    const queryRef = db.collection("users").where("role", "==", "sme");
     
     console.log(`[GET /api/sme/list] Fetching all SMEs for user ${uid} (role: ${userDoc.role})`);
 
