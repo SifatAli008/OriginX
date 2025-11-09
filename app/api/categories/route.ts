@@ -36,7 +36,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch custom categories from Firestore
-    const db = getAdminFirestore();
+    let db;
+    try {
+      db = getAdminFirestore();
+    } catch (adminError) {
+      const errorMsg = adminError instanceof Error ? adminError.message : String(adminError);
+      console.error("[Categories API] Firebase Admin error:", errorMsg);
+      // If firebase-admin is not available, return only default categories
+      if (errorMsg.includes('not installed') || errorMsg.includes('Cannot find module')) {
+        return NextResponse.json({ 
+          categories: DEFAULT_CATEGORIES,
+          customCategories: [],
+          warning: "Custom categories unavailable - firebase-admin not configured"
+        }, { status: 200 });
+      }
+      throw adminError;
+    }
+
     const categoriesSnapshot = await db.collection("categories").get();
     const customCategories = categoriesSnapshot.docs.map((doc: { data: () => { name?: string } }) => {
       const data = doc.data();
@@ -52,8 +68,19 @@ export async function GET(request: NextRequest) {
     }, { status: 200 });
   } catch (error: unknown) {
     console.error("[Categories API] Error:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    // If firebase-admin is not available, return default categories instead of error
+    if (errorMsg.includes('not installed') || errorMsg.includes('Cannot find module')) {
+      return NextResponse.json({ 
+        categories: DEFAULT_CATEGORIES,
+        customCategories: [],
+        warning: "Custom categories unavailable - firebase-admin not configured"
+      }, { status: 200 });
+    }
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: errorMsg },
       { status: 500 }
     );
   }
@@ -121,7 +148,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = getAdminFirestore();
+    let db;
+    try {
+      db = getAdminFirestore();
+    } catch (adminError) {
+      const errorMsg = adminError instanceof Error ? adminError.message : String(adminError);
+      console.error("[Categories API] Firebase Admin error:", errorMsg);
+      if (errorMsg.includes('not installed') || errorMsg.includes('Cannot find module')) {
+        return NextResponse.json({ 
+          error: "Categories feature is temporarily unavailable. Please ensure firebase-admin is properly configured." 
+        }, { status: 503 });
+      }
+      throw adminError;
+    }
     
     // Check if custom category already exists
     const existingCategory = await db.collection("categories")
@@ -229,7 +268,19 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const db = getAdminFirestore();
+    let db;
+    try {
+      db = getAdminFirestore();
+    } catch (adminError) {
+      const errorMsg = adminError instanceof Error ? adminError.message : String(adminError);
+      console.error("[Categories API] Firebase Admin error:", errorMsg);
+      if (errorMsg.includes('not installed') || errorMsg.includes('Cannot find module')) {
+        return NextResponse.json({ 
+          error: "Categories feature is temporarily unavailable. Please ensure firebase-admin is properly configured." 
+        }, { status: 503 });
+      }
+      throw adminError;
+    }
     
     // Find and delete the category
     const categoryQuery = await db.collection("categories")

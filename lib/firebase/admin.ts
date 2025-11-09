@@ -44,12 +44,12 @@ function initAdminApp(): any {
 	let adminAppModule: any;
 	try {
 		// Use eval('require') to prevent bundlers from resolving at build time
-		const req = eval('require');
+		const req = typeof require !== 'undefined' ? require : eval('require');
 		adminAppModule = req('firebase-admin/app');
 	} catch (requireError) {
 		const errorMsg = requireError instanceof Error ? requireError.message : String(requireError);
 		// Check if it's a module not found error
-		if (errorMsg.includes('Cannot find module') || errorMsg.includes('MODULE_NOT_FOUND')) {
+		if (errorMsg.includes('Cannot find module') || errorMsg.includes('MODULE_NOT_FOUND') || errorMsg.includes('not installed') || errorMsg.includes('Cannot resolve')) {
 			throw new Error("firebase-admin is not installed. Please add 'firebase-admin' to your dependencies for server routes that need it.");
 		}
 		throw new Error(`Failed to require firebase-admin/app: ${errorMsg}. Please ensure firebase-admin is installed.`);

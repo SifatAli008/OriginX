@@ -24,9 +24,23 @@ export async function GET(request: NextRequest) {
     }
 
     const userEmail = decoded.email || undefined;
-    const userDoc = await getUserDocumentServer(decoded.uid, userEmail);
+    let userDoc = await getUserDocumentServer(decoded.uid, userEmail);
+    
+    // If user document doesn't exist, try to create it
+    if (!userDoc && userEmail) {
+      try {
+        // getUserDocumentServer should auto-create, but if it doesn't, we'll handle it
+        // Try one more time after a brief delay
+        userDoc = await getUserDocumentServer(decoded.uid, userEmail);
+      } catch (createError) {
+        console.warn(`[Company Stats] Failed to create user document for ${decoded.uid}:`, createError);
+      }
+    }
+    
     if (!userDoc) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ 
+        error: "User not found. Please ensure your account is properly set up." 
+      }, { status: 404 });
     }
 
     // Only company users can access this
