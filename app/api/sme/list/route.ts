@@ -1,8 +1,8 @@
 export const runtime = 'nodejs';
 /**
- * API Route: List SMEs in the caller's organization
+ * API Route: List all SMEs from Firebase
  * GET /api/sme/list
- * Returns SMEs filtered by the authenticated user's orgId
+ * Returns all SMEs (company users and admins can see all SMEs)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -39,18 +39,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const db = getAdminFirestore();
-    let queryRef = db.collection("users").where("role", "==", "sme");
-
-    // Non-admins restricted to their orgId
-    if (userDoc.role !== "admin") {
-      if (!userDoc.orgId) {
-        return NextResponse.json({ error: "Organization not set for user" }, { status: 403 });
+    let db;
+    try {
+      db = getAdminFirestore();
+    } catch (adminError) {
+      const errorMsg = adminError instanceof Error ? adminError.message : String(adminError);
+      console.error("[GET /api/sme/list] Firebase Admin error:", errorMsg);
+      if (errorMsg.includes('not installed') || 
+          errorMsg.includes('Cannot find module') || 
+          errorMsg.includes('Could not load the default credentials') ||
+          errorMsg.includes('credentials') ||
+          errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
+        return NextResponse.json({ 
+          error: "SME list feature is temporarily unavailable. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable in Vercel with your Firebase service account credentials.",
+          items: [],
+          total: 0
+        }, { status: 503 });
       }
-      queryRef = queryRef.where("orgId", "==", userDoc.orgId);
+      throw adminError;
     }
 
+    // Fetch all SMEs from Firebase (no orgId filter)
+    // Company users and admins can see all SMEs
+    let queryRef = db.collection("users").where("role", "==", "sme");
+    
+    console.log(`[GET /api/sme/list] Fetching all SMEs for user ${uid} (role: ${userDoc.role})`);
+
     const snapshot = await queryRef.get();
+    console.log(`[GET /api/sme/list] Found ${snapshot.docs.length} SME(s) for user ${uid} (role: ${userDoc.role}, orgId: ${userDoc.orgId || 'N/A'})`);
     let items: Array<Pick<UserDocument, "uid" | "email" | "displayName" | "photoURL" | "orgId" | "orgName" | "status">> = snapshot.docs.map((d: QueryDocumentSnapshot) => {
       const data = d.data() as UserDocument;
       return {
@@ -73,42 +89,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fallback: If nothing matched in org-scoped query and the query looks like an email,
-    // try an exact email lookup across orgs (read-only) so companies can find external SMEs by email.
-    if (items.length === 0 && q && q.includes("@")) {
-      try {
-        const exactSnap = await db
-          .collection("users")
-          .where("role", "==", "sme")
-          .where("email", "==", q)
-          .limit(5)
-          .get();
-        const extra = exactSnap.docs.map((d: QueryDocumentSnapshot) => {
-          const data = d.data() as UserDocument;
-          return {
-            uid: data.uid || d.id,
-            email: data.email,
-            displayName: data.displayName || null,
-            photoURL: data.photoURL || null,
-            orgId: data.orgId || null,
-            orgName: data.orgName,
-            status: data.status,
-          };
-        });
-        // Only add if not already included
-        extra.forEach((e: Pick<UserDocument, "uid" | "email" | "displayName" | "photoURL" | "orgId" | "orgName" | "status">) => {
-          if (!items.find((x) => x.uid === e.uid)) items.push(e);
-        });
-      } catch (e: unknown) {
-        // ignore fallback errors to avoid blocking primary response
-        console.warn("[GET /api/sme/list] fallback email lookup failed", e);
-      }
-    }
+    // Note: Since we're fetching all SMEs, the in-memory search filter above handles all filtering
 
     return NextResponse.json({ items, total: items.length }, { status: 200 });
   } catch (error) {
-    console.error("[GET /api/sme/list]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[GET /api/sme/list] Error:", errorMsg, error);
+    
+    // Handle Firebase Admin errors gracefully
+    if (errorMsg.includes('not installed') || 
+        errorMsg.includes('Cannot find module') || 
+        errorMsg.includes('Could not load the default credentials') ||
+        errorMsg.includes('credentials') ||
+        errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
+      return NextResponse.json({ 
+        error: "SME list feature is temporarily unavailable. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable in Vercel with your Firebase service account credentials.",
+        items: [],
+        total: 0
+      }, { status: 503 });
+    }
+    
+    return NextResponse.json({ 
+      error: errorMsg || "Internal server error",
+      items: [],
+      total: 0
+    }, { status: 500 });
   }
 }
 

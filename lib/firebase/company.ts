@@ -34,14 +34,27 @@ export async function createCompanyRegistrationRequest(
   }
 
   const requestsRef = collection(db, "companyRegistrationRequests");
-  const requestData: Omit<CompanyRegistrationRequest, "requestId"> = {
+  
+  // Build request data, filtering out undefined values (Firestore doesn't accept undefined)
+  const requestData: Record<string, unknown> = {
     userId,
     userEmail,
-    userName,
     ...companyData,
     status: "pending",
     requestedAt: Date.now(),
   };
+  
+  // Only include userName if it's defined (not undefined or empty)
+  if (userName && userName.trim()) {
+    requestData.userName = userName.trim();
+  }
+  
+  // Filter out any undefined values from companyData
+  Object.keys(requestData).forEach(key => {
+    if (requestData[key] === undefined) {
+      delete requestData[key];
+    }
+  });
 
   const docRef = await addDoc(requestsRef, requestData);
   return docRef.id;

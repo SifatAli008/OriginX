@@ -225,20 +225,49 @@ export default function SmeProductTransferPage() {
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1">
-                <div className="mb-2 text-sm text-gray-400">Select Receiver SME</div>
-                <div className="relative mb-3">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                  <Input value={smeSearch} onChange={(e) => setSmeSearch(e.target.value)} placeholder="Search SME by name/email" className="pl-9 bg-gray-900 border-gray-800 text-white placeholder:text-gray-500" />
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Select SME</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input 
+                      value={smeSearch} 
+                      onChange={(e) => setSmeSearch(e.target.value)} 
+                      placeholder="Search by name or email..." 
+                      className="pl-9 bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                    />
+                  </div>
                 </div>
-                <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
-                  {filteredSmes.map((s) => (
-                    <button key={s.uid} onClick={() => setSelectedSmeId(s.uid)} className={`w-full text-left p-3 rounded-lg border ${selectedSmeId === s.uid ? 'border-blue-500 bg-blue-500/10' : 'border-gray-800 bg-gray-900/50 hover:bg-gray-900'}`}>
-                      <div className="text-white text-sm">{s.displayName || s.email}</div>
-                      <div className="text-xs text-gray-500">{s.orgName || 'SME'}</div>
-                    </button>
-                  ))}
-                  {filteredSmes.length === 0 && <div className="text-xs text-gray-500 p-2">No SMEs found</div>}
+                <div className="max-h-80 overflow-y-auto space-y-2 pr-1 border border-gray-800 rounded-lg p-2 bg-gray-900/30">
+                  {filteredSmes.length > 0 ? (
+                    filteredSmes.map((s) => (
+                      <button 
+                        key={s.uid} 
+                        onClick={() => setSelectedSmeId(s.uid)} 
+                        className={`w-full text-left p-3 rounded-lg border transition-all ${
+                          selectedSmeId === s.uid 
+                            ? 'border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20' 
+                            : 'border-gray-800 bg-gray-900/50 hover:bg-gray-900 hover:border-gray-700'
+                        }`}
+                      >
+                        <div className="text-white text-sm font-medium">{s.displayName || s.email}</div>
+                        {s.displayName && <div className="text-xs text-gray-400 mt-0.5">{s.email}</div>}
+                        {s.orgName && <div className="text-xs text-gray-500 mt-1">{s.orgName}</div>}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-xs text-gray-500 p-4 text-center">
+                      {smeSearch ? `No SMEs found matching "${smeSearch}"` : "No SMEs available"}
+                    </div>
+                  )}
                 </div>
+                {selectedSmeId && (
+                  <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <div className="text-xs text-gray-400 mb-1">Selected:</div>
+                    <div className="text-sm text-white font-medium">
+                      {smes.find(s => s.uid === selectedSmeId)?.displayName || smes.find(s => s.uid === selectedSmeId)?.email}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="lg:col-span-2">

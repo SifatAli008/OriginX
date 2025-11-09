@@ -42,12 +42,16 @@ export async function GET(request: NextRequest) {
     } catch (adminError) {
       const errorMsg = adminError instanceof Error ? adminError.message : String(adminError);
       console.error("[Categories API] Firebase Admin error:", errorMsg);
-      // If firebase-admin is not available, return only default categories
-      if (errorMsg.includes('not installed') || errorMsg.includes('Cannot find module')) {
+      // If firebase-admin is not available or credentials are missing, return only default categories
+      if (errorMsg.includes('not installed') || 
+          errorMsg.includes('Cannot find module') || 
+          errorMsg.includes('Could not load the default credentials') ||
+          errorMsg.includes('credentials') ||
+          errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
         return NextResponse.json({ 
           categories: DEFAULT_CATEGORIES,
           customCategories: [],
-          warning: "Custom categories unavailable - firebase-admin not configured"
+          warning: "Custom categories unavailable - Firebase credentials not configured. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables."
         }, { status: 200 });
       }
       throw adminError;
@@ -70,12 +74,16 @@ export async function GET(request: NextRequest) {
     console.error("[Categories API] Error:", error);
     const errorMsg = error instanceof Error ? error.message : String(error);
     
-    // If firebase-admin is not available, return default categories instead of error
-    if (errorMsg.includes('not installed') || errorMsg.includes('Cannot find module')) {
+    // If firebase-admin is not available or credentials are missing, return default categories instead of error
+    if (errorMsg.includes('not installed') || 
+        errorMsg.includes('Cannot find module') || 
+        errorMsg.includes('Could not load the default credentials') ||
+        errorMsg.includes('credentials') ||
+        errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
       return NextResponse.json({ 
         categories: DEFAULT_CATEGORIES,
         customCategories: [],
-        warning: "Custom categories unavailable - firebase-admin not configured"
+        warning: "Custom categories unavailable - Firebase credentials not configured. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 in Vercel environment variables."
       }, { status: 200 });
     }
     
@@ -154,9 +162,13 @@ export async function POST(request: NextRequest) {
     } catch (adminError) {
       const errorMsg = adminError instanceof Error ? adminError.message : String(adminError);
       console.error("[Categories API] Firebase Admin error:", errorMsg);
-      if (errorMsg.includes('not installed') || errorMsg.includes('Cannot find module')) {
+      if (errorMsg.includes('not installed') || 
+          errorMsg.includes('Cannot find module') || 
+          errorMsg.includes('Could not load the default credentials') ||
+          errorMsg.includes('credentials') ||
+          errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
         return NextResponse.json({ 
-          error: "Categories feature is temporarily unavailable. Please ensure firebase-admin is properly configured." 
+          error: "Categories feature is temporarily unavailable. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable in Vercel with your Firebase service account credentials." 
         }, { status: 503 });
       }
       throw adminError;
@@ -274,9 +286,13 @@ export async function DELETE(request: NextRequest) {
     } catch (adminError) {
       const errorMsg = adminError instanceof Error ? adminError.message : String(adminError);
       console.error("[Categories API] Firebase Admin error:", errorMsg);
-      if (errorMsg.includes('not installed') || errorMsg.includes('Cannot find module')) {
+      if (errorMsg.includes('not installed') || 
+          errorMsg.includes('Cannot find module') || 
+          errorMsg.includes('Could not load the default credentials') ||
+          errorMsg.includes('credentials') ||
+          errorMsg.includes('FIREBASE_SERVICE_ACCOUNT_BASE64')) {
         return NextResponse.json({ 
-          error: "Categories feature is temporarily unavailable. Please ensure firebase-admin is properly configured." 
+          error: "Categories feature is temporarily unavailable. Please set FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable in Vercel with your Firebase service account credentials." 
         }, { status: 503 });
       }
       throw adminError;
