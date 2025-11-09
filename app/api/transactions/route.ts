@@ -145,7 +145,6 @@ export async function GET(request: NextRequest) {
       collection: getCollection,
       query: buildQuery,
       where: buildWhere,
-      orderBy: buildOrderBy,
       getDocs,
       getFirestore,
       app,
@@ -264,7 +263,7 @@ export async function GET(request: NextRequest) {
     // Instead, fetch all matching documents and sort in memory
     // This avoids the need for composite indexes while maintaining functionality
     const allDocs = await getDocs(q);
-    let items: Array<Record<string, unknown>> = allDocs.docs.map((doc) => {
+    const items: Array<Record<string, unknown>> = allDocs.docs.map((doc) => {
       const data = doc.data() as Record<string, unknown>;
       return {
         ...data,

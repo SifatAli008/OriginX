@@ -350,7 +350,7 @@ export default function QRProductContent() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {transactions.map((tx, idx) => (
+                    {transactions.map((tx) => (
                       <div
                         key={tx.txHash}
                         className="p-4 bg-gray-800/50 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"

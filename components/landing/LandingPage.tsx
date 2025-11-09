@@ -633,7 +633,7 @@ export default function LandingPage() {
                 role: "Admin", 
                 desc: "System administrators managing users, roles, and policies. Configure system settings, manage user access, monitor platform analytics, and oversee security policies. Full administrative control with comprehensive dashboard and reporting tools." 
               },
-            ].map((r, index) => (
+            ].map((r) => (
               <motion.div key={r.role} variants={fadeInUp}>
                 <Card 
                   tabIndex={0} 
