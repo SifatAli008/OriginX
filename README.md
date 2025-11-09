@@ -1,32 +1,32 @@
 # OriginX - Anti-Counterfeit Platform
 
-A Next.js platform for supply chain management and product authentication using **blockchain-style simulation** and QR code encryption.
+A Next.js platform for supply chain management and product authentication using blockchain-style simulation and QR code encryption.
 
 ---
 
-## 🔗 Blockchain-Style Product Transfer & Tracking System
+## Blockchain-Style Product Transfer & Tracking System
 
 > **Note:** Simulation-based — no real blockchain or payment involved
 
-### 🧩 Overview
+### Overview
 
-This system **simulates blockchain principles** to provide **secure and transparent product tracking** between **Companies** and **SMEs**.
+This system simulates blockchain principles to provide secure and transparent product tracking between Companies and SMEs.
 
-It creates a **chain-like record** of product ownership using **SHA-256 hashes** and **AES-256 encryption**, but **does not use any real blockchain or cryptocurrency transactions**.
-
----
-
-### ⚙️ Core Mechanism
-
-* Each **product creation** generates an **initial record (block-like entry)**.
-
-* Every **ownership transfer** (Company → SME → new SME) adds a **new simulated block**.
-
-* The blocks are **not stored on a blockchain network**, but instead within a **central database**, maintaining a **chain of ownership history**.
+It creates a chain-like record of product ownership using SHA-256 hashes and AES-256 encryption, but does not use any real blockchain or cryptocurrency transactions.
 
 ---
 
-### 🔐 Hashing & Security
+### Core Mechanism
+
+* Each product creation generates an initial record (block-like entry).
+
+* Every ownership transfer (Company → SME → new SME) adds a new simulated block.
+
+* The blocks are not stored on a blockchain network, but instead within a central database, maintaining a chain of ownership history.
+
+---
+
+### Hashing & Security
 
 * **Algorithm:** SHA-256 for unique owner hashes
 
@@ -49,7 +49,7 @@ Each simulated "block" includes:
 
 ---
 
-## 🏢 Database Schemas
+## Database Schemas
 
 ### Company
 
@@ -65,7 +65,7 @@ Each simulated "block" includes:
 | phone           | Contact number                             |
 | address         | Company address                            |
 
-### 📦 Product
+### Product
 
 | Field             | Description                                       |
 | ----------------- | ------------------------------------------------- |
@@ -80,7 +80,7 @@ Each simulated "block" includes:
 | new_sme_hash      | SHA-256 hash of next SME (for transfer)           |
 | qr                | QR code for product verification and traceability |
 
-### 🧾 SME
+### SME
 
 | Field           | Description                           |
 | --------------- | ------------------------------------- |
@@ -93,7 +93,7 @@ Each simulated "block" includes:
 | phone           | Contact number                        |
 | address         | Business address                      |
 
-### 👤 User
+### User
 
 | Field          | Description                      |
 | -------------- | -------------------------------- |
@@ -109,23 +109,23 @@ Each simulated "block" includes:
 
 ---
 
-## 🚫 Rules & Restrictions
+## Rules & Restrictions
 
-* Only **Companies** can **create** products.
+* Only Companies can create products.
 
-* Companies **cannot edit** or **update** product details once created.
+* Companies cannot edit or update product details once created.
 
-* Companies can **transfer** products to SMEs.
+* Companies can transfer products to SMEs.
 
-* SMEs can **receive** and **transfer** products to other SMEs.
+* SMEs can receive and transfer products to other SMEs.
 
-* Each transfer creates a **new simulated block** (database entry) linking sender and receiver.
+* Each transfer creates a new simulated block (database entry) linking sender and receiver.
 
-* No **payment**, **crypto**, or **real blockchain network** is involved — only a **secure record trail** within the system database.
+* No payment, crypto, or real blockchain network is involved — only a secure record trail within the system database.
 
 ---
 
-## 🧠 Summary
+## Summary
 
 | Concept     | Real Blockchain Equivalent | In This System                       |
 | ----------- | -------------------------- | ------------------------------------ |
@@ -139,26 +139,26 @@ Each simulated "block" includes:
 
 ## Features
 
-- **Product Management**: Register products, generate encrypted QR codes, batch imports
-- **Movement Tracking**: Track shipments and transfers with handover records
-- **Verification System**: QR code verification with AI-powered counterfeit detection
-- **Blockchain-Style Ledger**: Immutable transaction history (simulated)
-- **Analytics Dashboard**: KPIs and insights for supply chain monitoring
-- **Role-Based Access**: Admin, Company, and SME user roles
+* Product Management: Register products, generate encrypted QR codes, batch imports
+* Movement Tracking: Track shipments and transfers with handover records
+* Verification System: QR code verification with AI-powered counterfeit detection
+* Blockchain-Style Ledger: Immutable transaction history (simulated)
+* Analytics Dashboard: KPIs and insights for supply chain monitoring
+* Role-Based Access: Admin, Company, and SME user roles
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16, TypeScript, Tailwind CSS
-- **Backend**: Firebase (Auth, Firestore, Storage)
-- **Authentication**: Firebase Auth with MFA support
-- **Database**: Firestore
-- **Storage**: Cloudinary for images
+* Frontend: Next.js 16, TypeScript, Tailwind CSS
+* Backend: Firebase (Auth, Firestore, Storage)
+* Authentication: Firebase Auth with MFA support
+* Database: Firestore
+* Storage: Cloudinary for images
 
 ## Prerequisites
 
-- Node.js 18+
-- Firebase project with Authentication, Firestore, and Storage enabled
-- Cloudinary account (optional)
+* Node.js 18+
+* Firebase project with Authentication, Firestore, and Storage enabled
+* Cloudinary account (optional)
 
 ## Quick Start
 
@@ -222,15 +222,15 @@ vercel --prod
 
 ## Environment Variables
 
-**Required:**
+Required:
 
-- `NEXT_PUBLIC_FIREBASE_*` - Firebase client configuration
-- `FIREBASE_SERVICE_ACCOUNT_BASE64` - Base64 encoded service account JSON
+* `NEXT_PUBLIC_FIREBASE_*` - Firebase client configuration
+* `FIREBASE_SERVICE_ACCOUNT_BASE64` - Base64 encoded service account JSON
 
-**Optional:**
+Optional:
 
-- `CLOUDINARY_*` - Cloudinary image upload configuration
-- `QR_AES_SECRET` - QR code encryption secret
+* `CLOUDINARY_*` - Cloudinary image upload configuration
+* `QR_AES_SECRET` - QR code encryption secret
 
 ## License
 
