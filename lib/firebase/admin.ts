@@ -43,8 +43,17 @@ function initAdminApp(): any {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let adminAppModule: any;
 	try {
-		// Use eval('require') to prevent bundlers from resolving at build time
-		const req = typeof require !== 'undefined' ? require : eval('require');
+		// Try multiple require strategies for better compatibility
+		let req: NodeRequire;
+		if (typeof require !== 'undefined') {
+			req = require;
+		} else if (typeof eval !== 'undefined') {
+			req = eval('require');
+		} else {
+			throw new Error('require is not available in this environment');
+		}
+		
+		// Try to require firebase-admin/app
 		adminAppModule = req('firebase-admin/app');
 	} catch (requireError) {
 		const errorMsg = requireError instanceof Error ? requireError.message : String(requireError);
@@ -222,7 +231,16 @@ export function getAdminFirestore() {
 	}
 	// Lazy require main firebase-admin to avoid subpath resolution issues
 	try {
-		const req = eval('require');
+		// Try multiple require strategies for better compatibility
+		let req: NodeRequire;
+		if (typeof require !== 'undefined') {
+			req = require;
+		} else if (typeof eval !== 'undefined') {
+			req = eval('require');
+		} else {
+			throw new Error('require is not available in this environment');
+		}
+		
 		const admin = req('firebase-admin');
 		// Use legacy accessor which binds to the default app initialized above
 		const firestore = admin.firestore();
@@ -236,7 +254,7 @@ export function getAdminFirestore() {
 	} catch (requireError) {
 		const errorMsg = requireError instanceof Error ? requireError.message : String(requireError);
 		// Check if it's a module not found error
-		if (errorMsg.includes('Cannot find module') || errorMsg.includes('MODULE_NOT_FOUND')) {
+		if (errorMsg.includes('Cannot find module') || errorMsg.includes('MODULE_NOT_FOUND') || errorMsg.includes('not installed') || errorMsg.includes('Cannot resolve')) {
 			throw new Error("firebase-admin is not installed. Please add 'firebase-admin' to your dependencies for server routes that need it.");
 		}
 		throw new Error(`Failed to require firebase-admin: ${errorMsg}. Please ensure firebase-admin is installed.`);

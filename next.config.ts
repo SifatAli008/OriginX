@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Ensure firebase-admin is properly handled for serverless functions
+  experimental: {
+    serverComponentsExternalPackages: ['firebase-admin'],
+  },
 };
 
 export default nextConfig;
