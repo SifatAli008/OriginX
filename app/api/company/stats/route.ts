@@ -9,6 +9,7 @@ import { verifyIdToken } from "@/lib/auth/verify-token";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { getUserDocumentServer } from "@/lib/firebase/firestore-server";
 import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
+import type { UserDocument } from "@/lib/types/user";
 
 export async function GET(request: NextRequest) {
   try {
